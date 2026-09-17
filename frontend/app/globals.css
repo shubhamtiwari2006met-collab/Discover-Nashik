@@ -1,0 +1,147 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #e86f18;
+  --color-primary-hover: #c9580f;
+  --color-background: #f8f2e8;
+  --color-card: #fffdf8;
+  --color-text-main: #173247;
+  --color-text-muted: #667883;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display), Georgia, serif;
+}
+
+:root {
+  --background: #f8f2e8;
+  --foreground: #173247;
+  --card: #fffdf8;
+  --text-muted: #667883;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #f8f2e8;
+    --foreground: #173247;
+    --card: #fffdf8;
+    --text-muted: #667883;
+  }
+}
+
+html {
+  background: #f8f2e8;
+}
+
+body {
+  background:
+    radial-gradient(circle at 82% 5%, rgba(230, 111, 24, 0.12), transparent 25%),
+    linear-gradient(180deg, #fffdf8 0%, #f8f2e8 42%, #edf3f3 100%);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+  font-family: var(--font-sans), "Noto Sans Devanagari", "Nirmala UI", ui-sans-serif, system-ui, sans-serif;
+}
+
+h1, h2, h3, .font-display {
+  font-family: var(--font-display), "Noto Serif Devanagari", Georgia, serif;
+  letter-spacing: 0;
+}
+
+body,
+button,
+input,
+textarea,
+select {
+  font-family: var(--font-inter), "Noto Sans Devanagari", "Nirmala UI", ui-sans-serif, system-ui, sans-serif;
+}
+
+input,
+textarea,
+select {
+  color: #111827;
+}
+
+.chatbot-message-input {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.add-place-form input,
+.add-place-form textarea,
+.add-place-form select {
+  background-color: #1e293b !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.add-place-form input::placeholder,
+.add-place-form textarea::placeholder {
+  color: #cbd5e1 !important;
+}
+
+.add-place-location {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #6b7280 !important;
+  opacity: 1;
+}
+
+input:-webkit-autofill,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px #f8fafc inset;
+  -webkit-text-fill-color: #111827;
+  color: #111827;
+}
+
+.add-place-form input:-webkit-autofill,
+.add-place-form textarea:-webkit-autofill,
+.add-place-form select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px #1e293b inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  color: #ffffff !important;
+}
+
+/* Glassmorphism utility */
+.glass {
+  background: rgba(255, 253, 248, 0.78);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(23, 50, 71, 0.1);
+}
+
+.glass-light {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  .glass-adaptive {
+    background: rgba(30, 41, 59, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+}
+@media (prefers-color-scheme: light) {
+  .glass-adaptive {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* Hide scrollbar for category list */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

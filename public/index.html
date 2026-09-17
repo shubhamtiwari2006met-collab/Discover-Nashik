@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Discover Nashik | The Wine Capital & Spiritual Soul of Maharashtra</title>
+  <meta name="description"
+    content="Explore the best tourist places, sacred temples, lush vineyards, ancient rock-cut caves, trekking forts, and authentic culinary delights in Nashik.">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <!-- Header / Navigation -->
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="#" class="logo">
+        <div class="logo-icon">
+          <i class="fa-solid fa-om"></i>
+        </div>
+        <div class="logo-text">
+          <span class="brand-title">Discover <span>Nashik</span></span>
+          <span class="brand-subtitle">The Grape & Godavari City</span>
+        </div>
+      </a>
+
+      <nav class="nav-actions">
+        <div id="futureFeaturePlaceholder" class="future-feature-placeholder">
+          <!-- Placeholder for future feature -->
+        </div>
+        <button id="openTrackerModalBtn" class="btn btn-secondary">
+          <i class="fa-solid fa-users-viewfinder"></i> Group Tracker
+        </button>
+        <button id="openAddModalBtn" class="btn btn-primary">
+          <i class="fa-solid fa-plus"></i> Add Place
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <div class="hero-badge">
+        <i class="fa-solid fa-om"></i> Welcome to the Spiritual Capital of India
+      </div>
+      <h1 class="hero-title">Experience the Divine Mahakumbh &amp; Heritage</h1>
+      <p class="hero-desc">
+        From the sacred waters of Godavari &amp; the massive Mahakumbh Mela to the rolling hills of Sula — curate your
+        quintessential Nashik voyage.
+      </p>
+
+      <!-- Search & Filters Container -->
+      <div class="hero-search-wrapper">
+        <div class="search-bar">
+          <i class="fa-solid fa-location-dot search-icon"></i>
+          <input type="text" id="mainSearchInput" placeholder="Search by name, attraction, misal, fort, or keyword...">
+          <button id="searchBtn" class="btn btn-search">
+            <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Metrics -->
+      <div class="metrics-container" id="metricsContainer">
+        <div class="metric-card">
+          <div class="metric-icon"><i class="fa-solid fa-gopuram"></i></div>
+          <div class="metric-info">
+            <span class="metric-value" id="statTemples">--</span>
+            <span class="metric-label">Sacred Shrines</span>
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon"><i class="fa-solid fa-wine-bottle"></i></div>
+          <div class="metric-info">
+            <span class="metric-value" id="statVineyards">--</span>
+            <span class="metric-label">Wineries &amp; Stays</span>
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon"><i class="fa-solid fa-mountain-sun"></i></div>
+          <div class="metric-info">
+            <span class="metric-value" id="statTreks">--</span>
+            <span class="metric-label">Forts &amp; Treks</span>
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon"><i class="fa-solid fa-utensils"></i></div>
+          <div class="metric-info">
+            <span class="metric-value" id="statTotal">--</span>
+            <span class="metric-label">Total Curated Spots</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Explore Section -->
+  <main class="main-content">
+    <div class="content-header">
+      <div class="section-title-wrap">
+        <h2 class="section-title">Explore Attractions &amp; Experiences</h2>
+        <p class="section-subtitle">Filter through categories or sort by highest ratings</p>
+      </div>
+
+      <!-- Sorting -->
+      <div class="sort-wrapper">
+        <label for="sortSelect"><i class="fa-solid fa-arrow-down-short-wide"></i> Sort By:</label>
+        <select id="sortSelect" class="custom-select">
+          <option value="rating">Top Rated ⭐</option>
+          <option value="reviews">Most Reviewed 💬</option>
+          <option value="name">Alphabetical (A-Z)</option>
+          <option value="newest">Recently Added</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Category Pills -->
+    <div class="category-filters" id="categoryFilters">
+      <button class="filter-pill active" data-category="All">
+        <i class="fa-solid fa-compass"></i> All Places
+      </button>
+      <button class="filter-pill" data-category="Spiritual & Temples">
+        <i class="fa-solid fa-om"></i> Spiritual &amp; Temples
+      </button>
+      <button class="filter-pill" data-category="Mahakumbh Specials">
+        <i class="fa-solid fa-hands-praying"></i> Mahakumbh Specials
+      </button>
+      <button class="filter-pill" data-category="Ghats & Snan">
+        <i class="fa-solid fa-water"></i> Ghats &amp; Snan
+      </button>
+      <button class="filter-pill" data-category="Vineyards & Wineries">
+        <i class="fa-solid fa-wine-glass"></i> Vineyards &amp; Wineries
+      </button>
+      <button class="filter-pill" data-category="Heritage & Caves">
+        <i class="fa-solid fa-archway"></i> Heritage &amp; Caves
+      </button>
+      <button class="filter-pill" data-category="Forts & Trekking">
+        <i class="fa-solid fa-person-hiking"></i> Forts &amp; Trekking
+      </button>
+      <button class="filter-pill" data-category="Nature & Waterfalls">
+        <i class="fa-solid fa-tree"></i> Nature &amp; Waterfalls
+      </button>
+      <button class="filter-pill" data-category="Food & Culture">
+        <i class="fa-solid fa-bowl-food"></i> Food &amp; Misal Trail
+      </button>
+    </div>
+
+    <!-- Active Filters & Results Count -->
+    <div class="results-meta">
+      <span id="placesCountText">Showing curated places...</span>
+      <button id="resetFiltersBtn" class="btn-text" style="display: none;">
+        <i class="fa-solid fa-rotate-left"></i> Reset Filters
+      </button>
+    </div>
+
+    <!-- Places Grid -->
+    <div class="places-grid" id="placesGrid">
+      <!-- Dynamic cards loaded via app.js -->
+      <div class="loader-container">
+        <div class="spinner"></div>
+        <p>Loading the finest Nashik spots...</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Place Detail Modal -->
+  <div class="modal-backdrop" id="detailModal">
+    <div class="modal-card modal-large">
+      <button class="modal-close" id="closeDetailModalBtn">&times;</button>
+      <div class="modal-body" id="detailModalBody">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Add New Place Modal -->
+  <div class="modal-backdrop" id="addModal">
+    <div class="modal-card">
+      <button class="modal-close" id="closeAddModalBtn">&times;</button>
+      <div class="modal-header">
+        <h3 id="addModalTitle"><i class="fa-solid fa-plus-circle"></i> Add a New Destination in Nashik</h3>
+        <p id="addModalSubtitle">Contribute a hidden gem, temple, winery, or food spot to the directory</p>
+      </div>
+      <form id="addPlaceForm" class="modal-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="placeName">Place Name *</label>
+            <input type="text" id="placeName" required placeholder="e.g. Dugarwadi Waterfall">
+          </div>
+          <div class="form-group">
+            <label for="placeCategory">Category *</label>
+            <select id="placeCategory" required>
+              <option value="Spiritual & Temples">Spiritual &amp; Temples</option>
+              <option value="Mahakumbh Specials">Mahakumbh Specials</option>
+              <option value="Ghats & Snan">Ghats &amp; Snan</option>
+              <option value="Vineyards & Wineries">Vineyards &amp; Wineries</option>
+              <option value="Heritage & Caves">Heritage &amp; Caves</option>
+              <option value="Forts & Trekking">Forts &amp; Trekking</option>
+              <option value="Nature & Waterfalls">Nature &amp; Waterfalls</option>
+              <option value="Food & Culture">Food &amp; Culture</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="placeTagline">Tagline / Catchphrase</label>
+          <input type="text" id="placeTagline"
+            placeholder="e.g. Spectacular secluded waterfall surrounded by dense woods">
+        </div>
+
+        <div class="form-group">
+          <label for="placeDesc">Description *</label>
+          <textarea id="placeDesc" rows="3" required
+            placeholder="Provide history, importance, or what travelers will experience..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="placeStory">Significance & Story (Optional)</label>
+          <textarea id="placeStory" rows="3"
+            placeholder="Share ancient history, mythological significance, or local stories related to this place..."></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="placeLocation">Location / Address *</label>
+            <input type="text" id="placeLocation" required placeholder="e.g. Near Trimbakeshwar, Nashik">
+          </div>
+          <div class="form-group">
+            <label for="placeTimings">Visiting Hours</label>
+            <input type="text" id="placeTimings" placeholder="e.g. 6:00 AM – 6:00 PM">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="placeFee">Entry Fee</label>
+            <input type="text" id="placeFee" placeholder="e.g. Free / ₹50 per person">
+          </div>
+          <div class="form-group">
+            <label for="placeBestTime">Best Time to Visit</label>
+            <input type="text" id="placeBestTime" placeholder="e.g. July to October (Monsoon)">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="placeImage">Image URL</label>
+            <input type="url" id="placeImage" placeholder="https://images.unsplash.com/photo-...">
+          </div>
+          <div class="form-group">
+            <label for="placeRating">Initial Rating (1-5)</label>
+            <input type="number" id="placeRating" min="1" max="5" step="0.1" value="4.5">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="placeHighlights">Highlights (Comma separated)</label>
+          <input type="text" id="placeHighlights" placeholder="Scenic valley views, Natural pool, Nature walk">
+        </div>
+
+        <div class="form-group">
+          <label for="placeTags">Tags (Comma separated)</label>
+          <input type="text" id="placeTags" placeholder="Waterfall, Monsoon, Adventure, Trimbak">
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" id="cancelAddBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="savePlaceBtn">
+            <i class="fa-solid fa-check"></i> <span id="savePlaceBtnText">Publish Place</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Group Tracker Modal -->
+  <div class="modal-backdrop" id="trackerModal">
+    <div class="modal-card">
+      <button class="modal-close" id="closeTrackerModalBtn">&times;</button>
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-users-viewfinder"></i> Family &amp; Group Tracker</h3>
+        <p>Coordinate with your group during Mahakumbh. Create a group or join an existing one.</p>
+      </div>
+
+      <div class="tracker-tabs">
+        <button class="tracker-tab active" id="tabCreateGroup">Create Group</button>
+        <button class="tracker-tab" id="tabJoinGroup">Join Group</button>
+      </div>
+
+      <!-- Create Group Form -->
+      <form id="createGroupForm" class="modal-form tracker-section active">
+        <div class="form-group">
+          <label for="leaderName">Your Name (Leader) *</label>
+          <input type="text" id="leaderName" required placeholder="e.g. Ramesh">
+        </div>
+        <button type="submit" class="btn btn-primary w-100">
+          <i class="fa-solid fa-plus"></i> Create New Group
+        </button>
+      </form>
+
+      <!-- Join Group Form -->
+      <form id="joinGroupForm" class="modal-form tracker-section">
+        <div class="form-group">
+          <label for="joinGroupCode">Group Code *</label>
+          <input type="text" id="joinGroupCode" required placeholder="Enter 6-character code"
+            style="text-transform: uppercase;">
+        </div>
+        <button type="submit" class="btn btn-primary w-100">
+          <i class="fa-solid fa-right-to-bracket"></i> Join Group
+        </button>
+      </form>
+
+      <!-- Active Group View -->
+      <div id="activeGroupView" class="tracker-section">
+        <div class="group-info-card">
+          <h4 id="displayGroupCode" class="group-code-large">------</h4>
+          <p class="text-center mb-1">Share this code with your members</p>
+          <p class="text-center text-muted" id="displayLeaderName">Leader: ...</p>
+        </div>
+
+        <div class="form-group mt-1">
+          <label for="meetingLocation">Set Meeting Point</label>
+          <input type="text" id="meetingLocation" placeholder="e.g. Ramkund Main Ghat">
+        </div>
+        <div class="form-group">
+          <label for="meetingInstructions">Instructions</label>
+          <input type="text" id="meetingInstructions" placeholder="Wait near the big Banyan tree">
+        </div>
+        <button id="updateLocationBtn" class="btn btn-primary w-100 mt-1">
+          <i class="fa-solid fa-location-dot"></i> Update Meeting Point
+        </button>
+
+        <div id="currentMeetingPoint" class="mt-1 meeting-point-box" style="display: none;">
+          <h5>Current Meeting Point:</h5>
+          <p id="meetingPointText" class="fw-bold text-gold">...</p>
+          <p id="meetingInstText" class="text-muted small">...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Chatbot Widget -->
+  <button id="chatbotToggle" class="chatbot-toggle">
+    <i class="fa-solid fa-robot"></i>
+  </button>
+
+  <div id="chatbotWidget" class="chatbot-widget">
+    <div class="chatbot-header">
+      <h4><i class="fa-solid fa-robot"></i> Nashik AI Guide</h4>
+      <button id="chatbotClose" class="chatbot-close">&times;</button>
+    </div>
+    <div class="chatbot-messages" id="chatbotMessages">
+      <div class="chat-msg bot">
+        <p>Namaste! I'm your Discover Nashik AI guide. Need help planning your Mahakumbh itinerary or finding the best
+          spots?</p>
+      </div>
+    </div>
+    <form id="chatbotForm" class="chatbot-input-area">
+      <input type="text" id="chatInput" placeholder="Ask me anything..." required autocomplete="off">
+      <button type="submit" class="btn-chat-send"><i class="fa-solid fa-paper-plane"></i></button>
+    </form>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-col">
+        <div class="brand-title">Discover <span>Nashik</span></div>
+        <p class="footer-tagline">
+          The ultimate digital travel guide to Maharashtra's most spiritual and celebrated vineyard destination.
+        </p>
+      </div>
+      <div class="footer-col">
+        <h4>Key Highlights</h4>
+        <ul>
+          <li>Trimbakeshwar Jyotirlinga</li>
+          <li>Panchavati & Ramkund</li>
+          <li>Sula & York Wine Tours</li>
+          <li>Mountains, Forts & Treks</li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Local Delights</h4>
+        <ul>
+          <li>Chulivarchi Misal Pav</li>
+          <li>Nashik Table Grapes &amp; Raisins</li>
+          <li>Kondaji Chivda</li>
+          <li>Sayantara Sabudana Vada</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2026 Discover Nashik Portal. Crafted for explorers, pilgrims, and wine connoisseurs. <br> Created by
+        Shubham Tiwari</p>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+
+</html>

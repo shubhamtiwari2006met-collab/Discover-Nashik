@@ -1,0 +1,29 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Orange Circle Border -->
+  <circle cx="50" cy="50" r="47" fill="none" stroke="#ea580c" stroke-width="5"/>
+  
+  <!-- Shiva Head -->
+  <circle cx="50" cy="32" r="13" fill="#001f3f"/>
+  
+  <!-- Moon -->
+  <path d="M 60 24 Q 64 22 64 28" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
+  
+  <!-- Trident -->
+  <g stroke="#001f3f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="25" y1="38" x2="25" y2="62"/>
+    <line x1="18" y1="46" x2="25" y2="38"/>
+    <line x1="25" y1="36" x2="25" y2="40"/>
+    <line x1="32" y1="46" x2="25" y2="38"/>
+  </g>
+  <rect x="24" y="50" width="2" height="4" fill="#ea580c"/>
+  
+  <!-- Temple -->
+  <polygon points="75 60 82 38 89 60" fill="#d97706"/>
+  <rect x="73" y="60" width="12" height="10" fill="#b45309"/>
+  
+  <!-- Bridge Arch -->
+  <path d="M 42 70 Q 44 65 46 70 Q 48 65 50 70 Q 52 65 54 70 Q 56 65 58 70" stroke="white" stroke-width="1.5" fill="none"/>
+  
+  <!-- Water -->
+  <path d="M 35 78 Q 40 75 45 78 T 55 78 T 65 78" stroke="#0369a1" stroke-width="1.5" fill="none"/>
+</svg>

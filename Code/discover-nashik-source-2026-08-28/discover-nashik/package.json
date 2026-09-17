@@ -1,0 +1,18 @@
+{
+  "name": "discover-nashik",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=@discover-nashik/api & npm run dev --workspace=@discover-nashik/web",
+    "dev:api": "npm run dev --workspace=@discover-nashik/api",
+    "dev:web": "npm run dev --workspace=@discover-nashik/web",
+    "build": "npm run build --workspace=@discover-nashik/api && npm run build --workspace=@discover-nashik/web",
+    "seed": "npm run seed --workspace=@discover-nashik/api"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
