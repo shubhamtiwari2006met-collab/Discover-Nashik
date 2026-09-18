@@ -1,21 +1,24 @@
 const express = require('express');
 const router = express.Router();
-const { createClient } = require('@supabase/supabase-js');
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_PUBLISHABLE_KEY);
-
-// Middleware to verify business role
-async function verifyBusiness(req, res, next) {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session || session.user.role !== 'business') {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  req.businessId = session.user.id;
-  next();
-}
-
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
+const { authenticate, optionalAuthenticate, requireRoles } = require('../middleware/auth');
+const { createClient } = require('@supabase/supabase-js');
+
+const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+
+// Dedicated Rate Limiter for Image Uploads (15 uploads per 15 minutes per IP)
+const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many upload attempts. Please try again after a few minutes." }
+});
 
 // Magic byte validation for JPG, PNG, WebP
 function isValidImageBuffer(buffer) {
@@ -37,8 +40,8 @@ function isValidImageBuffer(buffer) {
   return false;
 }
 
-// Secure Business Photo Upload Endpoint
-router.post('/upload', async (req, res) => {
+// Secure Business Photo Upload Endpoint (Enforcing strictly 1 MB = 1,048,576 bytes)
+router.post('/upload', uploadLimiter, optionalAuthenticate, async (req, res) => {
   try {
     const { imageBase64, image } = req.body;
     const rawData = imageBase64 || image;
@@ -58,29 +61,30 @@ router.post('/upload', async (req, res) => {
 
     const buffer = Buffer.from(base64String, 'base64');
 
-    // File size check: 5 MB limit
-    const MAX_SIZE = 5 * 1024 * 1024;
+    // STRICT 1 MB limit (1,048,576 bytes)
+    const MAX_SIZE = 1048576;
     if (buffer.length > MAX_SIZE) {
-      return res.status(400).json({ message: 'Image size must be less than 5 MB.' });
+      return res.status(400).json({ message: 'Image size must be 1 MB or less.' });
     }
 
-    // Magic byte validation
+    // Magic byte validation (Ensuring JPEG, PNG, or WEBP only)
     const detectedExt = isValidImageBuffer(buffer);
     if (!detectedExt) {
       return res.status(400).json({ message: 'Please select a valid JPG, PNG, or WebP image.' });
     }
 
-    const randomName = `biz_photo_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.${detectedExt}`;
+    // Server-side random filename (prevents path traversal)
+    const safeRandomName = `biz_photo_${Date.now()}_${crypto.randomBytes(8).toString('hex')}.${detectedExt}`;
     const uploadsDir = path.join(__dirname, '..', 'public', 'uploads');
     
     if (!fs.existsSync(uploadsDir)) {
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
 
-    const filePath = path.join(uploadsDir, randomName);
+    const filePath = path.join(uploadsDir, safeRandomName);
     await fs.promises.writeFile(filePath, buffer);
 
-    const publicUrl = `/uploads/${randomName}`;
+    const publicUrl = `/uploads/${safeRandomName}`;
     return res.json({ success: true, url: publicUrl });
   } catch (err) {
     console.error('Error in /api/business/upload:', err);
@@ -88,63 +92,118 @@ router.post('/upload', async (req, res) => {
   }
 });
 
-// Register business endpoint removed (temporarily disabled). See backup at backend/routes/_businessRegisterBackup.js
-
-router.use(verifyBusiness);
+// Middleware to verify authenticated business account
+const verifyBusinessAuth = [authenticate, requireRoles('business', 'admin')];
 
 // Summary endpoint for dashboard cards
-router.get('/summary', async (req, res) => {
-  const businessId = req.businessId;
-  const { count: placesCount } = await supabase.from('places').select('id', { count: 'exact', head: true }).eq('business_id', businessId);
-  const { count: pendingReviews } = await supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('business_id', businessId).eq('status', 'pending');
-  // placeholders for other counts
-  res.json({ placesCount, pendingReviews, bookings: 0, inquiries: 0, notifications: 0, supportTickets: 0, applicationStatus: 'pending' });
+router.get('/summary', verifyBusinessAuth, async (req, res) => {
+  try {
+    const businessId = req.user.supabaseId || req.user._id.toString();
+    let placesCount = 0;
+    let pendingReviews = 0;
+    if (supabase) {
+      const { count: pCount } = await supabase.from('places').select('id', { count: 'exact', head: true }).eq('business_id', businessId);
+      const { count: rCount } = await supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('business_id', businessId).eq('status', 'pending');
+      placesCount = pCount || 0;
+      pendingReviews = rCount || 0;
+    }
+    res.json({ placesCount, pendingReviews, bookings: 0, inquiries: 0, notifications: 0, supportTickets: 0, applicationStatus: req.user.businessStatus || 'approved' });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to load business summary.' });
+  }
 });
 
 // CRUD for places
-router.get('/places', async (req, res) => {
-  const { data, error } = await supabase.from('places').select('*').eq('business_id', req.businessId);
-  if (error) return res.status(400).json({ error });
-  res.json(data);
+router.get('/places', verifyBusinessAuth, async (req, res) => {
+  try {
+    const businessId = req.user.supabaseId || req.user._id.toString();
+    if (!supabase) return res.json([]);
+    const { data, error } = await supabase.from('places').select('*').eq('business_id', businessId);
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching business places.' });
+  }
 });
-router.post('/places', async (req, res) => {
-  const payload = { ...req.body, business_id: req.businessId };
-  const { error, data } = await supabase.from('places').insert(payload).single();
-  if (error) return res.status(400).json({ error });
-  res.status(201).json(data);
+
+router.post('/places', verifyBusinessAuth, async (req, res) => {
+  try {
+    const businessId = req.user.supabaseId || req.user._id.toString();
+    const payload = { ...req.body, business_id: businessId };
+    if (!supabase) return res.status(500).json({ message: 'Database service unconfigured' });
+    const { error, data } = await supabase.from('places').insert(payload).single();
+    if (error) return res.status(400).json({ error: error.message });
+    res.status(201).json(data);
+  } catch (err) {
+    res.status(500).json({ message: 'Error creating business place.' });
+  }
 });
-router.put('/places/:id', async (req, res) => {
-  const { id } = req.params;
-  const { error, data } = await supabase.from('places').update(req.body).eq('id', id).eq('business_id', req.businessId).single();
-  if (error) return res.status(400).json({ error });
-  res.json(data);
+
+router.put('/places/:id', verifyBusinessAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const businessId = req.user.supabaseId || req.user._id.toString();
+    if (!supabase) return res.status(500).json({ message: 'Database service unconfigured' });
+    const { error, data } = await supabase.from('places').update(req.body).eq('id', id).eq('business_id', businessId).single();
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ message: 'Error updating business place.' });
+  }
 });
-router.delete('/places/:id', async (req, res) => {
-  const { id } = req.params;
-  const { error } = await supabase.from('places').delete().eq('id', id).eq('business_id', req.businessId);
-  if (error) return res.status(400).json({ error });
-  res.status(204).end();
+
+router.delete('/places/:id', verifyBusinessAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const businessId = req.user.supabaseId || req.user._id.toString();
+    if (!supabase) return res.status(500).json({ message: 'Database service unconfigured' });
+    const { error } = await supabase.from('places').delete().eq('id', id).eq('business_id', businessId);
+    if (error) return res.status(400).json({ error: error.message });
+    res.status(204).end();
+  } catch (err) {
+    res.status(500).json({ message: 'Error deleting business place.' });
+  }
 });
 
 // Reviews moderation
-router.get('/reviews', async (req, res) => {
-  const { data, error } = await supabase.from('reviews').select('*').eq('business_id', req.businessId);
-  if (error) return res.status(400).json({ error });
-  res.json(data);
-});
-router.patch('/reviews/:id', async (req, res) => {
-  const { id } = req.params;
-  const { status } = req.body;
-  const { error, data } = await supabase.from('reviews').update({ status }).eq('id', id).eq('business_id', req.businessId).single();
-  if (error) return res.status(400).json({ error });
-  res.json(data);
+router.get('/reviews', verifyBusinessAuth, async (req, res) => {
+  try {
+    const businessId = req.user.supabaseId || req.user._id.toString();
+    if (!supabase) return res.json([]);
+    const { data, error } = await supabase.from('reviews').select('*').eq('business_id', businessId);
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching reviews.' });
+  }
 });
 
-// Application status (assuming a table business_applications)
-router.get('/application-status', async (req, res) => {
-  const { data, error } = await supabase.from('business_applications').select('status').eq('business_id', req.businessId).single();
-  if (error) return res.status(400).json({ error });
-  res.json(data);
+router.patch('/reviews/:id', verifyBusinessAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const businessId = req.user.supabaseId || req.user._id.toString();
+    if (!supabase) return res.status(500).json({ message: 'Database service unconfigured' });
+    const { error, data } = await supabase.from('reviews').update({ status }).eq('id', id).eq('business_id', businessId).single();
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ message: 'Error updating review status.' });
+  }
+});
+
+// Application status
+router.get('/application-status', verifyBusinessAuth, async (req, res) => {
+  try {
+    const businessId = req.user.supabaseId || req.user._id.toString();
+    if (!supabase) return res.json({ status: req.user.businessStatus || 'approved' });
+    const { data, error } = await supabase.from('business_applications').select('status').eq('business_id', businessId).single();
+    if (error) return res.json({ status: req.user.businessStatus || 'approved' });
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching application status.' });
+  }
 });
 
 module.exports = router;
+

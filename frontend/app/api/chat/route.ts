@@ -15,22 +15,30 @@ export async function POST(request: Request) {
     const apiKey = rawApiKey?.trim().replace(/^["']|["']$/g, "");
 
     if (!apiKey) {
-      console.error("Gemini API key is not configured or empty in process.env.GEMINI_API_KEY");
+      console.error("Gemini API key is missing on the server.");
       return NextResponse.json(
-        { error: "Gemini API key is not configured on the server." },
+        { error: "AI Assistant is currently unavailable. Please try again later." },
         { status: 500 }
       );
     }
 
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON request payload." }, { status: 400 });
+    }
+
     const { question, language, history = [] } = body || {};
 
-    if (!question || typeof question !== "string") {
+    if (!question || typeof question !== "string" || !question.trim()) {
       return NextResponse.json(
-        { error: "Question parameter is required." },
+        { error: "A valid question string is required." },
         { status: 400 }
       );
     }
+
+    const sanitizedQuestion = question.trim().slice(0, 1000);
 
     const langName =
       language === "hi"
@@ -49,22 +57,22 @@ Guidelines:
 
     const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [];
 
-    // Include last few messages from history if provided
+    // Include last few messages from history if provided and valid
     if (Array.isArray(history)) {
       const recentHistory = history.slice(-6);
       for (const msg of recentHistory) {
-        if (msg && typeof msg.content === "string" && msg.content.trim()) {
+        if (msg && typeof msg === "object" && typeof msg.content === "string" && msg.content.trim()) {
           const role = msg.role === "user" ? "user" : "model";
           contents.push({
             role,
-            parts: [{ text: msg.content.trim() }],
+            parts: [{ text: msg.content.trim().slice(0, 500) }],
           });
         }
       }
     }
 
     // Append user prompt with system context
-    const userPromptText = `[System Context: ${systemInstruction}]\n\nUser Question: ${question}`;
+    const userPromptText = `[System Context: ${systemInstruction}]\n\nUser Question: ${sanitizedQuestion}`;
     contents.push({
       role: "user",
       parts: [{ text: userPromptText }],
@@ -96,8 +104,8 @@ Guidelines:
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.warn(`Gemini model ${model} returned status ${response.status}: ${errorText.slice(0, 150)}`);
-          lastError = `[${model}] HTTP ${response.status}: ${errorText.slice(0, 150)}`;
+          console.warn(`Gemini model ${model} returned status ${response.status}`);
+          lastError = `[${model}] HTTP ${response.status}`;
           continue;
         }
 
@@ -120,11 +128,12 @@ Guidelines:
     }
 
     return NextResponse.json(
-      { error: "All Gemini model attempts failed", details: lastError },
+      { error: "AI Assistant is currently busy. Please try asking again in a moment." },
       { status: 502 }
     );
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("Chat API internal error:", error);
+    return NextResponse.json({ error: "An unexpected error occurred. Please try again." }, { status: 500 });
   }
 }
+

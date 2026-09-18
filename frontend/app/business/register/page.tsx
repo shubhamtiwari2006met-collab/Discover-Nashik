@@ -170,8 +170,9 @@ export default function BusinessRegisterPage() {
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setUploadError(t("Image size must be less than 5 MB."));
+    // STRICT 1 MB limit (1,048,576 bytes)
+    if (file.size > 1048576) {
+      setUploadError(t("Image size must be 1 MB or less."));
       e.target.value = "";
       return;
     }
@@ -601,7 +602,7 @@ export default function BusinessRegisterPage() {
                         {t("Option 1: Upload from Device")}
                       </span>
                       <p className="text-xs text-slate-600">
-                        {t("Select JPG, PNG, or WebP image from your gallery or files (Max 5 MB).")}
+                        {t("Select JPG, PNG, or WebP image from your gallery or files (Max 1 MB).")}
                       </p>
                     </div>
 
