@@ -29,9 +29,6 @@ const getSpeechRecognition = () => {
 
 const speechLocale: Record<Language, string> = { en: "en-IN", hi: "hi-IN", mr: "mr-IN" };
 
-const GEMINI_API_KEY = "AQ.Ab8RN6JbqFgfp4bYg5yy_sGpe3cwplhduuezpdMp3S_mqdZY9g";
-const GEMINI_MODELS = ["gemini-3.1-flash-lite"];
-
 const cleanChatReply = (reply: string) => reply
   .replace(/^\s{0,3}#{1,6}\s*/gm, "")
   .replace(/^\s*[-*+]\s+/gm, "• ")
@@ -54,7 +51,7 @@ const getPredefinedReply = (input: string, language: Language = "en") => {
   }
 
   if (value.includes("4 days")) {
-    return "Day 1: Trimbakeshwar → Panchavati → Ramkund → Goda Ghat\nDay 2: Anjaneri/Brahmagiri → Pandavleni\nDay 3: Misal(Sadhana/Grapes Embasy/Peruchi Wadi) → Isckon Temple → SwamiNarayan Temple → Tapovan\nDay 4: Sula → Famous Food → Navshya Ganpati → Gangapur Dam → Back Water\nEnjoy 'Nashik The Best Climate City'"
+    return "Day 1: Trimbakeshwar → Panchavati → Ramkund → Goda Ghat\nDay 2: Anjaneri/Brahmagiri → Pandavleni\nDay 3: Misal(Sadhana/Grapes Embasy/Peruchi Wadi) → Isckon Temple → SwamiNarayan Temple → Tapovan\nDay 4: Sula → Famous Food → Navshya Ganpati → Gangapur Dam → Back Water\nEnjoy 'Nashik The Best Climate City'";
   }
 
   if (value.includes("best time to visit")) {
@@ -90,77 +87,48 @@ const getPredefinedReply = (input: string, language: Language = "en") => {
   }
 
   if (language === "hi") return "मैं आपकी मदद कर सकता हूँ! नासिक में घूमने के लिए कई अद्भुत जगहें हैं।";
-  if (language === "mr") return "मी तुम्हाला मदत करू शकतो! नाशिकमध्ये पाहण्यासारखी अनेक सुंदर ठिकाणे आहेत.";
+  if (language === "mr") return "मी तुम्हाला मदत करू शकतो! नाशिकमध्ये पाहण्यासारखी अनेक सुंदर ठिकाणे आहेत।";
   return "I can help you with that! Discover Nashik is full of amazing places.";
 };
 
-const getGeminiReply = async (question: string, language: Language): Promise<string> => {
-  if (!navigator.onLine || !GEMINI_API_KEY) {
+const getGeminiReply = async (
+  question: string,
+  language: Language,
+  history: { role: "user" | "ai"; content: string }[] = []
+): Promise<string> => {
+  if (typeof window !== "undefined" && !navigator.onLine) {
     return getPredefinedReply(question, language);
   }
 
-  let lastError: unknown = null;
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
 
-  for (const model of GEMINI_MODELS) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 12000);
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question, language, history }),
+      signal: controller.signal,
+    });
 
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [
-              {
-                role: "user",
-                parts: [
-                  {
-                    text: `You are a helpful Nashik travel guide. Answer naturally in the user's language (${language === "hi" ? "Hindi" : language === "mr" ? "Marathi" : "English"}), matching it when possible. Preserve verified facts, names, timings, prices, emergency numbers, and database data exactly. Keep it concise. User question: ${question}`,
-                  },
-                ],
-              },
-            ],
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 300,
-            },
-          }),
-          signal: controller.signal,
-        }
-      );
+    clearTimeout(timeoutId);
 
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          lastError = new Error(`Model ${model} not found`);
-          continue;
-        }
-
-        throw new Error(`Gemini request failed with status ${response.status}`);
-      }
-
-      const data = await response.json();
-      const generatedText = data?.candidates?.[0]?.content?.parts
-        ?.map((part: { text?: string }) => part.text || "")
-        .join("")
-        .trim();
-
-      if (generatedText && generatedText.length > 10) {
-        return generatedText;
-      }
-
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      console.error(`Chat API request failed with status ${response.status}:`, errData);
       return getPredefinedReply(question, language);
-    } catch (error) {
-      lastError = error;
-      console.error(`Gemini request failed for ${model}:`, error);
     }
-  }
 
-  console.error("All Gemini model attempts failed, using predefined reply:", lastError);
-  return getPredefinedReply(question, language);
+    const data = await response.json();
+    if (data?.reply && typeof data.reply === "string" && data.reply.trim().length > 0) {
+      return data.reply.trim();
+    }
+
+    return getPredefinedReply(question, language);
+  } catch (error) {
+    console.error("Chat API request failed, using predefined reply:", error);
+    return getPredefinedReply(question, language);
+  }
 };
 
 export function ChatbotWidget() {
@@ -229,12 +197,13 @@ export function ChatbotWidget() {
     const currentInput = input.trim();
     if (!currentInput) return;
 
+    const currentHistory = [...messages];
     setMessages(prev => [...prev, { role: "user", content: currentInput }]);
     setInput("");
     setIsLoading(true);
 
     try {
-      const reply = await getGeminiReply(currentInput, language);
+      const reply = await getGeminiReply(currentInput, language, currentHistory);
       const cleanedReply = cleanChatReply(reply);
       setMessages(prev => [...prev, { role: "ai", content: cleanedReply }]);
       speak(cleanedReply);
