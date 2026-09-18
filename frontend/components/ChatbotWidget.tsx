@@ -100,18 +100,16 @@ const getGeminiReply = async (
     return getPredefinedReply(question, language);
   }
 
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 20000);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 35000);
 
+  try {
     const response = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question, language, history }),
       signal: controller.signal,
     });
-
-    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
@@ -125,9 +123,15 @@ const getGeminiReply = async (
     }
 
     return getPredefinedReply(question, language);
-  } catch (error) {
-    console.error("Chat API request failed, using predefined reply:", error);
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === "AbortError") {
+      console.warn("Chat API request timed out, using predefined reply.");
+    } else {
+      console.error("Chat API request failed, using predefined reply:", error);
+    }
     return getPredefinedReply(question, language);
+  } finally {
+    clearTimeout(timeoutId);
   }
 };
 

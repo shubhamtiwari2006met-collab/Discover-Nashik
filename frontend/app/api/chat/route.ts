@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 
 const GEMINI_MODELS = [
-  "gemini-3.6-flash",
+  "gemini-3.5-flash-lite",
   "gemini-3.5-flash",
-  "gemini-3.5-flash-lite"
+  "gemini-3.1-flash-lite",
+  "gemini-flash-latest",
+  "gemini-flash-lite-latest",
+  "gemini-3.6-flash"
 ];
 
 export async function POST(request: Request) {
@@ -70,10 +73,10 @@ Guidelines:
     let lastError: string | null = null;
 
     for (const model of GEMINI_MODELS) {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 18000);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 12000);
 
+      try {
         const response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
           {
@@ -91,12 +94,10 @@ Guidelines:
           }
         );
 
-        clearTimeout(timeoutId);
-
         if (!response.ok) {
           const errorText = await response.text();
-          console.error(`Gemini model ${model} failed with status ${response.status}:`, errorText);
-          lastError = `[${model}] HTTP ${response.status}: ${errorText.slice(0, 200)}`;
+          console.warn(`Gemini model ${model} returned status ${response.status}: ${errorText.slice(0, 150)}`);
+          lastError = `[${model}] HTTP ${response.status}: ${errorText.slice(0, 150)}`;
           continue;
         }
 
@@ -112,7 +113,9 @@ Guidelines:
         }
       } catch (err: unknown) {
         lastError = err instanceof Error ? err.message : String(err);
-        console.error(`Gemini fetch error for ${model}:`, err);
+        console.warn(`Gemini fetch error for model ${model}:`, lastError);
+      } finally {
+        clearTimeout(timeoutId);
       }
     }
 
