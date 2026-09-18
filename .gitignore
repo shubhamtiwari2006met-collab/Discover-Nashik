@@ -19,6 +19,10 @@ __pycache__/
 .venv/
 venv/
 
+# Uploads
+Backend/public/uploads/*
+!Backend/public/uploads/.gitkeep
+
 # OS
 .DS_Store
 Thumbs.db

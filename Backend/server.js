@@ -2,7 +2,15 @@ const express = require("express");
 const mongoose = require("mongoose");
 const dns = require("dns");
 const cors = require("cors");
+const path = require("path");
+const fs = require("fs");
 require("dotenv").config();
+
+// Ensure public/uploads directory exists
+const uploadsDir = path.join(__dirname, "public", "uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 // Route files
 const placeRoutes = require("./routes/placeRoutes");
@@ -14,6 +22,9 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+// Serve uploaded static files
+app.use("/uploads", express.static(uploadsDir));
 
 // DNS config
 dns.setServers(["8.8.8.8", "1.1.1.1"]);

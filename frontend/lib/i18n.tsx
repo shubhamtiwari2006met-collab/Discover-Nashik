@@ -517,9 +517,18 @@ const translations: Record<Language, Record<string, string>> = {
     "Open in Maps": "मानचित्र में खोलें",
     "Visit Website": "वेबसाइट पर जाएं",
     "Opening Hours": "खुलने का समय",
-    "Photos & Gallery": "फ़ोटो और गैलरी",
-    "Similar Places": "समान स्थान",
-    "About this place": "इस स्थान के बारे में",
+    // Business Photo Upload
+    "Upload Business Photo": "व्यवसाय फोटो अपलोड करें",
+    "Or enter Image URL": "या इमेज URL दर्ज करें",
+    "Remove Photo": "फोटो हटाएं",
+    "Change Photo": "फोटो बदलें",
+    "Please select a valid JPG, PNG, or WebP image.": "कृपया एक वैध JPG, PNG या WebP इमेज चुनें।",
+    "Image size must be less than 5 MB.": "इमेज का आकार 5 MB से कम होना चाहिए।",
+    "Unable to upload image. Please try again.": "इमेज अपलोड करने में असमर्थ। कृपया पुनः प्रयास करें।",
+    "Uploading photo...": "फोटो अपलोड हो रहा है...",
+    "Photo uploaded successfully": "फोटो सफलतापूर्वक अपलोड हो गया",
+    "Option 1: Upload from Device": "विकल्प 1: डिवाइस से अपलोड करें",
+    "Option 2: Image URL": "विकल्प 2: इमेज URL",
   },
   mr: {
     // Navigation & Global Header/Footer
@@ -1032,9 +1041,18 @@ const translations: Record<Language, Record<string, string>> = {
     "Open in Maps": "नकाशामध्ये उघडा",
     "Visit Website": "वेबसाइटला भेट द्या",
     "Opening Hours": "उघडण्याची वेळ",
-    "Photos & Gallery": "फोटो आणि गॅलरी",
-    "Similar Places": "समान ठिकाणे",
-    "About this place": "या ठिकाणाबद्दल",
+    // Business Photo Upload
+    "Upload Business Photo": "व्यवसाय फोटो अपलोड करा",
+    "Or enter Image URL": "किंवा इमेज URL प्रविष्ट करा",
+    "Remove Photo": "फोटो हटवा",
+    "Change Photo": "फोटो बदला",
+    "Please select a valid JPG, PNG, or WebP image.": "कृपया वैध JPG, PNG किंवा WebP इमेज निवडा.",
+    "Image size must be less than 5 MB.": "इमेजचा आकार 5 MB पेक्षा कमी असावा.",
+    "Unable to upload image. Please try again.": "इमेज अपलोड करण्यात अक्षम. कृपया पुन्हा प्रयत्न करा.",
+    "Uploading photo...": "फोटो अपलोड होत आहे...",
+    "Photo uploaded successfully": "फोटो यशस्वीरित्या अपलोड झाला",
+    "Option 1: Upload from Device": "पर्याय १: डिव्हाइसवरून अपलोड करा",
+    "Option 2: Image URL": "पर्याय २: इमेज URL",
   },
 };
 
