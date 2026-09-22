@@ -46,7 +46,7 @@ async function purgeSamplePlacesFromDb() {
 // @route   GET /api/places
 exports.getPlaces = async (req, res) => {
   try {
-    await purgeSamplePlacesFromDb();
+    // purgeSamplePlacesFromDb removed – no DB write on each request
     let query = {};
     if (typeof req.query.category === 'string' && req.query.category.trim()) {
       query.category = new RegExp(escapeRegex(req.query.category.trim()), 'i');
