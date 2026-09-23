@@ -56,8 +56,8 @@ export default function KumbhPage() {
                     {t("Explore")} <ArrowRight className="h-3.5 w-3.5" />
                   </span>
                 </div>
-                <h2 className="mt-6 text-xl font-bold text-slate-900 dark:text-white group-hover:text-orange-600 transition-colors">{t(title)}</h2>
-                <p className="mt-2 leading-7 text-slate-600 dark:text-slate-400">{t(text)}</p>
+                <h2 className="mt-6 text-xl font-bold text-[#173247] group-hover:text-orange-600 transition-colors">{t(title)}</h2>
+                <p className="mt-2 leading-7 text-[#667883]">{t(text)}</p>
               </div>
               <div className="mt-6 flex items-center font-semibold text-orange-600 text-sm">
                 <span>{t("View Details")}</span>

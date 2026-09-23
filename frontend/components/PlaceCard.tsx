@@ -42,6 +42,9 @@ export function PlaceCard({ place }: { place: Place }) {
   const dist = place.distance ?? place.distance_km;
   const formattedDist = formatDistance(dist);
 
+  const phone = typeof place.phone === "string" ? place.phone.trim() : "";
+  const hasValidPhone = Boolean(phone) && !["n/a", "na", "none", "null", "undefined"].includes(phone.toLowerCase());
+
   return (
     <motion.div
       whileHover={{ y: -5 }}
@@ -105,16 +108,16 @@ export function PlaceCard({ place }: { place: Place }) {
           <Link href={`/place/${place._id}`} className="flex-1 rounded-xl bg-[#f97316] px-3 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-[#ea580c]">
             {t("Explore")}
           </Link>
-          {place.phone ? (
+          {hasValidPhone && (
             <a
-              href={`tel:${place.phone}`}
+              href={`tel:${phone}`}
               className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-500 bg-emerald-50 px-3 py-2.5 text-center text-sm font-semibold text-emerald-800 transition-colors hover:bg-emerald-100"
-              title={`Call ${place.phone}`}
+              title={`Call ${phone}`}
             >
               <Phone className="h-4 w-4 text-emerald-700" />
               <span>{t("Call")}</span>
             </a>
-          ) : null}
+          )}
           <a
             href={place.mapLink || (place.latitude && place.longitude ? `https://www.google.com/maps/search/?api=1&query=${place.latitude},${place.longitude}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.name}, ${place.location}`)}`)}
             target="_blank"
