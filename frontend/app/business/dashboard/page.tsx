@@ -9,6 +9,7 @@ import {
   Clock, Tag, ShieldCheck, TrendingUp, Calendar, Info, Users, Image as ImageIcon
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import { parsePhotoList, normalizeImageUrl, DEFAULT_FALLBACK_IMAGE } from "@/lib/imageUrl";
 
 type BusinessRegistration = {
   id: string;
@@ -296,8 +297,19 @@ export default function BusinessDashboardPage() {
                     <div className="sm:col-span-2">
                       <span className="text-xs font-bold uppercase text-[#667883]">Photos</span>
                       <div className="mt-3 grid grid-cols-3 gap-3">
-                        {reg.photos.split("\n").filter(Boolean).map((photo, i) => (
-                          <img key={i} src={photo} alt={`Photo ${i + 1}`} className="h-28 w-full rounded-2xl object-cover border border-[#e1cfb0]" />
+                        {parsePhotoList(reg.photos).map((photo, i) => (
+                          <img
+                            key={i}
+                            src={normalizeImageUrl(photo)}
+                            alt={`Photo ${i + 1}`}
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              if (target.src !== DEFAULT_FALLBACK_IMAGE) {
+                                target.src = DEFAULT_FALLBACK_IMAGE;
+                              }
+                            }}
+                            className="h-28 w-full rounded-2xl object-cover border border-[#e1cfb0]"
+                          />
                         ))}
                       </div>
                     </div>

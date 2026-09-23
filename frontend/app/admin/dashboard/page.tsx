@@ -29,6 +29,7 @@ import {
   X,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import { parsePhotoList, normalizeImageUrl, DEFAULT_FALLBACK_IMAGE } from "@/lib/imageUrl";
 
 type BusinessRegistration = {
   id: string;
@@ -1027,8 +1028,19 @@ function AdminDashboardContent() {
                   <div>
                     <span className="text-xs font-bold text-[#667883] uppercase">Attached Photos</span>
                     <div className="mt-2 grid grid-cols-2 gap-2">
-                      {selectedBusiness.photos.split("\n").filter(Boolean).map((url, i) => (
-                        <img key={i} src={url} alt={`Photo ${i + 1}`} className="h-32 w-full rounded-xl object-cover border border-[#e1cfb0]" />
+                      {parsePhotoList(selectedBusiness.photos).map((url, i) => (
+                        <img
+                          key={i}
+                          src={normalizeImageUrl(url)}
+                          alt={`Photo ${i + 1}`}
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            if (target.src !== DEFAULT_FALLBACK_IMAGE) {
+                              target.src = DEFAULT_FALLBACK_IMAGE;
+                            }
+                          }}
+                          className="h-32 w-full rounded-xl object-cover border border-[#e1cfb0]"
+                        />
                       ))}
                     </div>
                   </div>

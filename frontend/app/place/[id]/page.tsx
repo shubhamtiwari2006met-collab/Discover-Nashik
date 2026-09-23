@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Clock, Globe, Mail, MapPin, Pencil, Phone, Save, Star, Trash2 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { createClient } from "@/utils/supabase/client";
+import { parsePhotoList, normalizeImageUrl, DEFAULT_FALLBACK_IMAGE } from "@/lib/imageUrl";
 
 type PlaceRecord = {
   _id: string;
@@ -79,14 +80,14 @@ export default function PlacePage() {
           .maybeSingle();
 
         if (bus) {
-          const photos = bus.photos ? String(bus.photos).split(/[\n,]/).map((s: string) => s.trim()).filter(Boolean) : [];
+          const photos = parsePhotoList(bus.photos);
           const item: PlaceRecord = {
             _id: bus.id,
             name: bus.business_name,
             category: bus.category,
             location: bus.city_area ? `${bus.city_area}, ${bus.address}` : bus.address,
             description: bus.description || `${bus.business_name} in ${bus.address}`,
-            image: photos[0] || "https://images.unsplash.com/photo-1596700508005-4f05ab04c997?auto=format&fit=crop&w=800&q=80",
+            image: photos[0] || DEFAULT_FALLBACK_IMAGE,
             images: photos.length > 0 ? photos : undefined,
             rating: 4.8,
             mapLink: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${bus.business_name}, ${bus.address}`)}`,

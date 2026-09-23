@@ -6,6 +6,7 @@ import { useEffect, useState, FormEvent } from "react";
 import { Menu, X, Users, Languages, ChevronDown, LogIn } from "lucide-react";
 import { useTranslation, type Language } from "@/lib/i18n";
 import { createClient } from "@/utils/supabase/client";
+import logo from "@/assets/DN.logo.png"
 
 const supabase = createClient();
 
@@ -161,14 +162,14 @@ export function NavBar() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-[#d8c4a3] bg-[#fffdf8]/95 shadow-[0_3px_18px_rgba(74,55,31,0.08)] backdrop-blur-md">
       <div className="mx-auto flex h-16 items-center justify-between px-4 md:px-8">
-        <Link href="/" className="flex items-center space-x-2">
+        <Link href="/" className="flex items-center space-x-2 shrink-0">
           <Image
-            src="/images/discover-nashik-logo.svg"
+            src={logo}
             alt="Discover Nashik Logo"
             width={56}
             height={56}
             priority
-            className="h-14 w-14"
+            className="h-14 w-14 object-contain shrink-0"
           />
           <span className="text-lg font-bold tracking-tight text-[#173247] sm:text-xl">
             <span>Discover</span> <span className="text-[#e86f18]">Nashik</span>
@@ -333,7 +334,7 @@ export function NavBar() {
                 handleGroupTrackerClick();
                 setIsOpen(false);
               }}
-              className="relative flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 py-3 text-base font-bold text-white shadow-lg shadow-orange-500/25 transition-all hover:-translate-y-0.5 hover:bg-orange-600"
+              className="relative flex items-center justify-center gap-1.5 rounded-full border border-[#e7b06d] bg-[#fff7ed] px-3 py-2 text-sm font-bold text-[#c9580f] transition-colors hover:bg-[#ffedd5]"
             >
               <Users className="h-5 w-5" />
               {t("Group Tracker")}

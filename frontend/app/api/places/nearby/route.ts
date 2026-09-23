@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { resolveCategory } from "@/lib/categories";
+import { parsePhotoList } from "@/lib/imageUrl";
 
 export async function GET(request: NextRequest) {
   try {
@@ -91,7 +92,7 @@ export async function GET(request: NextRequest) {
             latitude: b.latitude,
             longitude: b.longitude,
             distance_km: distKm,
-            image: parsePhoto(b.photos),
+            image: parsePhotoList(b.photos)[0],
             verified: true,
             isApprovedBusiness: true,
           };
@@ -123,7 +124,7 @@ export async function GET(request: NextRequest) {
       longitude: b.longitude,
       distance: b.distance_km,
       distance_km: b.distance_km,
-      image: parsePhoto(b.photos),
+      image: parsePhotoList(b.photos)[0],
       verified: true,
       isApprovedBusiness: true,
     }));
@@ -133,20 +134,6 @@ export async function GET(request: NextRequest) {
     console.error("GET /api/places/nearby error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}
-
-function parsePhoto(photos: any): string {
-  if (!photos) return "https://images.unsplash.com/photo-1570168007204-dfb528c6958f?w=800&auto=format&fit=crop&q=60";
-  if (typeof photos === "string") {
-    try {
-      const parsed = JSON.parse(photos);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed[0];
-    } catch {
-      if (photos.startsWith("http")) return photos;
-    }
-  }
-  if (Array.isArray(photos) && photos.length > 0) return photos[0];
-  return "https://images.unsplash.com/photo-1570168007204-dfb528c6958f?w=800&auto=format&fit=crop&q=60";
 }
 
 function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
