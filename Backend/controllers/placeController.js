@@ -1,6 +1,38 @@
 const Place = require('../models/Place');
 const Business = require('../models/Business');
 
+function escapeRegex(text) {
+  if (typeof text !== 'string') return '';
+  return text.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+}
+
+function getPermittedPlaceFields(body) {
+  if (!body || typeof body !== 'object') return {};
+  const allowed = [
+    'name',
+    'category',
+    'location',
+    'description',
+    'image',
+    'images',
+    'rating',
+    'phone',
+    'email',
+    'openingHours',
+    'entryFee',
+    'latitude',
+    'longitude',
+    'website'
+  ];
+  const clean = {};
+  for (const field of allowed) {
+    if (Object.prototype.hasOwnProperty.call(body, field)) {
+      clean[field] = body[field];
+    }
+  }
+  return clean;
+}
+
 async function purgeSamplePlacesFromDb() {
   try {
     // Delete all place documents to ensure no sample data remains
@@ -14,13 +46,13 @@ async function purgeSamplePlacesFromDb() {
 // @route   GET /api/places
 exports.getPlaces = async (req, res) => {
   try {
-    await purgeSamplePlacesFromDb();
+    // purgeSamplePlacesFromDb removed – no DB write on each request
     let query = {};
-    if (req.query.category) {
-      query.category = new RegExp(req.query.category, 'i');
+    if (typeof req.query.category === 'string' && req.query.category.trim()) {
+      query.category = new RegExp(escapeRegex(req.query.category.trim()), 'i');
     }
-    if (req.query.search) {
-      query.name = new RegExp(req.query.search, 'i');
+    if (typeof req.query.search === 'string' && req.query.search.trim()) {
+      query.name = new RegExp(escapeRegex(req.query.search.trim()), 'i');
     }
 
     const places = await Place.find(query);
@@ -28,14 +60,15 @@ exports.getPlaces = async (req, res) => {
     let approvedBusinesses = [];
     try {
       let businessQuery = { verificationStatus: 'approved' };
-      if (req.query.category) {
-        businessQuery.businessType = new RegExp(req.query.category, 'i');
+      if (typeof req.query.category === 'string' && req.query.category.trim()) {
+        businessQuery.businessType = new RegExp(escapeRegex(req.query.category.trim()), 'i');
       }
-      if (req.query.search) {
+      if (typeof req.query.search === 'string' && req.query.search.trim()) {
+        const searchPattern = new RegExp(escapeRegex(req.query.search.trim()), 'i');
         businessQuery.$or = [
-          { businessName: new RegExp(req.query.search, 'i') },
-          { description: new RegExp(req.query.search, 'i') },
-          { address: new RegExp(req.query.search, 'i') },
+          { businessName: searchPattern },
+          { description: searchPattern },
+          { address: searchPattern },
         ];
       }
       approvedBusinesses = await Business.find(businessQuery);
@@ -59,7 +92,7 @@ exports.getPlaces = async (req, res) => {
 
     res.status(200).json([...formattedBusinesses, ...places]);
   } catch (error) {
-    res.status(500).json({ message: 'Server Error', error: error.message });
+    res.status(500).json({ message: 'Unable to fetch places' });
   }
 };
 
@@ -67,10 +100,11 @@ exports.getPlaces = async (req, res) => {
 // @route   GET /api/places/:id
 exports.getPlaceById = async (req, res) => {
   try {
-    let place = await Place.findById(req.params.id).catch(() => null);
+    const id = String(req.params.id || '');
+    let place = await Place.findById(id).catch(() => null);
     if (!place && Business) {
       try {
-        const business = await Business.findOne({ _id: req.params.id, verificationStatus: 'approved' });
+        const business = await Business.findOne({ _id: id, verificationStatus: 'approved' });
         if (business) {
           place = {
             _id: business._id.toString(),
@@ -94,49 +128,68 @@ exports.getPlaceById = async (req, res) => {
     }
     res.status(200).json(place);
   } catch (error) {
-    res.status(500).json({ message: 'Server Error', error: error.message });
+    res.status(500).json({ message: 'Error retrieving place details' });
   }
 };
 
-// @desc    Create a new place
+// @desc    Create a new place (Explicit field allowlisting prevents Mass Assignment)
 // @route   POST /api/places
 exports.createPlace = async (req, res) => {
   try {
-    const place = await Place.create({ ...req.body, createdBy: req.user._id });
+    const permittedFields = getPermittedPlaceFields(req.body);
+    if (!permittedFields.name) {
+      return res.status(400).json({ message: 'Place name is required' });
+    }
+    const place = await Place.create({
+      ...permittedFields,
+      createdBy: req.user._id
+    });
     res.status(201).json(place);
   } catch (error) {
-    res.status(400).json({ message: 'Bad Request', error: error.message });
+    res.status(400).json({ message: 'Invalid place data submitted' });
   }
 };
 
+// @desc    Update an existing place
+// @route   PUT /api/places/:id
 exports.updatePlace = async (req, res) => {
   try {
     const place = await Place.findById(req.params.id);
     if (!place) return res.status(404).json({ message: 'Place not found' });
-    if (req.user.role !== 'admin' && String(place.createdBy) !== String(req.user._id)) {
+    
+    // Authorization & Ownership Check
+    const isOwner = String(place.createdBy) === String(req.user._id);
+    const isAdmin = req.user.role === 'admin' || req.user.isPrimaryAdmin;
+    if (!isAdmin && !isOwner) {
       return res.status(403).json({ message: 'You can only edit places you created' });
     }
 
-    Object.assign(place, req.body, { createdBy: place.createdBy || req.user._id });
+    const permittedFields = getPermittedPlaceFields(req.body);
+    Object.assign(place, permittedFields, { createdBy: place.createdBy || req.user._id });
     await place.save();
     res.status(200).json(place);
   } catch (error) {
-    res.status(400).json({ message: 'Bad Request', error: error.message });
+    res.status(400).json({ message: 'Failed to update place' });
   }
 };
 
+// @desc    Delete a place
+// @route   DELETE /api/places/:id
 exports.deletePlace = async (req, res) => {
   try {
     const place = await Place.findById(req.params.id);
     if (!place) return res.status(404).json({ message: 'Place not found' });
-    if (req.user.role !== 'admin' && String(place.createdBy) !== String(req.user._id)) {
+    
+    const isOwner = String(place.createdBy) === String(req.user._id);
+    const isAdmin = req.user.role === 'admin' || req.user.isPrimaryAdmin;
+    if (!isAdmin && !isOwner) {
       return res.status(403).json({ message: 'You can only delete places you created' });
     }
 
     await place.deleteOne();
     res.status(200).json({ success: true, deletedId: req.params.id });
   } catch (error) {
-    res.status(400).json({ message: 'Bad Request', error: error.message });
+    res.status(400).json({ message: 'Failed to delete place' });
   }
 };
 
@@ -184,6 +237,7 @@ exports.seedPlaces = async (req, res) => {
     const places = await Place.insertMany(mockPlaces);
     res.status(201).json({ message: "Mock data seeded successfully", count: places.length });
   } catch (error) {
-    res.status(500).json({ message: 'Server Error', error: error.message });
+    res.status(500).json({ message: 'Server error while seeding data' });
   }
 };
+

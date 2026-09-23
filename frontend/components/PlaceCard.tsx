@@ -6,6 +6,7 @@ import { MapPin, Star, Phone, CheckCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTranslation } from "@/lib/i18n";
 import { formatDistance } from "@/lib/distance";
+import { normalizeImageUrl, DEFAULT_FALLBACK_IMAGE } from "@/lib/imageUrl";
 
 export interface Place {
   _id: string;
@@ -37,7 +38,7 @@ export interface Place {
 
 export function PlaceCard({ place }: { place: Place }) {
   const { t } = useTranslation();
-  const imageUrl = place.image || `https://source.unsplash.com/400x300/?${encodeURIComponent(place.category)},nashik`;
+  const imageUrl = normalizeImageUrl(place.image, DEFAULT_FALLBACK_IMAGE);
   const dist = place.distance ?? place.distance_km;
   const formattedDist = formatDistance(dist);
 
@@ -52,6 +53,12 @@ export function PlaceCard({ place }: { place: Place }) {
         <img
           src={imageUrl}
           alt={place.name}
+          onError={(e) => {
+            const target = e.currentTarget;
+            if (target.src !== DEFAULT_FALLBACK_IMAGE) {
+              target.src = DEFAULT_FALLBACK_IMAGE;
+            }
+          }}
           className="relative z-10 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
         <div className="absolute right-4 top-4 z-20 flex items-center space-x-1 rounded-full bg-[#fff7ed]/90 dark:bg-stone-800/90 px-2.5 py-1 shadow-sm backdrop-blur-sm">

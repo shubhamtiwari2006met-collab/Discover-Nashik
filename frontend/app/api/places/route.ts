@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/utils/supabase/server";
+import { normalizeImageUrl, parsePhotoList, DEFAULT_FALLBACK_IMAGE } from "@/lib/imageUrl";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -41,8 +42,8 @@ function getStaticPlaces(): SavedPlace[] {
     tagline: p.tagline,
     famousThing: p.famousThing,
     mapLink: p.mapLink,
-    image: p.image,
-    images: p.images || (p.image ? [p.image] : []),
+    image: normalizeImageUrl(p.image),
+    images: (p.images || (p.image ? [p.image] : [])).map(img => normalizeImageUrl(img)),
     rating: p.rating,
     phone: p.phone,
     email: p.email,
@@ -99,15 +100,15 @@ function normalizePlace(payload: unknown): SavedPlace | null {
 
   let images: string[] = [];
   if (Array.isArray(data.images)) {
-    images = data.images.map(String).map(s => s.trim()).filter(Boolean);
-  } else if (typeof data.photos === "string") {
-    images = data.photos.split(/[\n,]/).map(s => s.trim()).filter(Boolean);
+    images = parsePhotoList(data.images);
+  } else if (typeof data.photos === "string" && data.photos.trim()) {
+    images = parsePhotoList(data.photos);
   } else if (data.image || data.imageUrl) {
-    images = [String(data.image || data.imageUrl).trim()];
+    images = [normalizeImageUrl(String(data.image || data.imageUrl))];
   }
 
   images = images.slice(0, 6);
-  const primaryImage = images[0] || "https://images.unsplash.com/photo-1596700508005-4f05ab04c997?auto=format&fit=crop&w=800&q=80";
+  const primaryImage = images[0] || DEFAULT_FALLBACK_IMAGE;
 
   return {
     _id: String(data._id || data.id || `place-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`),
@@ -153,14 +154,8 @@ export async function GET() {
 
       if (businesses && businesses.length > 0) {
         registeredPlaces = businesses.map((b: any) => {
-          let allPhotos: string[] = [];
-          if (b.photos) {
-            allPhotos = String(b.photos)
-              .split(/[\n,]/)
-              .map((s: string) => s.trim())
-              .filter(Boolean);
-          }
-          const firstPhoto = allPhotos[0] || "https://images.unsplash.com/photo-1596700508005-4f05ab04c997?auto=format&fit=crop&w=800&q=80";
+          const allPhotos = parsePhotoList(b.photos);
+          const firstPhoto = allPhotos[0] || DEFAULT_FALLBACK_IMAGE;
           return {
             _id: b.id,
             name: b.business_name,

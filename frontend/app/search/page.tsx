@@ -9,6 +9,7 @@ import { useTranslation } from "@/lib/i18n";
 import { resolveCategory } from "@/lib/categories";
 import { createClient } from "@/utils/supabase/client";
 import { calculateHaversineDistance } from "@/lib/distance";
+import { parsePhotoList, DEFAULT_FALLBACK_IMAGE } from "@/lib/imageUrl";
 
 function SearchResults() {
   const params = useSearchParams();
@@ -42,13 +43,8 @@ function SearchResults() {
         }
 
         const registeredPlaces: Place[] = (businesses || []).map((b: any) => {
-          let firstPhoto: string | undefined = undefined;
-          if (b.photos) {
-            const lines = String(b.photos).split("\n").filter(Boolean);
-            if (lines.length > 0) {
-              firstPhoto = lines[0].split(",")[0].trim();
-            }
-          }
+          const photos = parsePhotoList(b.photos);
+          const firstPhoto = photos[0] || DEFAULT_FALLBACK_IMAGE;
           return {
             _id: b.id,
             name: b.business_name,
@@ -62,7 +58,8 @@ function SearchResults() {
             longitude: b.longitude != null ? Number(b.longitude) : undefined,
             verified: true,
             isApprovedBusiness: true,
-            image: firstPhoto || "https://images.unsplash.com/photo-1596700508005-4f05ab04c997?auto=format&fit=crop&w=800&q=80",
+            image: firstPhoto,
+            images: photos,
             mapLink: b.latitude && b.longitude
               ? `https://www.google.com/maps/search/?api=1&query=${b.latitude},${b.longitude}`
               : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${b.business_name}, ${b.address}`)}`,

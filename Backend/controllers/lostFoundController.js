@@ -49,7 +49,7 @@ async function purgeSampleReportsFromDb() {
 // 1. GET /api/kumbh/lost-found — Public published reports
 exports.getPublicReports = async (req, res) => {
   try {
-    await purgeSampleReportsFromDb();
+    // purgeSampleReportsFromDb removed – no DB write on each request
     const { reportType, category, search, status, page = 1, limit = 30 } = req.query;
 
     const query = {

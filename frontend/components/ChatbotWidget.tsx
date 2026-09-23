@@ -145,30 +145,81 @@ export function ChatbotWidget() {
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [speakingIndex, setSpeakingIndex] = useState<number | null>(null);
   const voiceAvailable = typeof window !== "undefined" && Boolean(window.speechSynthesis || getSpeechRecognition());
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const activeSpeechIdRef = useRef<number>(0);
 
+  const stopSpeaking = () => {
+    activeSpeechIdRef.current += 1;
+    if (typeof window !== "undefined") {
+      window.speechSynthesis?.cancel();
+    }
+    setIsSpeaking(false);
+    setSpeakingIndex(null);
+  };
+
+  // Component unmount cleanup
   useEffect(() => {
     return () => {
       recognitionRef.current?.stop();
-      window.speechSynthesis?.cancel();
+      if (typeof window !== "undefined") {
+        window.speechSynthesis?.cancel();
+      }
     };
   }, []);
 
-  const speak = (text: string) => {
-    if (!window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = speechLocale[language];
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
-    window.speechSynthesis.speak(utterance);
-  };
+  // Cancel speech whenever the chatbot is closed or language is changed
+  useEffect(() => {
+    if (!isOpen) {
+      stopSpeaking();
+    }
+  }, [isOpen]);
 
-  const stopSpeaking = () => {
-    window.speechSynthesis?.cancel();
-    setIsSpeaking(false);
+  useEffect(() => {
+    stopSpeaking();
+  }, [language]);
+
+  const speak = (text: string, index: number) => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+
+    // Increment active speech ID so stale callbacks from older speech cannot overwrite new state
+    activeSpeechIdRef.current += 1;
+    const currentSpeechId = activeSpeechIdRef.current;
+
+    // Cancel any current speech before starting new utterance (prevents queue buildup)
+    window.speechSynthesis.cancel();
+
+    const utteranceText = text.replace(/•/g, "").trim();
+    if (!utteranceText) return;
+
+    const utterance = new SpeechSynthesisUtterance(utteranceText);
+    utterance.lang = speechLocale[language] || "en-IN";
+
+    utterance.onstart = () => {
+      if (activeSpeechIdRef.current === currentSpeechId) {
+        setIsSpeaking(true);
+        setSpeakingIndex(index);
+      }
+    };
+
+    utterance.onend = () => {
+      if (activeSpeechIdRef.current === currentSpeechId) {
+        setIsSpeaking(false);
+        setSpeakingIndex(null);
+      }
+    };
+
+    utterance.onerror = () => {
+      if (activeSpeechIdRef.current === currentSpeechId) {
+        setIsSpeaking(false);
+        setSpeakingIndex(null);
+      }
+    };
+
+    setIsSpeaking(true);
+    setSpeakingIndex(index);
+    window.speechSynthesis.speak(utterance);
   };
 
   const toggleVoiceInput = () => {
@@ -201,6 +252,9 @@ export function ChatbotWidget() {
     const currentInput = input.trim();
     if (!currentInput) return;
 
+    // IMMEDIATELY interrupt and stop any ongoing speech when the user submits a new question
+    stopSpeaking();
+
     const currentHistory = [...messages];
     setMessages(prev => [...prev, { role: "user", content: currentInput }]);
     setInput("");
@@ -210,15 +264,29 @@ export function ChatbotWidget() {
       const reply = await getGeminiReply(currentInput, language, currentHistory);
       const cleanedReply = cleanChatReply(reply);
       setMessages(prev => [...prev, { role: "ai", content: cleanedReply }]);
-      speak(cleanedReply);
+      // Note: Automatic speech removed as per requirements. Speech is triggered strictly on user click.
     } catch (error) {
       console.error("Chat request failed:", error);
       const fallbackReply = cleanChatReply(getPredefinedReply(currentInput, language));
       setMessages(prev => [...prev, { role: "ai", content: fallbackReply }]);
-      speak(fallbackReply);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const closeChatbot = () => {
+    stopSpeaking();
+    setIsOpen(false);
+  };
+
+  const toggleOpen = () => {
+    setIsOpen(prev => {
+      const nextState = !prev;
+      if (!nextState) {
+        stopSpeaking();
+      }
+      return nextState;
+    });
   };
 
   return (
@@ -251,7 +319,7 @@ export function ChatbotWidget() {
                   </p>
                 </div>
               </div>
-              <button onClick={() => setIsOpen(false)} className="rounded-full p-2 text-orange-50 transition-colors hover:bg-white/15" aria-label="Close chatbot">
+              <button onClick={closeChatbot} className="rounded-full p-2 text-orange-50 transition-colors hover:bg-white/15" aria-label="Close chatbot">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -269,11 +337,17 @@ export function ChatbotWidget() {
                     {msg.role === "ai" && voiceAvailable && (
                       <button
                         type="button"
-                        onClick={() => isSpeaking ? stopSpeaking() : speak(msg.content)}
+                        onClick={() => {
+                          if (speakingIndex === i) {
+                            stopSpeaking();
+                          } else {
+                            speak(msg.content, i);
+                          }
+                        }}
                         className="absolute -bottom-2 -right-2 rounded-full border border-orange-100 bg-white p-1.5 text-orange-600 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 focus:opacity-100 dark:border-slate-700 dark:bg-slate-800 dark:text-orange-300"
-                        aria-label={isSpeaking ? t("Stop reading") : t("Read aloud")}
+                        aria-label={speakingIndex === i ? t("Stop reading") : t("Read aloud")}
                       >
-                        {isSpeaking ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+                        {speakingIndex === i ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
                       </button>
                     )}
                   </div>
@@ -326,7 +400,7 @@ export function ChatbotWidget() {
       <motion.button
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={toggleOpen}
         suppressHydrationWarning
         className="group fixed bottom-6 right-4 z-50 flex h-[62px] w-[62px] items-center justify-center rounded-full border-4 border-[#fff7ed] bg-[#ea580c] text-white shadow-[0_10px_30px_rgba(234,88,12,0.38)] transition-all hover:bg-[#c2410c] hover:shadow-[0_12px_34px_rgba(234,88,12,0.5)] dark:border-[#1a120f] md:right-8"
         aria-label={isOpen ? "Close chatbot" : "Open Nashik AI Guide"}
@@ -337,3 +411,4 @@ export function ChatbotWidget() {
     </>
   );
 }
+
