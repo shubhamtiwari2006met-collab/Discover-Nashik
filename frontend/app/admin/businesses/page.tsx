@@ -4,5 +4,5 @@ import React from "react";
 import AdminDashboardPage from "../dashboard/page";
 
 export default function AdminBusinessesPage() {
-  return <AdminDashboardPage />;
+  return <AdminDashboardPage defaultFilter="approved" />;
 }

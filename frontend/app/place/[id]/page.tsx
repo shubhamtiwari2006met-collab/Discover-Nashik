@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Clock, Globe, Mail, MapPin, Pencil, Phone, Save, Star, Trash2 } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Clock, Globe, Landmark, Mail, MapPin, Pencil, Phone, Save, Star, Trash2 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { createClient } from "@/utils/supabase/client";
 import { parsePhotoList, normalizeImageUrl, DEFAULT_FALLBACK_IMAGE } from "@/lib/imageUrl";
@@ -14,6 +14,7 @@ type PlaceRecord = {
   category: string;
   location: string;
   description: string;
+  heritage?: string;
   tagline?: string;
   famousThing?: string;
   image?: string;
@@ -40,6 +41,10 @@ export default function PlacePage() {
   const [editing, setEditing] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
+  const [carouselPaused, setCarouselPaused] = useState(false);
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
+  const pauseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -116,12 +121,62 @@ export default function PlacePage() {
 
   const categories = ["Temples", "Food", "Hotels", "Nature", "Waterfalls", "Trekking", "Vineyards", "Shopping", "Emergency"];
 
+  // --- Carousel auto-slide logic ---
+  const validPhotos = (form?.images && form.images.length > 0)
+    ? form.images.filter(u => u && u.trim())
+    : (form?.image ? [form.image] : []);
+  const photoCount = validPhotos.length;
+
+  const goToSlide = useCallback((index: number) => {
+    setSelectedPhotoIndex(index);
+  }, []);
+
+  const goNext = useCallback(() => {
+    setSelectedPhotoIndex(prev => (prev + 1) % Math.max(photoCount, 1));
+  }, [photoCount]);
+
+  const goPrev = useCallback(() => {
+    setSelectedPhotoIndex(prev => (prev - 1 + Math.max(photoCount, 1)) % Math.max(photoCount, 1));
+  }, [photoCount]);
+
+  // Pause carousel briefly after manual interaction
+  const pauseCarousel = useCallback(() => {
+    setCarouselPaused(true);
+    if (pauseTimerRef.current) clearTimeout(pauseTimerRef.current);
+    pauseTimerRef.current = setTimeout(() => setCarouselPaused(false), 6000);
+  }, []);
+
+  useEffect(() => {
+    if (photoCount <= 1 || carouselPaused || editing) return;
+    const interval = setInterval(goNext, 3000);
+    return () => clearInterval(interval);
+  }, [photoCount, carouselPaused, editing, goNext]);
+
+  // Touch swipe handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+  const handleTouchEnd = () => {
+    const diff = touchStartX.current - touchEndX.current;
+    if (Math.abs(diff) > 50) {
+      pauseCarousel();
+      if (diff > 0) goNext();
+      else goPrev();
+    }
+  };
+
+  // Broken-image tracker
+  const [brokenImages, setBrokenImages] = useState<Set<number>>(new Set());
+
   async function savePlace() {
     if (!form) return;
 
-    // Ensure images array is synced with the primary image before saving
-    const updatedImages = form.image ? [form.image] : [];
-    const payload = { ...form, images: updatedImages.length > 0 ? updatedImages : form.images };
+    // Filter out empty image URLs before saving, keep up to 6
+    const cleanedImages = (form.images || (form.image ? [form.image] : [])).filter((u: string) => u && u.trim()).slice(0, 6);
+    const payload = { ...form, image: cleanedImages[0] || form.image || "", images: cleanedImages.length > 0 ? cleanedImages : (form.image ? [form.image] : []) };
 
     const response = await fetch("/api/places", {
       method: "PUT",
@@ -166,31 +221,80 @@ export default function PlacePage() {
     );
   }
 
-  const allPhotos = (form.images && form.images.length > 0) ? form.images : (form.image ? [form.image] : []);
-  const activeImage = allPhotos[selectedPhotoIndex] || form.image || "https://images.unsplash.com/photo-1596700508005-4f05ab04c997?auto=format&fit=crop&w=800&q=80";
+  const displayPhotos = validPhotos.length > 0 ? validPhotos : [DEFAULT_FALLBACK_IMAGE];
+  const safeIndex = selectedPhotoIndex < displayPhotos.length ? selectedPhotoIndex : 0;
+  const activeImage = displayPhotos[safeIndex] || DEFAULT_FALLBACK_IMAGE;
 
   return (
     <main className="min-h-screen bg-[#f8f2e8] py-12">
       <div className="container mx-auto px-4">
         <Link href="/search" className="inline-flex items-center gap-2 text-sm font-semibold text-orange-700"><ArrowLeft className="h-4 w-4" /> {t("Back to places")}</Link>
         <div className="mt-8 grid overflow-hidden rounded-3xl border border-[#e1cfb0] bg-[#fffdf8] shadow-[0_20px_55px_rgba(77,58,30,0.12)] md:grid-cols-2">
-          <div className="flex flex-col">
-            <img src={activeImage} alt={form.name} className="h-72 sm:h-96 w-full object-cover" />
-            {allPhotos.length > 1 && (
-              <div className="flex gap-2 p-3 bg-amber-900/5 overflow-x-auto no-scrollbar border-t border-[#e1cfb0]">
-                {allPhotos.map((imgUrl, idx) => (
+          {/* Photo Carousel */}
+          <div className="relative flex flex-col">
+            <div
+              className="relative w-full overflow-hidden bg-black/5"
+              style={{ aspectRatio: "4 / 5", maxHeight: "520px" }}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
+              {displayPhotos.map((imgUrl, idx) => (
+                <img
+                  key={idx}
+                  src={brokenImages.has(idx) ? DEFAULT_FALLBACK_IMAGE : imgUrl}
+                  alt={`${form.name} photo ${idx + 1}`}
+                  onError={() => setBrokenImages(prev => new Set(prev).add(idx))}
+                  className="absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ease-in-out"
+                  style={{ opacity: safeIndex === idx ? 1 : 0 }}
+                />
+              ))}
+
+              {/* Arrow controls — only when multiple photos */}
+              {displayPhotos.length > 1 && (
+                <>
                   <button
-                    key={idx}
-                    onClick={() => setSelectedPhotoIndex(idx)}
-                    className={`relative h-16 w-16 shrink-0 rounded-xl overflow-hidden border-2 transition-all ${
-                      selectedPhotoIndex === idx ? "border-[#e86f18] scale-105 shadow-md" : "border-transparent opacity-70 hover:opacity-100"
-                    }`}
+                    onClick={() => { pauseCarousel(); goPrev(); }}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/30 text-white backdrop-blur-sm transition hover:bg-black/50"
+                    aria-label="Previous photo"
                   >
-                    <img src={imgUrl} alt={`Thumbnail ${idx + 1}`} className="h-full w-full object-cover" />
+                    <ChevronLeft className="h-5 w-5" />
                   </button>
-                ))}
-              </div>
-            )}
+                  <button
+                    onClick={() => { pauseCarousel(); goNext(); }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/30 text-white backdrop-blur-sm transition hover:bg-black/50"
+                    aria-label="Next photo"
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                </>
+              )}
+
+              {/* Dot indicators */}
+              {displayPhotos.length > 1 && (
+                <div className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 gap-1.5">
+                  {displayPhotos.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => { pauseCarousel(); goToSlide(idx); }}
+                      className={`h-2 rounded-full transition-all duration-300 ${
+                        safeIndex === idx
+                          ? "w-5 bg-white shadow-md"
+                          : "w-2 bg-white/50 hover:bg-white/70"
+                      }`}
+                      aria-label={`Go to photo ${idx + 1}`}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Photo counter badge */}
+              {displayPhotos.length > 1 && (
+                <span className="absolute top-3 right-3 z-10 rounded-full bg-black/40 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+                  {safeIndex + 1} / {displayPhotos.length}
+                </span>
+              )}
+            </div>
           </div>
           <div className="p-7 md:p-10">
             <div className="flex items-start justify-between gap-4">
@@ -267,17 +371,34 @@ export default function PlacePage() {
                   />
                 </div>
 
+                {/* 6 Photo URL fields */}
                 <div>
-                  <label className="mb-1 block text-sm font-semibold text-slate-700 dark:text-slate-300">{t("Image URL")}</label>
-                  <input
-                    value={form.image || ""}
-                    onChange={(event) => {
-                      const newUrl = event.target.value;
-                      setForm({ ...form, image: newUrl, images: newUrl ? [newUrl] : [] });
-                    }}
-                    placeholder="Image URL"
-                    className="w-full rounded-xl border border-amber-200 bg-white p-3 text-slate-900 outline-none"
-                  />
+                  <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">{t("Photo URLs")} <span className="text-xs font-normal text-slate-500">({t("Up to 6 photos")})</span></label>
+                  <div className="space-y-2">
+                    {Array.from({ length: 6 }).map((_, idx) => {
+                      const currentImages = form.images && form.images.length > 0 ? form.images : (form.image ? [form.image] : []);
+                      const currentVal = currentImages[idx] || "";
+                      return (
+                        <input
+                          key={idx}
+                          value={currentVal}
+                          onChange={(event) => {
+                            const newVal = event.target.value;
+                            const updated = [...(form.images && form.images.length > 0 ? form.images : (form.image ? [form.image] : []))];
+                            // Extend array if needed
+                            while (updated.length <= idx) updated.push("");
+                            updated[idx] = newVal;
+                            // Filter out empty trailing entries for images, but keep image as first valid
+                            const cleaned = updated.slice(0, 6);
+                            const firstValid = cleaned.find(u => u.trim()) || "";
+                            setForm({ ...form, image: firstValid, images: cleaned });
+                          }}
+                          placeholder={`${t("Photo")} ${idx + 1} URL${idx === 0 ? " (" + t("Primary") + ")" : " (" + t("Optional") + ")"}`}
+                          className="w-full rounded-xl border border-amber-200 bg-white p-3 text-sm text-slate-900 outline-none"
+                        />
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <div>
@@ -309,10 +430,35 @@ export default function PlacePage() {
                     className="min-h-36 w-full rounded-xl border border-amber-200 bg-white p-3 text-slate-900 outline-none"
                   />
                 </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    {t("Heritage")} <span className="text-xs font-normal text-slate-500">({t("Optional - Historical background, spiritual significance, legends")})</span>
+                  </label>
+                  <textarea
+                    value={form.heritage || ""}
+                    onChange={(event) => setForm({ ...form, heritage: event.target.value })}
+                    placeholder={t("Enter historical background, spiritual significance, local legends, or cultural importance...")}
+                    className="min-h-36 w-full rounded-xl border border-amber-200 bg-white p-3 text-slate-900 outline-none"
+                  />
+                </div>
               </div>
             ) : (
               <>
                 <p className="mt-8 text-lg leading-8 text-orange-950">{form.description}</p>
+                {Boolean(form.heritage && form.heritage.trim()) && (
+                  <div className="mt-8 rounded-2xl border border-[#e1cfb0] bg-[#fffaf0] p-6 shadow-sm">
+                    <div className="mb-3 flex items-center gap-2">
+                      <Landmark className="h-5 w-5 text-[#c9580f]" />
+                      <h3 className="text-base font-bold uppercase tracking-[0.15em] text-[#c9580f]">
+                        {t("Heritage")}
+                      </h3>
+                    </div>
+                    <div className="whitespace-pre-line text-base leading-7 text-[#173247]">
+                      {form.heritage?.trim()}
+                    </div>
+                  </div>
+                )}
                 {/* Business Details Section — shown for approved business listings */}
                 {(form.phone || form.email || form.websiteUrl || form.openingTime || form.workingDays) && (
                   <div className="mt-8 rounded-2xl border border-[#e1cfb0] bg-[#fffaf0] p-5">

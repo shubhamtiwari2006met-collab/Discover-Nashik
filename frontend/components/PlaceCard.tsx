@@ -14,6 +14,7 @@ export interface Place {
   category: string;
   location: string;
   description: string;
+  heritage?: string;
   image?: string;
   rating?: number;
   mapLink?: string;

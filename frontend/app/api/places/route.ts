@@ -14,6 +14,7 @@ export type SavedPlace = {
   category: string;
   location: string;
   description: string;
+  heritage?: string;
   tagline?: string;
   famousThing?: string;
   mapLink?: string;
@@ -39,6 +40,7 @@ function getStaticPlaces(): SavedPlace[] {
     category: p.category,
     location: p.location,
     description: p.description,
+    heritage: p.heritage,
     tagline: p.tagline,
     famousThing: p.famousThing,
     mapLink: p.mapLink,
@@ -93,6 +95,7 @@ function normalizePlace(payload: unknown): SavedPlace | null {
   const category = String(data.category || "").trim();
   const location = String(data.location || "").trim();
   const description = String(data.description || data.bestAbout || "").trim();
+  const heritage = typeof data.heritage === "string" ? data.heritage.trim() : (data.heritage ? String(data.heritage).trim() : "");
 
   if (!name || !category || !location || !description) {
     return null;
@@ -116,6 +119,7 @@ function normalizePlace(payload: unknown): SavedPlace | null {
     category,
     location,
     description,
+    heritage: heritage || undefined,
     tagline: data.tagline ? String(data.tagline) : undefined,
     famousThing: data.famousThing ? String(data.famousThing) : undefined,
     mapLink: data.mapLink ? String(data.mapLink) : undefined,
@@ -236,18 +240,8 @@ export async function GET() {
     }
   });
 
-  // Filter out any explicitly deleted IDs and sample places
-  const SAMPLE_PLACE_NAMES = [
-    "trimbakeshwar shiva temple",
-    "sula vineyards",
-    "dugarwadi waterfall",
-    "sadhana restaurant"
-  ];
-
   const finalPlaces = Array.from(placesMap.values()).filter((p) => {
     if (!p || deletedPlaceIds.has(p._id)) return false;
-    const lowerName = (p.name || "").toLowerCase().trim();
-    if (SAMPLE_PLACE_NAMES.some(sample => lowerName.includes(sample))) return false;
     return true;
   });
 

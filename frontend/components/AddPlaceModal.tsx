@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, MapPin, Tag, Star, AlignLeft, Info, Search, Loader2 } from "lucide-react";
+import { X, MapPin, Tag, Star, AlignLeft, Info, Search, Loader2, Landmark } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 
 interface AddPlaceModalProps {
@@ -16,6 +16,7 @@ export function AddPlaceModal({ isOpen, onClose }: AddPlaceModalProps) {
     name: "",
     location: "",
     bestAbout: "",
+    heritage: "",
     mapLink: "",
     tagline: "",
     famousThing: "",
@@ -66,6 +67,7 @@ export function AddPlaceModal({ isOpen, onClose }: AddPlaceModalProps) {
           category: formData.category,
           location: formData.location,
           description: formData.bestAbout,
+          heritage: formData.heritage,
           tagline: formData.tagline,
           famousThing: formData.famousThing,
           mapLink: formData.mapLink,
@@ -84,6 +86,7 @@ export function AddPlaceModal({ isOpen, onClose }: AddPlaceModalProps) {
           name: "",
           location: "",
           bestAbout: "",
+          heritage: "",
           mapLink: "",
           tagline: "",
           famousThing: "",
@@ -247,6 +250,20 @@ export function AddPlaceModal({ isOpen, onClose }: AddPlaceModalProps) {
                       placeholder="What makes this place special?" 
                       value={formData.bestAbout}
                       onChange={(e) => setFormData({...formData, bestAbout: e.target.value})}
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 text-black dark:bg-slate-800/50 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-orange-500 outline-none transition-all resize-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t("Heritage")} <span className="text-xs font-normal text-slate-500">({t("Optional")})</span></label>
+                  <div className="relative">
+                    <Landmark className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                    <textarea 
+                      rows={3}
+                      placeholder="Historical background, spiritual significance, legends, or cultural importance..." 
+                      value={formData.heritage}
+                      onChange={(e) => setFormData({...formData, heritage: e.target.value})}
                       className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 text-black dark:bg-slate-800/50 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-orange-500 outline-none transition-all resize-none"
                     />
                   </div>

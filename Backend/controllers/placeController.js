@@ -13,6 +13,7 @@ function getPermittedPlaceFields(body) {
     'category',
     'location',
     'description',
+    'heritage',
     'image',
     'images',
     'rating',
