@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
+import PhotoInput from "@/components/PhotoInput";
 import { createClient } from "@/utils/supabase/client";
 
 export default function AddPlacePage() {
@@ -242,30 +243,12 @@ export default function AddPlacePage() {
           </div>
 
           {/* Photo Upload */}
-          <div className="border border-slate-200 dark:border-slate-700 p-4 rounded-xl bg-slate-50/50 dark:bg-slate-800/20">
-            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2 block">{t("Add a Photo")}</label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <span className="text-xs text-slate-500">{t("Paste Image URL")}</span>
-                <input
-                  type="url"
-                  placeholder="https://..."
-                  className="w-full p-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 text-sm"
-                  value={formData.imageUrl}
-                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1">
-                <span className="text-xs text-slate-500">{t("Or Upload File")}</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="w-full p-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 text-sm"
-                  onChange={handleImageChange}
-                />
-              </div>
-            </div>
-          </div>
+          <PhotoInput
+            label={t("Add a Photo")}
+            description={t("Attach a photo via camera, device, or web URL")}
+            value={formData.imageUrl}
+            onChange={(val) => setFormData({ ...formData, imageUrl: val })}
+          />
 
           {/* Action Buttons */}
           <div className="flex justify-end space-x-3 pt-4">

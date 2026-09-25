@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, MapPin, Tag, Star, AlignLeft, Info, Search, Loader2, Landmark } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
+import PhotoInput from "@/components/PhotoInput";
 
 interface AddPlaceModalProps {
   isOpen: boolean;
@@ -269,30 +270,12 @@ export function AddPlaceModal({ isOpen, onClose }: AddPlaceModalProps) {
                   </div>
                 </div>
 
-                <div className="space-y-2 border border-slate-200 dark:border-slate-700 p-4 rounded-xl bg-slate-50/50 dark:bg-slate-800/20">
-                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t("Add a Photo")}</label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <span className="text-xs text-slate-500">{t("Paste Image URL")}</span>
-                      <input 
-                        type="url" 
-                        placeholder="https://..." 
-                        value={formData.imageUrl}
-                        onChange={(e) => setFormData({...formData, imageUrl: e.target.value})}
-                        className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white text-black dark:bg-slate-800/50 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none text-sm"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-xs text-slate-500">{t("Or Upload File")}</span>
-                      <input 
-                        type="file" 
-                        accept="image/*"
-                        onChange={handleImageChange}
-                        className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white text-black dark:bg-slate-800/50 dark:text-white text-sm file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-600 hover:file:bg-orange-100"
-                      />
-                    </div>
-                  </div>
-                </div>
+                <PhotoInput
+                  label={t("Add a Photo")}
+                  description={t("Attach a photo via camera, device, or web URL")}
+                  value={formData.imageUrl}
+                  onChange={(val) => setFormData({ ...formData, imageUrl: val })}
+                />
 
               </form>
             </div>

@@ -13,6 +13,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
+import PhotoInput from "@/components/PhotoInput";
 import { createClient } from "@/utils/supabase/client";
 
 const supabase = createClient();
@@ -297,29 +298,12 @@ export default function ReportInquiryPage({ params }: { params: Promise<{ report
             </label>
 
             {/* Optional Photo Attachment */}
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-[#173247] mb-1.5">
-                Attach Supporting Photo (Optional)
-              </label>
-              {photoUrl ? (
-                <div className="relative aspect-[16/9] max-w-xs rounded-2xl overflow-hidden border border-orange-300 shadow-md">
-                  <img src={photoUrl} alt="Sighting photo" className="h-full w-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => setPhotoUrl("")}
-                    className="absolute top-2 right-2 rounded-full bg-red-600 p-1 text-white shadow hover:bg-red-700"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              ) : (
-                <label className="flex items-center gap-2 rounded-xl border border-dashed border-orange-300 bg-orange-50/50 px-4 py-3 cursor-pointer hover:bg-orange-100 transition-colors">
-                  <Upload className="h-4 w-4 text-orange-600" />
-                  <span className="text-xs font-bold text-slate-700">Click to upload photo evidence</span>
-                  <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
-                </label>
-              )}
-            </div>
+            <PhotoInput
+              label="Attach Supporting Photo (Optional)"
+              description="Upload sighting or evidence photo via camera, device, or URL"
+              value={photoUrl}
+              onChange={setPhotoUrl}
+            />
 
             {/* Reporter Contact Info */}
             <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">

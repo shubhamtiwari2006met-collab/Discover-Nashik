@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useTranslation } from "@/lib/i18n";
+import PhotoInput from "@/components/PhotoInput";
 import { createClient } from "@/utils/supabase/client";
 
 export default function AdminAddPlacePage() {
@@ -271,31 +272,38 @@ export default function AdminAddPlacePage() {
                   {photos.filter((p) => p.trim()).length} / 6 Photos
                 </span>
               </div>
-              <div className="space-y-2.5">
-                {photos.map((photoUrl, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <span className="shrink-0 w-16 text-xs font-bold text-[#667883]">Photo {idx + 1}{idx === 0 ? " *" : ""}</span>
-                    <input
-                      type="url"
-                      placeholder={idx === 0 ? "Primary photo URL (required)" : `Photo ${idx + 1} URL (optional)`}
-                      className="w-full rounded-xl border border-[#d8c4a3] bg-white px-4 py-2.5 text-sm text-[#173247] outline-none focus:border-[#e86f18] focus:ring-2 focus:ring-[#e86f18]/20"
-                      value={photoUrl}
-                      onChange={(e) => updatePhoto(idx, e.target.value)}
-                    />
-                    {photoUrl.trim() && (
-                      <img
-                        src={photoUrl}
-                        alt={`Preview ${idx + 1}`}
-                        className="h-10 w-10 shrink-0 rounded-lg object-cover border border-[#d8c4a3]"
-                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              <div className="space-y-4">
+                <PhotoInput
+                  label="Primary Photo *"
+                  description="Capture with camera, choose from device, or enter image URL"
+                  value={photos[0]}
+                  onChange={(val) => updatePhoto(0, val)}
+                />
+
+                <div className="space-y-2 pt-2 border-t border-[#e1cfb0]">
+                  <span className="text-xs font-bold text-[#173247] block">Additional Photos (Optional)</span>
+                  {photos.slice(1).map((photoUrl, idx) => (
+                    <div key={idx + 1} className="flex items-center gap-2">
+                      <span className="shrink-0 w-16 text-xs font-bold text-[#667883]">Photo {idx + 2}</span>
+                      <input
+                        type="url"
+                        placeholder={`Photo ${idx + 2} URL (optional)`}
+                        className="w-full rounded-xl border border-[#d8c4a3] bg-white px-4 py-2 text-xs text-[#173247] outline-none focus:border-[#e86f18]"
+                        value={photoUrl}
+                        onChange={(e) => updatePhoto(idx + 1, e.target.value)}
                       />
-                    )}
-                  </div>
-                ))}
+                      {photoUrl.trim() && (
+                        <img
+                          src={photoUrl}
+                          alt={`Preview ${idx + 2}`}
+                          className="h-9 w-9 shrink-0 rounded-lg object-cover border border-[#d8c4a3]"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
-              <p className="mt-2 text-[11px] text-[#667883]">
-                Paste image URLs. Leave optional fields empty. Example: https://images.unsplash.com/photo-...
-              </p>
             </div>
 
             {/* Action Buttons */}
