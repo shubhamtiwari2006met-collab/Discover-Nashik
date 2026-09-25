@@ -29,6 +29,9 @@ export type SavedPlace = {
   closingTime?: string;
   workingDays?: string;
   subcategory?: string;
+  contact_name?: string;
+  admin_remarks?: string;
+  isBusinessApplication?: boolean;
 };
 
 import { places as staticPlaces } from "@/lib/places";
@@ -160,6 +163,7 @@ export async function GET() {
         registeredPlaces = businesses.map((b: any) => {
           const allPhotos = parsePhotoList(b.photos);
           const firstPhoto = allPhotos[0] || DEFAULT_FALLBACK_IMAGE;
+          const isAdminPlace = b.contact_name === "Admin Added" || b.admin_remarks === "Added directly by Admin";
           return {
             _id: b.id,
             name: b.business_name,
@@ -180,6 +184,9 @@ export async function GET() {
             closingTime: b.closing_time || undefined,
             workingDays: b.working_days || undefined,
             subcategory: b.subcategory || undefined,
+            contact_name: b.contact_name,
+            admin_remarks: b.admin_remarks,
+            isBusinessApplication: !isAdminPlace,
           };
         });
       }

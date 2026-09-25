@@ -149,7 +149,9 @@ export default function AdminPlacesPage() {
     }
   }
 
-  const filteredPlaces = places.filter((p) => {
+  const adminOnlyPlaces = places.filter((p) => !p.isBusinessApplication);
+
+  const filteredPlaces = adminOnlyPlaces.filter((p) => {
     if (selectedCategory !== "all" && p.category?.toLowerCase() !== selectedCategory.toLowerCase()) {
       return false;
     }
@@ -200,7 +202,7 @@ export default function AdminPlacesPage() {
             <MapPin className="h-6 w-6" />
           </div>
           <div>
-            <p className="text-2xl font-bold text-[#173247]">{places.length}</p>
+            <p className="text-2xl font-bold text-[#173247]">{adminOnlyPlaces.length}</p>
             <p className="text-xs font-semibold uppercase tracking-wider text-[#667883]">Total Managed Places</p>
           </div>
         </div>
@@ -210,7 +212,7 @@ export default function AdminPlacesPage() {
             <Landmark className="h-6 w-6" />
           </div>
           <div>
-            <p className="text-2xl font-bold text-[#173247]">{places.filter((p) => p.heritage).length}</p>
+            <p className="text-2xl font-bold text-[#173247]">{adminOnlyPlaces.filter((p) => p.heritage).length}</p>
             <p className="text-xs font-semibold uppercase tracking-wider text-[#667883]">Places with Heritage info</p>
           </div>
         </div>
