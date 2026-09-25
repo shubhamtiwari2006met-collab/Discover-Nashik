@@ -4,6 +4,8 @@ import { createClient } from "@/utils/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+const BACKEND_URL = (process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(/\/$/, "");
+
 async function getAuthHeader(): Promise<Record<string, string>> {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
@@ -11,6 +13,11 @@ async function getAuthHeader(): Promise<Record<string, string>> {
   const headers: Record<string, string> = {};
   if (session?.access_token) {
     headers["Authorization"] = `Bearer ${session.access_token}`;
+    return headers;
+  }
+  const rawToken = cookieStore.get('sb-access-token')?.value;
+  if (rawToken) {
+    headers["Authorization"] = `Bearer ${rawToken}`;
   }
   return headers;
 }
@@ -18,7 +25,7 @@ async function getAuthHeader(): Promise<Record<string, string>> {
 export async function GET() {
   try {
     const headers = await getAuthHeader();
-    const res = await fetch("http://localhost:5000/api/admin/admins", {
+    const res = await fetch(`${BACKEND_URL}/api/admin/admins`, {
       headers,
       cache: "no-store",
     });
@@ -40,7 +47,7 @@ export async function POST(request: Request) {
     const headers = await getAuthHeader();
     const body = await request.json();
 
-    const res = await fetch("http://localhost:5000/api/admin/admins", {
+    const res = await fetch(`${BACKEND_URL}/api/admin/admins`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

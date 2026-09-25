@@ -4,6 +4,8 @@ import { createClient } from "@/utils/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+const BACKEND_URL = (process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(/\/$/, "");
+
 async function getAuthHeader(): Promise<Record<string, string>> {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
@@ -28,7 +30,7 @@ export async function DELETE(
     const { id } = await params;
     const headers = await getAuthHeader();
 
-    const res = await fetch(`http://localhost:5000/api/admin/admins/${encodeURIComponent(id)}`, {
+    const res = await fetch(`${BACKEND_URL}/api/admin/admins/${encodeURIComponent(id)}`, {
       method: "DELETE",
       headers,
     });
