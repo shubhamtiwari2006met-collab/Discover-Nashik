@@ -17,6 +17,7 @@ import {
   Image as ImageIcon,
   User,
   Package,
+  Camera,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 
@@ -68,7 +69,7 @@ export default function ReportLostFoundPage() {
   const [error, setError] = useState("");
   const [submittedResult, setSubmittedResult] = useState<{ reportId: string } | null>(null);
 
-  // Handle Photo File Upload & Convert to Base64 Data URL for preview
+  // Handle Photo File Upload (Camera Capture or Device File Chooser) & Convert to Base64 Data URL
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -115,7 +116,11 @@ export default function ReportLostFoundPage() {
         img.src = reader.result;
       }
     };
+    reader.onerror = () => {
+      alert("Could not process the photo. Please try selecting a file from your device.");
+    };
     reader.readAsDataURL(file);
+    e.target.value = "";
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -271,28 +276,56 @@ export default function ReportLostFoundPage() {
                 <span>Upload Photograph (Optional)</span>
               </h2>
               <p className="text-xs text-slate-500 mb-4">
-                Attach a clear photo of the missing person or item to assist identification. Common formats (JPG, PNG, WebP) up to 5MB.
+                Attach a photo of the missing person or item using your device camera or photo gallery. Common formats (JPG, PNG, WebP) up to 5MB.
               </p>
 
               {photoUrl ? (
                 <div className="relative aspect-[16/9] max-w-sm rounded-2xl overflow-hidden border border-orange-300 shadow-md">
                   <img src={photoUrl} alt="Uploaded Preview" className="h-full w-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => setPhotoUrl("")}
-                    className="absolute top-2 right-2 rounded-full bg-red-600 p-1.5 text-white shadow-lg hover:bg-red-700 transition-colors"
-                    title="Remove Photo"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
+                  <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setPhotoUrl("")}
+                      className="rounded-full bg-red-600 p-1.5 text-white shadow-lg hover:bg-red-700 transition-colors"
+                      title="Remove Photo"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               ) : (
-                <label className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-orange-300 bg-white p-6 cursor-pointer hover:bg-orange-50/80 transition-colors">
-                  <Upload className="h-8 w-8 text-orange-600 mb-2" />
-                  <span className="text-sm font-bold text-[#173247]">Click to upload photo</span>
-                  <span className="text-xs text-slate-400 mt-1">PNG, JPG or WebP up to 5MB</span>
-                  <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
-                </label>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {/* Option A: Take Photo using Device Camera */}
+                  <label className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-orange-300 bg-white p-5 cursor-pointer hover:bg-orange-50/80 transition-colors text-center group shadow-sm">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-100 text-orange-600 mb-2 group-hover:bg-orange-600 group-hover:text-white transition-colors">
+                      <Camera className="h-6 w-6" />
+                    </div>
+                    <span className="text-sm font-bold text-[#173247]">📷 Take Photo</span>
+                    <span className="text-[11px] text-slate-400 mt-1">Capture directly with device camera</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handlePhotoUpload}
+                      className="hidden"
+                    />
+                  </label>
+
+                  {/* Option B: Choose Photo from Device Gallery/Files */}
+                  <label className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-orange-300 bg-white p-5 cursor-pointer hover:bg-orange-50/80 transition-colors text-center group shadow-sm">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100 text-amber-800 mb-2 group-hover:bg-amber-700 group-hover:text-white transition-colors">
+                      <Upload className="h-6 w-6" />
+                    </div>
+                    <span className="text-sm font-bold text-[#173247]">🖼️ Choose from Device</span>
+                    <span className="text-[11px] text-slate-400 mt-1">Select from photo gallery or files</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
               )}
             </div>
 
