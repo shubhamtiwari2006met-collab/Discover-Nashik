@@ -98,8 +98,8 @@ export default function PhotoInput({
   };
 
   // URL Submission Handler
-  const handleUrlSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleUrlSubmit = (e?: React.FormEvent | React.MouseEvent) => {
+    if (e) e.preventDefault();
     setUrlError("");
     const trimmed = urlInput.trim();
     if (!trimmed) return;
@@ -290,17 +290,24 @@ export default function PhotoInput({
 
           {/* TAB 3: IMAGE URL */}
           {activeTab === "url" && (
-            <form onSubmit={handleUrlSubmit} className="space-y-2 p-2">
+            <div className="space-y-2 p-2">
               <div className="flex gap-2">
                 <input
                   type="text"
                   placeholder={placeholderUrl}
                   value={urlInput}
                   onChange={(e) => setUrlInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleUrlSubmit();
+                    }
+                  }}
                   className="flex-1 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2 text-xs outline-none focus:border-orange-500 dark:text-white"
                 />
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={handleUrlSubmit}
                   className="px-4 py-2 rounded-xl bg-orange-600 text-white font-bold text-xs hover:bg-orange-700 transition-colors shrink-0 flex items-center gap-1"
                 >
                   <Check className="h-3.5 w-3.5" />
@@ -311,7 +318,7 @@ export default function PhotoInput({
               <p className="text-[10px] text-slate-400">
                 Paste any direct image web link (e.g. Unsplash, Imgur, Cloudinary).
               </p>
-            </form>
+            </div>
           )}
         </div>
       )}
