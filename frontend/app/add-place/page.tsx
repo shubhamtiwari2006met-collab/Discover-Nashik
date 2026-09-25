@@ -16,6 +16,7 @@ export default function AddPlacePage() {
     name: "",
     location: "",
     bestAbout: "",
+    heritage: "",
     mapLink: "",
     tagline: "",
     famousThing: "",
@@ -102,6 +103,7 @@ export default function AddPlacePage() {
           category: formData.category,
           location: formData.location,
           description: formData.bestAbout,
+          heritage: formData.heritage,
           tagline: formData.tagline,
           famousThing: formData.famousThing,
           mapLink: formData.mapLink,
@@ -224,6 +226,18 @@ export default function AddPlacePage() {
               className="w-full border border-slate-200 dark:border-slate-700 rounded-xl p-2 bg-slate-50 dark:bg-slate-800/50 focus:ring-2 focus:ring-orange-500 outline-none"
               value={formData.bestAbout}
               onChange={(e) => setFormData({ ...formData, bestAbout: e.target.value })}
+            />
+          </div>
+
+          {/* Heritage */}
+          <div className="space-y-1">
+            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t("Heritage")} <span className="text-xs font-normal text-slate-500">({t("Optional")})</span></label>
+            <textarea
+              rows={3}
+              placeholder="Historical background, spiritual significance, legends, or cultural importance..."
+              className="w-full border border-slate-200 dark:border-slate-700 rounded-xl p-2 bg-slate-50 dark:bg-slate-800/50 focus:ring-2 focus:ring-orange-500 outline-none"
+              value={formData.heritage}
+              onChange={(e) => setFormData({ ...formData, heritage: e.target.value })}
             />
           </div>
 

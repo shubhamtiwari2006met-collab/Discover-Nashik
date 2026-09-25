@@ -20,6 +20,7 @@ import {
   ShieldAlert,
   Package,
   Calendar,
+  PlusCircle,
   Search,
   ShieldCheck,
   UserPlus,
@@ -96,18 +97,20 @@ type AdminAccount = {
 
 type StatusFilter = "all" | "pending" | "approved" | "rejected";
 
-function AdminDashboardContent() {
+function AdminDashboardContent({ defaultFilter = "pending" }: { defaultFilter?: StatusFilter }) {
   const supabase = createClient();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
+  const filterParam = searchParams.get("filter");
   const initialTab = tabParam === "admins" ? "admins" : tabParam === "lost-found" ? "lost-found" : "businesses";
+  const initialFilter: StatusFilter = (filterParam as StatusFilter) || defaultFilter || "pending";
 
   const [activeMainTab, setActiveMainTab] = useState<"businesses" | "lost-found" | "admins">(initialTab);
   const [businesses, setBusinesses] = useState<BusinessRegistration[]>([]);
   const [lostFoundReports, setLostFoundReports] = useState<LostFoundReportAdmin[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(initialFilter);
   const [lfStatusFilter, setLfStatusFilter] = useState<string>("all");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [totalUsers, setTotalUsers] = useState<number>(0);
@@ -190,7 +193,8 @@ function AdminDashboardContent() {
       const { count: activeCount } = await supabase
         .from("business_registrations")
         .select("id", { count: "exact", head: true })
-        .eq("verification_status", "approved");
+        .eq("verification_status", "approved")
+        .neq("contact_name", "Admin Added");
       setActiveBusinesses(activeCount ?? 0);
     } catch (err: any) {
       console.error("Stats error:", err);
@@ -448,11 +452,15 @@ function AdminDashboardContent() {
     }
   }
 
+  const actualBusinesses = businesses.filter(
+    (b) => b.contact_name !== "Admin Added" && b.admin_remarks !== "Added directly by Admin"
+  );
+
   const counts = {
-    totalBusinesses: businesses.length,
-    pendingApprovals: businesses.filter((b) => b.verification_status === "pending").length,
-    approved: businesses.filter((b) => b.verification_status === "approved").length,
-    rejected: businesses.filter((b) => b.verification_status === "rejected").length,
+    totalBusinesses: actualBusinesses.length,
+    pendingApprovals: actualBusinesses.filter((b) => b.verification_status === "pending").length,
+    approved: actualBusinesses.filter((b) => b.verification_status === "approved").length,
+    rejected: actualBusinesses.filter((b) => b.verification_status === "rejected").length,
     totalUsers,
     activeBusinesses,
     totalLostFound: lostFoundReports.length,
@@ -461,8 +469,8 @@ function AdminDashboardContent() {
   };
 
   const filteredBusinesses = statusFilter === "all"
-    ? businesses
-    : businesses.filter((b) => b.verification_status === statusFilter);
+    ? actualBusinesses
+    : actualBusinesses.filter((b) => b.verification_status === statusFilter);
 
   const filteredReports = lostFoundReports.filter((r) => {
     if (lfStatusFilter !== "all" && r.status !== lfStatusFilter) return false;
@@ -576,9 +584,11 @@ function AdminDashboardContent() {
 
           {/* Filter Tabs */}
           <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-            <h2 className="text-xl font-bold text-[#173247]">Submitted Business Registrations</h2>
+            <h2 className="text-xl font-bold text-[#173247]">
+              {statusFilter === "pending" ? "Business Applications (Pending Review)" : statusFilter === "approved" ? "Approved Business Registrations" : "Submitted Business Registrations"}
+            </h2>
             <div className="flex gap-1 rounded-xl border border-[#e1cfb0] bg-[#fffdf8] p-1">
-              {(["all", "pending", "approved", "rejected"] as const).map((status) => (
+              {(["pending", "approved", "rejected", "all"] as const).map((status) => (
                 <button
                   key={status}
                   type="button"
@@ -719,15 +729,26 @@ function AdminDashboardContent() {
 
           {/* Search & Filter Header */}
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2 rounded-xl border border-[#d8c4a3] bg-white px-3 py-2 text-sm shadow-sm w-full sm:max-w-xs">
-              <Search className="h-4 w-4 text-slate-400 shrink-0" />
-              <input
-                type="text"
-                placeholder="Search by ID, name, area, phone..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-transparent outline-none text-xs md:text-sm"
-              />
+            <div className="flex flex-wrap items-center gap-3 w-full sm:max-w-md">
+              <div className="flex flex-1 items-center gap-2 rounded-xl border border-[#d8c4a3] bg-white px-3 py-2 text-sm shadow-sm">
+                <Search className="h-4 w-4 text-slate-400 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Search by ID, name, area, phone..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-transparent outline-none text-xs md:text-sm"
+                />
+              </div>
+
+              <Link
+                href="/kumbh/lost-found/report"
+                className="flex items-center gap-1.5 rounded-xl bg-[#e86f18] px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-[#c9580f] transition-all hover:scale-105 shrink-0"
+                title="Report a lost or found person/item as Admin"
+              >
+                <PlusCircle className="h-4 w-4" />
+                <span>Report Incident</span>
+              </Link>
             </div>
 
             <div className="flex gap-1 overflow-x-auto rounded-xl border border-[#e1cfb0] bg-[#fffdf8] p-1">
@@ -756,7 +777,14 @@ function AdminDashboardContent() {
           {/* Grid of Lost & Found Reports */}
           {!filteredReports.length ? (
             <div className="rounded-2xl border border-dashed border-[#d8c4a3] p-12 text-center text-[#667883]">
-              No Lost & Found reports found.
+              <p>No Lost & Found reports found.</p>
+              <Link
+                href="/kumbh/lost-found/report"
+                className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-[#e86f18] px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-[#c9580f] transition-all"
+              >
+                <PlusCircle className="h-4 w-4" />
+                <span>Report New Incident</span>
+              </Link>
             </div>
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -1287,7 +1315,7 @@ function AdminDashboardContent() {
   );
 }
 
-export default function AdminDashboardPage() {
+export default function AdminDashboardPage({ defaultFilter = "pending" }: { defaultFilter?: StatusFilter }) {
   return (
     <Suspense
       fallback={
@@ -1296,7 +1324,7 @@ export default function AdminDashboardPage() {
         </div>
       }
     >
-      <AdminDashboardContent />
+      <AdminDashboardContent defaultFilter={defaultFilter} />
     </Suspense>
   );
 }

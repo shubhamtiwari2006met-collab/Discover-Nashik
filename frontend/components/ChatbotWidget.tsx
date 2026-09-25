@@ -39,56 +39,78 @@ const cleanChatReply = (reply: string) => reply
   .replace(/[ \t]+\n/g, "\n")
   .trim();
 
+const getGreetingMessage = (language: Language = "en") => {
+  if (language === "hi") {
+    return "नमस्ते! डिस्कवर नासिक में आपका स्वागत है। मैं नासिक के आध्यात्मिक स्थलों, कुंभ मेला 2027, मंदिरों, पंचवटी, त्र्यंबकेश्वर और तीर्थ यात्रा के बारे में आपकी कैसे मदद कर सकता हूँ?";
+  }
+  if (language === "mr") {
+    return "नमस्कार! डिस्कव्हर नाशिकमध्ये आपले स्वागत आहे. मी तुम्हाला नाशिकची धार्मिक ठिकाणे, कुंभमेळा २०२७, मंदिरे, पंचवटी, त्र्यंबकेश्वर आणि प्रवासाच्या नियोजनाबद्दल कशी मदत करू शकतो?";
+  }
+  return "Hello! Welcome to Discover Nashik. How can I help you explore Nashik's spiritual places, Kumbh Mela 2027, temples, pilgrimage routes, or other local attractions?";
+};
+
 const getPredefinedReply = (input: string, language: Language = "en") => {
-  const value = input.toLowerCase();
+  const value = input.toLowerCase().trim();
+
+  // Greetings
+  if (value === "hi" || value === "hello" || value === "hey" || value.startsWith("hi ") || value.startsWith("hello ")) {
+    return getGreetingMessage(language);
+  }
 
   if (value.includes("2 days")) {
-    return "Day 1: Trimbakeshwar → Sula → Panchavati\nDay 2: Anjaneri → Pandavleni → Goda Ghat";
+    return "Day 1: Trimbakeshwar Temple → Panchavati → Ram Kund → Kalaram Temple\nDay 2: Anjaneri Fort → Pandavleni Caves → Muktidham";
   }
 
   if (value.includes("3 days")) {
-    return "Day 1: Trimbakeshwar → Sula → Panchavati\nDay 2: Anjaneri → Pandavleni → Goda Ghat\nDay 3: Muktidham → Coin Museum → Ramkund";
+    return "Day 1: Trimbakeshwar Temple → Panchavati → Ram Kund\nDay 2: Anjaneri Fort → Pandavleni Caves → Goda Ghat\nDay 3: Muktidham → Coin Museum → Someshwar Temple";
   }
 
   if (value.includes("4 days")) {
-    return "Day 1: Trimbakeshwar → Panchavati → Ramkund → Goda Ghat\nDay 2: Anjaneri/Brahmagiri → Pandavleni\nDay 3: Misal(Sadhana/Grapes Embasy/Peruchi Wadi) → Isckon Temple → SwamiNarayan Temple → Tapovan\nDay 4: Sula → Famous Food → Navshya Ganpati → Gangapur Dam → Back Water\nEnjoy 'Nashik The Best Climate City'";
+    return "Day 1: Trimbakeshwar → Panchavati → Ramkund → Goda Ghat\nDay 2: Anjaneri/Brahmagiri → Pandavleni Caves\nDay 3: Local Food (Misal Pav) → ISKCON Temple → Swaminarayan Temple → Tapovan\nDay 4: Navshya Ganpati → Gangapur Dam → Local Heritage Markets";
   }
 
   if (value.includes("best time to visit")) {
-    return "The best time to visit Nashik is from October to March when the weather is pleasant.";
+    return "The best time to visit Nashik is from October to March when the weather is pleasant for pilgrimage and sightseeing. During Kumbh Mela 2027, plan ahead for auspicious bathing dates.";
   }
 
-  if (value.includes("famous places")) {
-    return "Some famous places in Nashik include Trimbakeshwar, Sula Vineyards, Panchavati, and Anjaneri Fort.";
+  if (value.includes("famous places") || value.includes("best places")) {
+    return "Some famous spiritual and cultural places in Nashik include Trimbakeshwar Temple (Jyotirlinga), Panchavati, Ram Kund, Kalaram Temple, Muktidham, and Anjaneri Fort.";
   }
 
-  if (value.includes("food")) {
-    return "Nashik is known for its street food. Don't miss trying Misal Pav, Vada Pav, and local sweets like Shrikhand.";
+  if (value.includes("kumbh")) {
+    return "Kumbh Mela 2027 in Nashik will take place along the sacred Godavari River (Ram Kund) and Trimbakeshwar. Plan your accommodation and transport early as millions of pilgrims gather.";
   }
 
-  if (value.includes("wine")) {
-    return "Nashik is famous for its vineyards. You can visit Sula Vineyards, York Winery, and Soma Vineyards for wine tasting.";
+  if (value.includes("non-veg") || value.includes("non veg") || value.includes("meat") || value.includes("chicken") || value.includes("mutton") || value.includes("fish")) {
+    return "Nashik has local eateries serving regional non-vegetarian cuisine. However, note that areas surrounding holy sites like Trimbakeshwar and Ram Kund strictly serve vegetarian food.";
   }
 
-  if (value.includes("temples")) {
-    return "Nashik has many temples. Some notable ones are Trimbakeshwar Temple, Kalaram Temple, and Muktidham.";
+  if (value.includes("alcohol") || value.includes("liquor") || value.includes("bar") || value.includes("pub")) {
+    return "Alcohol is restricted near holy pilgrimage zones like Trimbakeshwar and sacred ghats. Licensed establishments are available in commercial areas of Nashik city.";
   }
 
-  if (value.includes("nature")) {
-    return "For nature lovers, Nashik offers beautiful spots like Anjaneri Fort, Pandavleni Caves, and the Goda Ghat.";
+  // Only mention wine/vineyards if user explicitly asked
+  if (value.includes("wine") || value.includes("vineyard") || value.includes("winery")) {
+    return "Nashik has notable wineries such as Sula Vineyards, York Winery, and Soma Vineyards located towards Gangapur Dam.";
+  }
+
+  if (value.includes("food") || value.includes("eat")) {
+    return "Nashik is renowned for vegetarian specialties like Misal Pav, Vada Pav, Sabudana Vada, and traditional Maharashtrian sweets like Shrikhand and Jalebi.";
+  }
+
+  if (value.includes("temple") || value.includes("temples")) {
+    return "Key sacred temples in Nashik include Trimbakeshwar Jyotirlinga, Kalaram Temple, Muktidham, Navshya Ganpati, and Kapaleshwar Temple.";
+  }
+
+  if (value.includes("nature") || value.includes("trek")) {
+    return "For nature and trekking, explore Anjaneri Fort (birthplace of Lord Hanuman), Brahmagiri Hill, Pandavleni Caves, and the serene Gangapur Dam backwaters.";
   }
 
   if (value.includes("history")) {
-    return "Nashik has a rich history. You can explore ancient monuments like the Pandavleni Caves, Kalaram Temple, and the Coin Museum to learn more.";
+    return "Nashik has deep historical significance dating back to the Ramayana period at Panchavati and Tapovan, along with the ancient 2nd-century BCE Pandavleni Caves.";
   }
 
-  if (value.includes("best places to visit in nashik")) {
-    return "Some of the best places to visit in Nashik include Trimbakeshwar Temple, Sula Vineyards, Panchavati, Pandavleni, Brahmagiri, and Anjaneri Fort.";
-  }
-
-  if (language === "hi") return "मैं आपकी मदद कर सकता हूँ! नासिक में घूमने के लिए कई अद्भुत जगहें हैं।";
-  if (language === "mr") return "मी तुम्हाला मदत करू शकतो! नाशिकमध्ये पाहण्यासारखी अनेक सुंदर ठिकाणे आहेत।";
-  return "I can help you with that! Discover Nashik is full of amazing places.";
+  return getGreetingMessage(language);
 };
 
 const getGeminiReply = async (
@@ -137,23 +159,32 @@ const getGeminiReply = async (
 
 export function ChatbotWidget() {
   const { language, t } = useTranslation();
+  const [chatLanguage, setChatLanguage] = useState<Language>(language);
   const [isOpen, setIsOpen] = useState(false);
+
+  // Sync chat language when global language changes
+  useEffect(() => {
+    setChatLanguage(language);
+  }, [language]);
+
   const [messages, setMessages] = useState<{ role: "user" | "ai"; content: string }[]>([
-    { role: "ai", content: language === "hi" ? "नमस्ते! मैं आपका नासिक AI गाइड हूँ। आपकी यात्रा की योजना में कैसे मदद करूँ?" : language === "mr" ? "नमस्कार! मी तुमचा नाशिक AI मार्गदर्शक आहे. तुमच्या प्रवासाच्या नियोजनात कशी मदत करू?" : "Hi! I'm your Nashik AI guide. How can I help you plan your trip?" }
+    { role: "ai", content: getGreetingMessage(language) }
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [speakingIndex, setSpeakingIndex] = useState<number | null>(null);
+
   const voiceAvailable = typeof window !== "undefined" && Boolean(window.speechSynthesis || getSpeechRecognition());
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const activeSpeechIdRef = useRef<number>(0);
+  const activeRequestIdRef = useRef<number>(0);
 
   const stopSpeaking = () => {
     activeSpeechIdRef.current += 1;
-    if (typeof window !== "undefined") {
-      window.speechSynthesis?.cancel();
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
     }
     setIsSpeaking(false);
     setSpeakingIndex(null);
@@ -163,8 +194,8 @@ export function ChatbotWidget() {
   useEffect(() => {
     return () => {
       recognitionRef.current?.stop();
-      if (typeof window !== "undefined") {
-        window.speechSynthesis?.cancel();
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
       }
     };
   }, []);
@@ -178,23 +209,22 @@ export function ChatbotWidget() {
 
   useEffect(() => {
     stopSpeaking();
-  }, [language]);
+  }, [chatLanguage]);
 
   const speak = (text: string, index: number) => {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
 
-    // Increment active speech ID so stale callbacks from older speech cannot overwrite new state
     activeSpeechIdRef.current += 1;
     const currentSpeechId = activeSpeechIdRef.current;
 
-    // Cancel any current speech before starting new utterance (prevents queue buildup)
+    // Cancel any ongoing speech immediately before starting new utterance
     window.speechSynthesis.cancel();
 
     const utteranceText = text.replace(/•/g, "").trim();
     if (!utteranceText) return;
 
     const utterance = new SpeechSynthesisUtterance(utteranceText);
-    utterance.lang = speechLocale[language] || "en-IN";
+    utterance.lang = speechLocale[chatLanguage] || "en-IN";
 
     utterance.onstart = () => {
       if (activeSpeechIdRef.current === currentSpeechId) {
@@ -234,7 +264,7 @@ export function ChatbotWidget() {
     const recognition = new recognitionConstructor();
     recognition.continuous = false;
     recognition.interimResults = false;
-    recognition.lang = speechLocale[language];
+    recognition.lang = speechLocale[chatLanguage];
     recognition.onresult = event => {
       const transcript = Array.from(event.results)
         .map(result => result[0]?.transcript || "")
@@ -252,8 +282,12 @@ export function ChatbotWidget() {
     const currentInput = input.trim();
     if (!currentInput) return;
 
-    // IMMEDIATELY interrupt and stop any ongoing speech when the user submits a new question
+    // 1. IMMEDIATELY cancel any ongoing speech
     stopSpeaking();
+
+    // 2. Increment request ID to prevent stale out-of-order API responses from overwriting latest UI
+    activeRequestIdRef.current += 1;
+    const currentRequestId = activeRequestIdRef.current;
 
     const currentHistory = [...messages];
     setMessages(prev => [...prev, { role: "user", content: currentInput }]);
@@ -261,16 +295,24 @@ export function ChatbotWidget() {
     setIsLoading(true);
 
     try {
-      const reply = await getGeminiReply(currentInput, language, currentHistory);
+      const reply = await getGeminiReply(currentInput, chatLanguage, currentHistory);
+
+      // Check if a newer request was sent while waiting
+      if (currentRequestId !== activeRequestIdRef.current) {
+        return;
+      }
+
       const cleanedReply = cleanChatReply(reply);
       setMessages(prev => [...prev, { role: "ai", content: cleanedReply }]);
-      // Note: Automatic speech removed as per requirements. Speech is triggered strictly on user click.
     } catch (error) {
+      if (currentRequestId !== activeRequestIdRef.current) return;
       console.error("Chat request failed:", error);
-      const fallbackReply = cleanChatReply(getPredefinedReply(currentInput, language));
+      const fallbackReply = cleanChatReply(getPredefinedReply(currentInput, chatLanguage));
       setMessages(prev => [...prev, { role: "ai", content: fallbackReply }]);
     } finally {
-      setIsLoading(false);
+      if (currentRequestId === activeRequestIdRef.current) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -298,7 +340,7 @@ export function ChatbotWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
             transition={{ type: "spring", stiffness: 400, damping: 25 }}
-            className="fixed bottom-24 right-4 z-50 flex h-[500px] w-80 flex-col overflow-hidden rounded-[22px] border border-orange-100 bg-white shadow-[0_22px_70px_rgba(67,31,12,0.28)] dark:border-orange-900/50 dark:bg-slate-900 md:right-8 md:w-96"
+            className="fixed bottom-24 right-4 z-50 flex h-[520px] w-80 flex-col overflow-hidden rounded-[22px] border border-orange-100 bg-white shadow-[0_22px_70px_rgba(67,31,12,0.28)] dark:border-orange-900/50 dark:bg-slate-900 md:right-8 md:w-96"
           >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-orange-400/20 bg-gradient-to-br from-[#f97316] via-[#ea580c] to-[#c2410c] p-4 text-white">
@@ -322,6 +364,30 @@ export function ChatbotWidget() {
               <button onClick={closeChatbot} className="rounded-full p-2 text-orange-50 transition-colors hover:bg-white/15" aria-label="Close chatbot">
                 <X className="h-5 w-5" />
               </button>
+            </div>
+
+            {/* Chatbot Language Selector */}
+            <div className="flex items-center justify-between border-b border-orange-100 bg-[#fffaf5] px-4 py-2 text-xs dark:border-slate-800 dark:bg-slate-950">
+              <span className="font-semibold text-slate-600 dark:text-slate-400">{t("Language")}:</span>
+              <div className="flex items-center gap-1">
+                {(["en", "hi", "mr"] as Language[]).map((lang) => (
+                  <button
+                    key={lang}
+                    type="button"
+                    onClick={() => {
+                      stopSpeaking();
+                      setChatLanguage(lang);
+                    }}
+                    className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
+                      chatLanguage === lang
+                        ? "bg-orange-500 text-white shadow-sm"
+                        : "text-slate-600 hover:bg-orange-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                    }`}
+                  >
+                    {lang === "en" ? "English" : lang === "hi" ? "हिन्दी" : "मराठी"}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Chat Area */}
@@ -411,4 +477,3 @@ export function ChatbotWidget() {
     </>
   );
 }
-

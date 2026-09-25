@@ -334,7 +334,7 @@ export function NavBar() {
                 handleGroupTrackerClick();
                 setIsOpen(false);
               }}
-              className="relative flex items-center justify-center gap-1.5 rounded-full border border-[#e7b06d] bg-[#fff7ed] px-3 py-2 text-sm font-bold text-[#c9580f] transition-colors hover:bg-[#ffedd5]"
+              className="relative flex items-center justify-center gap-2 rounded-xl border border-[#e7b06d] bg-[#fff7ed] px-4 py-3 text-base font-bold text-[#c9580f] hover:bg-[#ffedd5]"
             >
               <Users className="h-5 w-5" />
               {t("Group Tracker")}

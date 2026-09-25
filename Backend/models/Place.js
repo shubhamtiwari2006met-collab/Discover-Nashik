@@ -31,9 +31,17 @@ const placeSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  heritage: {
+    type: String,
+    default: ''
+  },
   image: {
     type: String,
     default: ''
+  },
+  images: {
+    type: [String],
+    default: []
   },
   rating: {
     type: Number,
