@@ -122,6 +122,37 @@ export default function PhotoInput({
     setUrlInput("");
   };
 
+  // Camera Permission Handler on explicit user interaction
+  const handleCameraClick = async () => {
+    if (processing) return;
+
+    if (typeof navigator !== "undefined" && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        // Stop stream tracks immediately so native camera capture input gets access
+        stream.getTracks().forEach((track) => track.stop());
+        cameraInputRef.current?.click();
+      } catch (err: any) {
+        console.warn("Camera permission error:", err);
+        if (
+          err.name === "NotAllowedError" ||
+          err.name === "PermissionDeniedError" ||
+          err.name === "NotFoundError" ||
+          err.name === "NotReadableError"
+        ) {
+          alert(
+            t("Camera access was denied or is unavailable. Please allow camera access in your browser or device settings to take photos, or use 'From Device' / 'Image URL'.") ||
+            "Camera access was denied or is unavailable. Please allow camera access in your browser or device settings to take photos, or use 'From Device' / 'Image URL'."
+          );
+        } else {
+          cameraInputRef.current?.click();
+        }
+      }
+    } else {
+      cameraInputRef.current?.click();
+    }
+  };
+
   return (
     <div className={`space-y-3 ${className}`}>
       {label && (
@@ -196,7 +227,13 @@ export default function PhotoInput({
           <div className="grid grid-cols-3 gap-1 bg-slate-200/80 dark:bg-slate-800 p-1 rounded-xl text-xs font-bold">
             <button
               type="button"
-              onClick={() => setActiveTab("camera")}
+              onClick={() => {
+                if (activeTab === "camera") {
+                  handleCameraClick();
+                } else {
+                  setActiveTab("camera");
+                }
+              }}
               className={`py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
                 activeTab === "camera"
                   ? "bg-white dark:bg-slate-700 text-orange-600 dark:text-orange-400 shadow-sm border border-slate-300/50 dark:border-slate-600"
@@ -237,7 +274,7 @@ export default function PhotoInput({
           {/* TAB 1: CAMERA */}
           {activeTab === "camera" && (
             <div
-              onClick={() => cameraInputRef.current?.click()}
+              onClick={handleCameraClick}
               className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-orange-400/80 dark:border-orange-500/50 bg-orange-50/70 dark:bg-slate-800/50 p-6 cursor-pointer hover:bg-orange-100/60 transition-colors text-center group"
             >
               {processing ? (
