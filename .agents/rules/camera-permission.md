@@ -1,18 +1,14 @@
-# Global Project Rule — First-Time Camera Permission Handling
+# Global Project Rule — Native Browser Camera Permission Handling
 
-1. **Trigger Permission Only On Explicit User Interaction:**
-   - When a user chooses to use the camera (e.g., clicking "Take Photo" or "Click to Open Camera"), trigger the native browser/device camera permission request (`navigator.mediaDevices.getUserMedia`).
-   - Never request camera permission on page load, form open, or component mounting.
+1. **Native Browser Permission Dialog First:**
+   - On first-time camera interaction ("Take Photo" / "Click to Open Camera"), trigger native browser camera capture (`cameraInputRef.current?.click()`).
+   - Never pop up custom JavaScript error/alert dialogs before the native browser permission dialog has had the chance to run.
+   - Do NOT request permission on page load or component mounting.
 
-2. **Granted Permission Workflow:**
-   - Immediately release test stream tracks and open the camera interface.
-   - Continue through the standard image capture -> preview -> validation -> upload pipeline.
+2. **Native Allow / Deny Flow:**
+   - Allow the browser/device to display its native permission prompt (`Allow` / `Block`).
+   - On `Allow`: Camera opens natively, photo captured, preview and upload pipeline continues.
+   - On `Deny` (or if blocked previously in browser settings): Keep "From Device" and "Image URL" options 100% available and operational. Inform user via browser settings guidance if blocked.
 
-3. **Denied / Blocked Permission Workflow:**
-   - Catch permission errors (`NotAllowedError`, `PermissionDeniedError`).
-   - Do not crash or break the application form.
-   - Inform the user cleanly (e.g., via alert) that camera access can be enabled in browser/device settings.
-   - Keep alternative photo options ("From Device" / "Image URL") 100% available.
-
-4. **Already Granted Permission:**
-   - Open camera directly without repeated unnecessary prompts.
+3. **Already Granted Permission:**
+   - Opens camera directly without repeated unnecessary prompts.

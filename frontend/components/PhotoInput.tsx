@@ -122,35 +122,131 @@ export default function PhotoInput({
     setUrlInput("");
   };
 
-  // Camera Permission Handler on explicit user interaction
-  const handleCameraClick = async () => {
+  const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [cameraError, setCameraError] = useState<string>("");
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Stop active camera stream helper
+  const stopCameraStream = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach((track) => track.stop());
+      setCameraStream(null);
+    }
+    setIsCameraActive(false);
+  };
+
+  // Cleanup camera stream on unmount
+  React.useEffect(() => {
+    return () => {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, [cameraStream]);
+
+  // Handle Tab change - stop stream if switching away from camera tab
+  const handleTabChange = (tab: "camera" | "device" | "url") => {
+    if (tab !== "camera") {
+      stopCameraStream();
+    }
+    setCameraError("");
+    setActiveTab(tab);
+  };
+
+  // Start Camera - Triggers Native Browser Permission Dialog ("Allow while using the site", "Allow this time", "Don't allow")
+  const startCamera = async () => {
     if (processing) return;
+    setCameraError("");
+
+    // Check Permissions API if supported to detect if user previously denied permission in site settings
+    if (typeof navigator !== "undefined" && navigator.permissions && navigator.permissions.query) {
+      try {
+        const permissionStatus = await navigator.permissions.query({ name: "camera" as any });
+        if (permissionStatus.state === "denied") {
+          setCameraError(
+            t("Camera permission was denied. You can enable camera access in browser settings, or select 'From Device' / 'Image URL'.") ||
+              "Camera permission was denied. You can enable camera access in browser settings, or select 'From Device' / 'Image URL'."
+          );
+          return;
+        }
+      } catch {
+        // Permissions query for "camera" is non-standard or unsupported in some browsers (e.g., Firefox/Safari); ignore & proceed
+      }
+    }
 
     if (typeof navigator !== "undefined" && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        // Stop stream tracks immediately so native camera capture input gets access
-        stream.getTracks().forEach((track) => track.stop());
-        cameraInputRef.current?.click();
+        let stream: MediaStream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          });
+        } catch {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        }
+
+        setCameraStream(stream);
+        setIsCameraActive(true);
       } catch (err: any) {
-        console.warn("Camera permission error:", err);
-        if (
-          err.name === "NotAllowedError" ||
-          err.name === "PermissionDeniedError" ||
-          err.name === "NotFoundError" ||
-          err.name === "NotReadableError"
-        ) {
-          alert(
-            t("Camera access was denied or is unavailable. Please allow camera access in your browser or device settings to take photos, or use 'From Device' / 'Image URL'.") ||
-            "Camera access was denied or is unavailable. Please allow camera access in your browser or device settings to take photos, or use 'From Device' / 'Image URL'."
+        console.warn("Camera permission denied or camera error:", err);
+        setIsCameraActive(false);
+
+        if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+          setCameraError(
+            t("Camera permission was denied. You can enable camera access in browser settings, or select 'From Device' / 'Image URL'.") ||
+              "Camera permission was denied. You can enable camera access in browser settings, or select 'From Device' / 'Image URL'."
           );
         } else {
+          // Fallback to native file capture if WebRTC stream unsupported or hardware unavailable
           cameraInputRef.current?.click();
         }
       }
     } else {
       cameraInputRef.current?.click();
     }
+  };
+
+  // Attach stream to video element when camera becomes active
+  React.useEffect(() => {
+    if (isCameraActive && cameraStream && videoRef.current) {
+      videoRef.current.srcObject = cameraStream;
+      videoRef.current.play().catch(console.error);
+    }
+  }, [isCameraActive, cameraStream]);
+
+  // Capture Photo Snapshot from Live Camera Stream
+  const capturePhoto = () => {
+    if (!videoRef.current) return;
+    setProcessing(true);
+
+    const video = videoRef.current;
+    const maxDim = 1200;
+    let width = video.videoWidth || 640;
+    let height = video.videoHeight || 480;
+
+    if (width > maxDim || height > maxDim) {
+      if (width > height) {
+        height = Math.round((height * maxDim) / width);
+        width = maxDim;
+      } else {
+        width = Math.round((width * maxDim) / height);
+        height = maxDim;
+      }
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      ctx.drawImage(video, 0, 0, width, height);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.75);
+      onChange(dataUrl);
+    }
+
+    stopCameraStream();
+    setProcessing(false);
   };
 
   return (
@@ -227,13 +323,7 @@ export default function PhotoInput({
           <div className="grid grid-cols-3 gap-1 bg-slate-200/80 dark:bg-slate-800 p-1 rounded-xl text-xs font-bold">
             <button
               type="button"
-              onClick={() => {
-                if (activeTab === "camera") {
-                  handleCameraClick();
-                } else {
-                  setActiveTab("camera");
-                }
-              }}
+              onClick={() => handleTabChange("camera")}
               className={`py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
                 activeTab === "camera"
                   ? "bg-white dark:bg-slate-700 text-orange-600 dark:text-orange-400 shadow-sm border border-slate-300/50 dark:border-slate-600"
@@ -246,7 +336,7 @@ export default function PhotoInput({
 
             <button
               type="button"
-              onClick={() => setActiveTab("device")}
+              onClick={() => handleTabChange("device")}
               className={`py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
                 activeTab === "device"
                   ? "bg-white dark:bg-slate-700 text-amber-700 dark:text-amber-400 shadow-sm border border-slate-300/50 dark:border-slate-600"
@@ -259,7 +349,7 @@ export default function PhotoInput({
 
             <button
               type="button"
-              onClick={() => setActiveTab("url")}
+              onClick={() => handleTabChange("url")}
               className={`py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
                 activeTab === "url"
                   ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm border border-slate-300/50 dark:border-slate-600"
@@ -273,27 +363,72 @@ export default function PhotoInput({
 
           {/* TAB 1: CAMERA */}
           {activeTab === "camera" && (
-            <div
-              onClick={handleCameraClick}
-              className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-orange-400/80 dark:border-orange-500/50 bg-orange-50/70 dark:bg-slate-800/50 p-6 cursor-pointer hover:bg-orange-100/60 transition-colors text-center group"
-            >
-              {processing ? (
-                <div className="flex items-center gap-2 text-orange-700 dark:text-orange-400 text-xs font-bold py-2">
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  <span>Processing camera photo...</span>
+            <div>
+              {isCameraActive ? (
+                <div className="flex flex-col items-center justify-center rounded-2xl overflow-hidden bg-slate-950 border-2 border-orange-400/80 p-3 space-y-3">
+                  <div className="relative aspect-[16/9] w-full max-w-sm rounded-xl overflow-hidden bg-black flex items-center justify-center">
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={capturePhoto}
+                      disabled={processing}
+                      className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-extrabold text-xs rounded-xl shadow-lg hover:brightness-110 transition-all flex items-center gap-2"
+                    >
+                      {processing ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Camera className="h-4 w-4" />
+                      )}
+                      <span>📸 Take Snapshot</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={stopCameraStream}
+                      className="px-4 py-2.5 bg-slate-800 text-slate-200 font-bold text-xs rounded-xl hover:bg-slate-700 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               ) : (
-                <>
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-200/80 dark:bg-orange-950 text-orange-700 dark:text-orange-300 mb-2 group-hover:bg-orange-600 group-hover:text-white transition-colors">
-                    <Camera className="h-6 w-6" />
+                <div className="space-y-2">
+                  <div
+                    onClick={startCamera}
+                    className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-orange-400/80 dark:border-orange-500/50 bg-orange-50/70 dark:bg-slate-800/50 p-6 cursor-pointer hover:bg-orange-100/60 transition-colors text-center group"
+                  >
+                    {processing ? (
+                      <div className="flex items-center gap-2 text-orange-700 dark:text-orange-400 text-xs font-bold py-2">
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <span>Processing camera photo...</span>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-200/80 dark:bg-orange-950 text-orange-700 dark:text-orange-300 mb-2 group-hover:bg-orange-600 group-hover:text-white transition-colors">
+                          <Camera className="h-6 w-6" />
+                        </div>
+                        <span className="text-sm font-extrabold text-[#173247] dark:text-white">
+                          Click to Open Camera
+                        </span>
+                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 mt-1">
+                          Capture directly using device camera (JPG, PNG up to {maxSizeMB}MB)
+                        </span>
+                      </>
+                    )}
                   </div>
-                  <span className="text-sm font-extrabold text-[#173247] dark:text-white">
-                    Click to Open Camera
-                  </span>
-                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 mt-1">
-                    Capture directly using device camera (JPG, PNG up to {maxSizeMB}MB)
-                  </span>
-                </>
+                  {cameraError && (
+                    <p className="text-xs text-red-600 dark:text-red-400 font-medium text-center px-2">
+                      {cameraError}
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           )}
