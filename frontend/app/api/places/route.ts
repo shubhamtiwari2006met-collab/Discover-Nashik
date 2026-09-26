@@ -8,6 +8,8 @@ import { normalizeImageUrl, parsePhotoList, DEFAULT_FALLBACK_IMAGE } from "@/lib
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:5000";
+
 export type SavedPlace = {
   _id: string;
   name: string;
@@ -198,7 +200,7 @@ export async function GET() {
   // Also query MongoDB Express backend if running to merge any MongoDB approved businesses
   let mongoPlaces: SavedPlace[] = [];
   try {
-    const mongoRes = await fetch("http://localhost:5000/api/places", { cache: "no-store" });
+    const mongoRes = await fetch(`${BACKEND_URL}/api/places`, { cache: "no-store" });
     if (mongoRes.ok) {
       const data = await mongoRes.json();
       if (Array.isArray(data)) {
@@ -303,7 +305,7 @@ export async function PUT(request: Request) {
 
     // Also update MongoDB Express backend if running
     try {
-      await fetch(`http://localhost:5000/api/places/${id}`, {
+      await fetch(`${BACKEND_URL}/api/places/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(normalized),
@@ -345,7 +347,7 @@ export async function DELETE(request: Request) {
 
     // Also delete from MongoDB Express backend if running
     try {
-      await fetch(`http://localhost:5000/api/places/${id}`, {
+      await fetch(`${BACKEND_URL}/api/places/${id}`, {
         method: "DELETE",
       });
     } catch {}
