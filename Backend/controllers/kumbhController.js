@@ -6,10 +6,19 @@ const Place = require('../models/Place');
 // Initial seed data helpers if collections are empty
 async function seedDefaultDataIfEmpty() {
   try {
-    const locCount = await KumbhLocation.countDocuments();
+    // Run independent collection counts concurrently
+    const [locCount, transCount, eventCount] = await Promise.all([
+      KumbhLocation.countDocuments(),
+      KumbhTransport.countDocuments(),
+      KumbhEvent.countDocuments()
+    ]);
+
     if (locCount === 0) {
-      const ramKundPlace = await Place.findOne({ name: { $regex: /Ram Kund/i } });
-      const trimbakPlace = await Place.findOne({ name: { $regex: /Trimbak/i } });
+      // Run independent Place lookups concurrently
+      const [ramKundPlace, trimbakPlace] = await Promise.all([
+        Place.findOne({ name: { $regex: /Ram Kund/i } }).lean(),
+        Place.findOne({ name: { $regex: /Trimbak/i } }).lean()
+      ]);
 
       await KumbhLocation.insertMany([
         {
@@ -72,7 +81,6 @@ async function seedDefaultDataIfEmpty() {
       console.log('Kumbh locations already exist — skipping seed');
     }
 
-    const transCount = await KumbhTransport.countDocuments();
     if (transCount === 0) {
       await KumbhTransport.insertMany([
         {
@@ -111,7 +119,6 @@ async function seedDefaultDataIfEmpty() {
       console.log('Kumbh transport already exists — skipping seed');
     }
 
-    const eventCount = await KumbhEvent.countDocuments();
     if (eventCount === 0) {
       await KumbhEvent.insertMany([
         {
@@ -180,7 +187,8 @@ const getKumbhLocations = async (req, res) => {
     const query = req.query.admin === 'true' ? {} : { isPublished: { $ne: false } };
     const locations = await KumbhLocation.find(query)
       .populate('placeId', 'name category location description image latitude longitude rating')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
     res.json(locations);
   } catch (error) {
     res.status(500).json({ message: error.message || 'Error fetching Kumbh locations' });
