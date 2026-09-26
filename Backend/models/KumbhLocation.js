@@ -55,4 +55,7 @@ const kumbhLocationSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
+kumbhLocationSchema.index({ isPublished: 1, createdAt: -1 });
+kumbhLocationSchema.index({ createdAt: -1 });
+
 module.exports = mongoose.model('KumbhLocation', kumbhLocationSchema);
