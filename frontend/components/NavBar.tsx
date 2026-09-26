@@ -62,7 +62,7 @@ export function NavBar() {
     const interval = setInterval(() => {
       checkGroupUnread();
       checkLostFoundUnread();
-    }, 4000);
+    }, 30000);
 
     const handleRefreshEvent = () => {
       checkLostFoundUnread();

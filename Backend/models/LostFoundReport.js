@@ -111,4 +111,6 @@ const LostFoundReportSchema = new mongoose.Schema(
   }
 );
 
+LostFoundReportSchema.index({ "reporterContact.userId": 1 });
+
 module.exports = mongoose.model("LostFoundReport", LostFoundReportSchema);
