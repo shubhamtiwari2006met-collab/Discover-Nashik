@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, ChevronLeft, ChevronRight, Clock, Globe, Landmark, Mail, MapPin, Pencil, Phone, Save, Star, Trash2 } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Clock, Globe, Landmark, Mail, MapPin, Pencil, Phone, Save, Star, Trash2, BedDouble, Tag, Check, Calendar, MessageSquare, ShieldAlert } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { createClient } from "@/utils/supabase/client";
 import { parsePhotoList, normalizeImageUrl, DEFAULT_FALLBACK_IMAGE } from "@/lib/imageUrl";
+import { HotelData } from "@/app/api/business/hotel-data/route";
 
 type PlaceRecord = {
   _id: string;
@@ -42,6 +43,12 @@ export default function PlacePage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
   const [carouselPaused, setCarouselPaused] = useState(false);
+  const [hotelData, setHotelData] = useState<HotelData | null>(null);
+  const [newReviewName, setNewReviewName] = useState("");
+  const [newReviewRating, setNewReviewRating] = useState(5);
+  const [newReviewComment, setNewReviewComment] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewMessage, setReviewMessage] = useState("");
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
   const pauseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -65,47 +72,63 @@ export default function PlacePage() {
     async function loadPlaceData() {
       try {
         const res = await fetch("/api/places");
+        let item: PlaceRecord | null = null;
         if (res.ok) {
           const data = await res.json();
-          const found = Array.isArray(data) ? data.find((item: PlaceRecord) => item._id === id) : null;
-          if (found) {
-            setPlace(found);
-            setForm(found);
-            setLoading(false);
-            return;
+          const found = Array.isArray(data) ? data.find((p: PlaceRecord) => p._id === id) : null;
+          if (found) item = found;
+        }
+
+        if (!item) {
+          // Direct fallback for approved business in Supabase
+          const { data: bus } = await supabase
+            .from("business_registrations")
+            .select("*")
+            .eq("id", id)
+            .eq("verification_status", "approved")
+            .maybeSingle();
+
+          if (bus) {
+            const photos = parsePhotoList(bus.photos);
+            item = {
+              _id: bus.id,
+              name: bus.business_name,
+              category: bus.category,
+              location: bus.city_area ? `${bus.city_area}, ${bus.address}` : bus.address,
+              description: bus.description || `${bus.business_name} in ${bus.address}`,
+              image: photos[0] || DEFAULT_FALLBACK_IMAGE,
+              images: photos.length > 0 ? photos : undefined,
+              rating: 4.8,
+              mapLink: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${bus.business_name}, ${bus.address}`)}`,
+              phone: bus.phone || undefined,
+              email: bus.email || undefined,
+              websiteUrl: bus.website_url || undefined,
+              openingTime: bus.opening_time || undefined,
+              closingTime: bus.closing_time || undefined,
+              workingDays: bus.working_days || undefined,
+              subcategory: bus.subcategory || undefined,
+            };
           }
         }
 
-        // Direct fallback for approved business in Supabase
-        const { data: bus } = await supabase
-          .from("business_registrations")
-          .select("*")
-          .eq("id", id)
-          .eq("verification_status", "approved")
-          .maybeSingle();
-
-        if (bus) {
-          const photos = parsePhotoList(bus.photos);
-          const item: PlaceRecord = {
-            _id: bus.id,
-            name: bus.business_name,
-            category: bus.category,
-            location: bus.city_area ? `${bus.city_area}, ${bus.address}` : bus.address,
-            description: bus.description || `${bus.business_name} in ${bus.address}`,
-            image: photos[0] || DEFAULT_FALLBACK_IMAGE,
-            images: photos.length > 0 ? photos : undefined,
-            rating: 4.8,
-            mapLink: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${bus.business_name}, ${bus.address}`)}`,
-            phone: bus.phone || undefined,
-            email: bus.email || undefined,
-            websiteUrl: bus.website_url || undefined,
-            openingTime: bus.opening_time || undefined,
-            closingTime: bus.closing_time || undefined,
-            workingDays: bus.working_days || undefined,
-            subcategory: bus.subcategory || undefined,
-          };
+        if (item) {
           setPlace(item);
           setForm(item);
+
+          const cat = (item.category || "").toLowerCase();
+          if (cat.includes("hotel") || cat.includes("stay")) {
+            try {
+              const hRes = await fetch(`/api/business/hotel-data?id=${item._id}`);
+              if (hRes.ok) {
+                const hData = await hRes.json();
+                if (hData && hData.rooms) {
+                  setHotelData(hData);
+                }
+              }
+            } catch (err) {
+              console.error("Failed to load hotel data", err);
+            }
+          }
         } else {
           setPlace(null);
         }
@@ -118,6 +141,38 @@ export default function PlacePage() {
 
     void loadPlaceData();
   }, [id]);
+
+  const handleAddReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newReviewName.trim() || !newReviewComment.trim()) return;
+    setSubmittingReview(true);
+    try {
+      const res = await fetch("/api/business/hotel-data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "add_review",
+          businessId: id,
+          reviewerName: newReviewName,
+          rating: newReviewRating,
+          comment: newReviewComment,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setHotelData(data.data);
+        setNewReviewName("");
+        setNewReviewComment("");
+        setNewReviewRating(5);
+        setReviewMessage("Thank you! Your review has been submitted.");
+        setTimeout(() => setReviewMessage(""), 4000);
+      }
+    } catch {
+      alert("Failed to submit review");
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   const categories = ["Temples", "Food", "Hotels", "Nature", "Waterfalls", "Trekking", "Vineyards", "Shopping", "Emergency"];
 
@@ -517,6 +572,344 @@ export default function PlacePage() {
             </div>
           </div>
         </div>
+
+        {/* HOTEL & STAYS EXTENDED CUSTOMER-FACING SECTION */}
+        {hotelData && (
+          <div className="mt-12 space-y-12">
+            {/* Active Offers & Stay Packages */}
+            {((hotelData.offers && hotelData.offers.filter(o => o.enabled).length > 0) || (hotelData.packages && hotelData.packages.filter(p => p.enabled).length > 0)) && (
+              <section className="rounded-3xl border border-amber-200 bg-[#fffdf8] p-6 md:p-8 shadow-[0_10px_30px_rgba(77,58,30,0.08)]">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-700">
+                    <Tag className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900">Special Offers & Stay Packages</h2>
+                    <p className="text-xs text-slate-500">Exclusive promotions for your Nashik stay</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-6 md:grid-cols-2">
+                  {/* Offers */}
+                  {hotelData.offers?.filter(o => o.enabled).map((offer) => (
+                    <div key={offer.id} className="relative overflow-hidden rounded-2xl border border-amber-300/60 bg-gradient-to-br from-amber-500/5 to-amber-600/10 p-5">
+                      <span className="absolute top-3 right-3 rounded-full bg-amber-600 px-3 py-1 text-xs font-bold text-white shadow-sm">
+                        {offer.discountType === "percentage" ? `${offer.discountValue}% OFF` : `₹${offer.discountValue} OFF`}
+                      </span>
+                      <h3 className="text-lg font-bold text-slate-900 pr-16">{offer.title}</h3>
+                      <p className="mt-2 text-sm text-slate-700">{offer.description}</p>
+                      <div className="mt-4 flex items-baseline gap-3">
+                        <span className="text-2xl font-extrabold text-amber-800">₹{offer.offerPrice}</span>
+                        {offer.originalPrice > offer.offerPrice && (
+                          <span className="text-sm font-semibold text-slate-400 line-through">₹{offer.originalPrice}</span>
+                        )}
+                        <span className="text-xs text-slate-500">/ night</span>
+                      </div>
+                      <div className="mt-3 text-xs text-slate-500">Valid: {offer.validFrom} to {offer.validUntil}</div>
+                      {offer.terms && <div className="mt-1 text-xs text-slate-400 italic">Terms: {offer.terms}</div>}
+                    </div>
+                  ))}
+
+                  {/* Packages */}
+                  {hotelData.packages?.filter(p => p.enabled).map((pkg) => (
+                    <div key={pkg.id} className="relative overflow-hidden rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-amber-50/50 p-5">
+                      <span className="absolute top-3 right-3 rounded-full bg-indigo-700 px-3 py-1 text-xs font-bold text-white shadow-sm">
+                        {pkg.duration}
+                      </span>
+                      <h3 className="text-lg font-bold text-slate-900 pr-20">{pkg.title}</h3>
+                      <p className="mt-2 text-sm text-slate-700 font-medium">Includes: {pkg.inclusions}</p>
+                      <div className="mt-4 flex items-baseline gap-3">
+                        <span className="text-2xl font-extrabold text-indigo-950">₹{pkg.packagePrice}</span>
+                        {pkg.savings && <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">{pkg.savings}</span>}
+                      </div>
+                      <div className="mt-3 text-xs text-slate-500">Valid until: {pkg.validUntil}</div>
+                      {pkg.terms && <div className="mt-1 text-xs text-slate-400 italic">Terms: {pkg.terms}</div>}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Rooms & Accommodation */}
+            {hotelData.rooms && hotelData.rooms.length > 0 && (
+              <section className="rounded-3xl border border-amber-200 bg-[#fffdf8] p-6 md:p-8 shadow-[0_10px_30px_rgba(77,58,30,0.08)]">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-700">
+                    <BedDouble className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900">Available Rooms & Accommodations</h2>
+                    <p className="text-xs text-slate-500">Explore room types, capacity, and current room availability</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-6 md:grid-cols-2">
+                  {hotelData.rooms.map((room) => {
+                    const availableCount = Math.max(0, room.totalRooms - (room.bookedRooms || 0));
+                    return (
+                      <div key={room.id} className="overflow-hidden rounded-2xl border border-amber-200 bg-white shadow-sm transition hover:shadow-md flex flex-col">
+                        {room.photos && room.photos[0] && (
+                          <div className="h-48 w-full overflow-hidden bg-slate-100">
+                            <img src={room.photos[0]} alt={room.name} className="h-full w-full object-cover" />
+                          </div>
+                        )}
+                        <div className="p-5 flex-1 flex flex-col justify-between">
+                          <div>
+                            <div className="flex items-start justify-between gap-2">
+                              <h3 className="text-lg font-bold text-slate-900">{room.name}</h3>
+                              <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${room.isAC ? "bg-cyan-100 text-cyan-800" : "bg-orange-100 text-orange-800"}`}>
+                                {room.isAC ? "AC Room" : "Non-AC"}
+                              </span>
+                            </div>
+                            <p className="mt-2 text-sm text-slate-600 line-clamp-2">{room.description}</p>
+
+                            <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-600">
+                              <span className="rounded-lg bg-slate-100 px-2.5 py-1">🛏️ {room.bedType} Bed ({room.numBeds})</span>
+                              <span className="rounded-lg bg-slate-100 px-2.5 py-1">👥 Max Guests: {room.maxGuests} ({room.adultsAllowed} Adults{room.childrenAllowed ? `, ${room.childrenAllowed} Kids` : ""})</span>
+                            </div>
+
+                            {room.extraNotes && (
+                              <p className="mt-3 text-xs text-amber-800 italic">💡 {room.extraNotes}</p>
+                            )}
+                          </div>
+
+                          <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
+                            <div>
+                              <div className="text-xl font-bold text-slate-900">₹{room.price} <span className="text-xs font-normal text-slate-500">/ night</span></div>
+                              <div className="text-xs font-semibold text-emerald-700">{availableCount} of {room.totalRooms} rooms available</div>
+                            </div>
+                            <a
+                              href={`tel:${form.phone || ""}`}
+                              className="rounded-xl bg-amber-600 px-4 py-2 text-xs font-bold text-white shadow hover:bg-amber-700 transition"
+                            >
+                              Inquire Room
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
+            {/* Property Amenities */}
+            {((hotelData.amenities && hotelData.amenities.length > 0) || (hotelData.customAmenities && hotelData.customAmenities.length > 0)) && (
+              <section className="rounded-3xl border border-amber-200 bg-[#fffdf8] p-6 md:p-8 shadow-[0_10px_30px_rgba(77,58,30,0.08)]">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-700">
+                    <Check className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900">Property Amenities & Facilities</h2>
+                    <p className="text-xs text-slate-500">Services and features available at this stay</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {[...(hotelData.amenities || []), ...(hotelData.customAmenities || [])].map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-2.5 rounded-xl border border-amber-200/80 bg-white p-3 text-xs font-semibold text-slate-800 shadow-sm">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 shrink-0">✓</span>
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Policies & Timings */}
+            <section className="rounded-3xl border border-amber-200 bg-[#fffdf8] p-6 md:p-8 shadow-[0_10px_30px_rgba(77,58,30,0.08)]">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-700">
+                  <Clock className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">Check-in / Check-out & Property Policies</h2>
+                  <p className="text-xs text-slate-500">Important rules and timings for staying guests</p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2 mb-6">
+                <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4">
+                  <div className="text-xs font-bold uppercase tracking-wider text-amber-800">Standard Check-In</div>
+                  <div className="mt-1 text-2xl font-extrabold text-slate-900">{hotelData.checkInTime || "12:00 PM"}</div>
+                  {hotelData.earlyCheckInPolicy && <p className="mt-2 text-xs text-slate-600">{hotelData.earlyCheckInPolicy}</p>}
+                </div>
+                <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4">
+                  <div className="text-xs font-bold uppercase tracking-wider text-amber-800">Standard Check-Out</div>
+                  <div className="mt-1 text-2xl font-extrabold text-slate-900">{hotelData.checkOutTime || "11:00 AM"}</div>
+                  {hotelData.lateCheckOutPolicy && <p className="mt-2 text-xs text-slate-600">{hotelData.lateCheckOutPolicy}</p>}
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2 text-xs text-slate-700">
+                {hotelData.cancellationPolicy && (
+                  <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-200">
+                    <span className="font-bold text-slate-900 block mb-1">Cancellation Policy:</span>
+                    {hotelData.cancellationPolicy}
+                  </div>
+                )}
+                {hotelData.idRequirements && (
+                  <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-200">
+                    <span className="font-bold text-slate-900 block mb-1">ID Requirements:</span>
+                    {hotelData.idRequirements}
+                  </div>
+                )}
+                {hotelData.childPolicy && (
+                  <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-200">
+                    <span className="font-bold text-slate-900 block mb-1">Child Policy:</span>
+                    {hotelData.childPolicy}
+                  </div>
+                )}
+                {hotelData.extraBedPolicy && (
+                  <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-200">
+                    <span className="font-bold text-slate-900 block mb-1">Extra Bed Policy:</span>
+                    {hotelData.extraBedPolicy}
+                  </div>
+                )}
+                {hotelData.petPolicy && (
+                  <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-200">
+                    <span className="font-bold text-slate-900 block mb-1">Pet Policy:</span>
+                    {hotelData.petPolicy}
+                  </div>
+                )}
+                {hotelData.smokingPolicy && (
+                  <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-200">
+                    <span className="font-bold text-slate-900 block mb-1">Smoking Policy:</span>
+                    {hotelData.smokingPolicy}
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* Guest Reviews */}
+            <section className="rounded-3xl border border-amber-200 bg-[#fffdf8] p-6 md:p-8 shadow-[0_10px_30px_rgba(77,58,30,0.08)]">
+              <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-700">
+                    <MessageSquare className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900">Guest Reviews & Feedback</h2>
+                    <p className="text-xs text-slate-500">Verified visitor ratings and genuine experiences</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 rounded-2xl bg-amber-100/70 px-4 py-2 text-amber-900">
+                  <Star className="h-5 w-5 fill-amber-500 text-amber-500" />
+                  <span className="text-lg font-bold">
+                    {hotelData.reviews?.length > 0
+                      ? (hotelData.reviews.reduce((acc, r) => acc + r.rating, 0) / hotelData.reviews.length).toFixed(1)
+                      : "4.8"}
+                  </span>
+                  <span className="text-xs text-amber-800 font-medium">({hotelData.reviews?.length || 0} reviews)</span>
+                </div>
+              </div>
+
+              {/* Review list */}
+              <div className="space-y-4 mb-8">
+                {hotelData.reviews && hotelData.reviews.length > 0 ? (
+                  hotelData.reviews.map((rev) => (
+                    <div key={rev.id} className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-600 text-xs font-bold text-white uppercase">
+                            {rev.reviewerName.charAt(0)}
+                          </div>
+                          <div>
+                            <div className="text-sm font-bold text-slate-900">{rev.reviewerName}</div>
+                            <div className="text-[11px] text-slate-400">{rev.date}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`h-4 w-4 ${i < rev.rating ? "fill-amber-500 text-amber-500" : "text-slate-200"}`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      <p className="mt-3 text-sm text-slate-700 leading-relaxed">{rev.comment}</p>
+
+                      {rev.ownerReply && (
+                        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/70 p-3.5 text-xs text-amber-950">
+                          <div className="font-bold flex items-center gap-1.5 text-amber-900 mb-1">
+                            <span>🏨 Response from property owner</span>
+                            {rev.ownerReplyDate && <span className="text-[10px] text-amber-700 font-normal">({rev.ownerReplyDate})</span>}
+                          </div>
+                          <p>{rev.ownerReply}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-slate-500 italic text-center py-6">No guest reviews yet. Be the first to review this property!</p>
+                )}
+              </div>
+
+              {/* Leave a review form */}
+              <form onSubmit={handleAddReview} className="rounded-2xl border border-amber-200 bg-amber-50/30 p-5">
+                <h3 className="text-sm font-bold text-slate-900 mb-3">Leave a Review for {form.name}</h3>
+
+                {reviewMessage && (
+                  <div className="mb-4 rounded-xl bg-emerald-100 p-3 text-xs font-semibold text-emerald-800">
+                    {reviewMessage}
+                  </div>
+                )}
+
+                <div className="grid gap-4 sm:grid-cols-2 mb-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Your Name</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Ramesh K."
+                      value={newReviewName}
+                      onChange={(e) => setNewReviewName(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs outline-none focus:border-amber-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Rating</label>
+                    <select
+                      value={newReviewRating}
+                      onChange={(e) => setNewReviewRating(Number(e.target.value))}
+                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs outline-none focus:border-amber-500"
+                    >
+                      <option value={5}>⭐⭐⭐⭐⭐ (5 - Excellent)</option>
+                      <option value={4}>⭐⭐⭐⭐ (4 - Very Good)</option>
+                      <option value={3}>⭐⭐⭐ (3 - Average)</option>
+                      <option value={2}>⭐⭐ (2 - Poor)</option>
+                      <option value={1}>⭐ (1 - Terrible)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="mb-3">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Your Review</label>
+                  <textarea
+                    required
+                    rows={3}
+                    placeholder="Share details about your room, cleanliness, staff, or location..."
+                    value={newReviewComment}
+                    onChange={(e) => setNewReviewComment(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submittingReview}
+                  className="rounded-xl bg-amber-600 px-5 py-2.5 text-xs font-bold text-white shadow hover:bg-amber-700 transition disabled:opacity-50"
+                >
+                  {submittingReview ? "Submitting..." : "Submit Genuine Review"}
+                </button>
+              </form>
+            </section>
+          </div>
+        )}
       </div>
     </main>
   );
