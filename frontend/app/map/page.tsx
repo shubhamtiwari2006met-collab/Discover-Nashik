@@ -15,12 +15,21 @@ const MapComponent = dynamic(() => import("@/components/MapComponent"), {
   ),
 });
 
-import { places as staticPlaces } from "@/lib/places";
-
-const mockPlaces: Place[] = staticPlaces;
+import { useEffect, useState } from "react";
 
 export default function MapPage() {
   const { t } = useTranslation();
+  const [places, setPlaces] = useState<Place[]>([]);
+
+  useEffect(() => {
+    fetch("/api/places", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setPlaces(data);
+      })
+      .catch((err) => console.error("Map places fetch error:", err));
+  }, []);
+
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] pt-6 pb-6 px-4">
       <div className="mb-4">
@@ -31,7 +40,7 @@ export default function MapPage() {
       </div>
       
       <div className="flex-1 rounded-2xl overflow-hidden shadow-lg border border-slate-200 dark:border-slate-800 relative z-0">
-        <MapComponent places={mockPlaces} />
+        <MapComponent places={places} />
       </div>
     </div>
   );
