@@ -2,41 +2,33 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Bell, Loader2, LogOut, User, PlusCircle, Menu, Settings } from "lucide-react";
+import { Loader2, LogOut, User, Menu, Settings } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { useTranslation } from "@/lib/i18n";
-import { AddPlaceModal } from "./AddPlaceModal";
 
 export default function AdminHeader({ onToggleMobileMenu }: { onToggleMobileMenu?: () => void }) {
   const supabase = createClient();
   const { t } = useTranslation();
   const [admin, setAdmin] = useState<{ name?: string; email?: string } | null>(null);
-  const [notifications, setNotifications] = useState<number>(0);
   const [loading, setLoading] = useState(true);
-  const [isAddPlaceOpen, setIsAddPlaceOpen] = useState(false);
 
-  // Load admin profile & notifications count
+  // Load admin profile
   useEffect(() => {
     async function fetchProfile() {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session) {
+        setLoading(false);
+        return;
+      }
       const { data: profile, error } = await supabase
         .from("profiles")
         .select("name,email")
         .eq("id", session.user.id)
         .maybeSingle();
       if (!error && profile) setAdmin(profile);
-    }
-    async function fetchNotifications() {
-      // Assuming a table "admin_notifications" with a boolean "read" column
-      const { data, error } = await supabase
-        .from("admin_notifications")
-        .select("id", { count: "exact", head: true });
-      if (!error && data) setNotifications(data.length);
+      setLoading(false);
     }
     void fetchProfile();
-    void fetchNotifications();
-    setLoading(false);
   }, []);
 
   const handleLogout = async () => {
@@ -60,52 +52,41 @@ export default function AdminHeader({ onToggleMobileMenu }: { onToggleMobileMenu
   }, []);
 
   return (
-    <header className="sticky top-16 left-0 right-0 z-20 flex h-16 items-center justify-between border-b border-[#c5924d]/30 bg-gradient-to-r from-[#102232] via-[#173247] to-[#122434] text-white shadow-[0_4px_20px_rgba(16,34,50,0.18)] transition-all duration-300 px-4 md:px-6">
-      <div className="flex items-center w-full justify-between pr-2 sm:pr-4">
-        <div className="flex items-center gap-2.5 min-w-0">
-          {onToggleMobileMenu && (
-            <button
-              type="button"
-              onClick={onToggleMobileMenu}
-              className="rounded-xl p-1.5 text-[#f4ebd9] hover:bg-white/10 hover:text-[#f4b35f] border border-white/10 focus:outline-none lg:hidden cursor-pointer transition-colors"
-              aria-label="Toggle navigation menu"
-            >
-              <Menu className="h-5 w-5 shrink-0" />
-            </button>
-          )}
-          <h1 className="font-display text-lg sm:text-2xl font-bold tracking-wide text-[#fbf6ec] mb-0 truncate flex items-center gap-2 drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
-            <span>{t("Discover Nashik Admin")}</span>
-            <span className="hidden sm:inline-flex items-center rounded-full bg-[#c5924d]/20 px-2.5 py-0.5 text-[10px] font-sans font-extrabold uppercase tracking-widest text-[#f4b35f] border border-[#c5924d]/40">
-              Portal
-            </span>
-          </h1>
-        </div>
-        <Link
-          href="/admin/add-place"
-          className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#e86f18] to-[#c9580f] px-3 sm:px-4 py-1.5 text-xs sm:text-sm font-bold text-white shadow-md shadow-orange-950/20 border border-orange-400/30 hover:from-[#f07b24] hover:to-[#db6215] transition-all hover:scale-[1.02] active:scale-95 cursor-pointer shrink-0"
-          title="Add a new place to Discover Nashik"
-        >
-          <PlusCircle className="h-4 w-4" />
-          <span>{t("Add Place")}</span>
-        </Link>
+    <header className="sticky top-16 left-0 right-0 z-20 flex h-14 sm:h-16 items-center justify-between border-b border-[#c5924d]/30 bg-gradient-to-r from-[#102232] via-[#173247] to-[#122434] text-white shadow-[0_4px_20px_rgba(16,34,50,0.18)] transition-all duration-300 px-3 sm:px-4 md:px-6">
+      <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1 mr-2">
+        {onToggleMobileMenu && (
+          <button
+            type="button"
+            onClick={onToggleMobileMenu}
+            className="rounded-xl p-1.5 text-[#f4ebd9] hover:bg-white/10 hover:text-[#f4b35f] border border-white/10 focus:outline-none lg:hidden cursor-pointer transition-colors shrink-0"
+            aria-label="Toggle navigation menu"
+          >
+            <Menu className="h-5 w-5 shrink-0" />
+          </button>
+        )}
+        <h1 className="font-display text-sm sm:text-xl md:text-2xl font-bold tracking-wide text-[#fbf6ec] mb-0 truncate flex items-center gap-1.5 sm:gap-2 drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)] min-w-0">
+          <span className="truncate">{t("Discover Nashik Admin")}</span>
+          <span className="hidden sm:inline-flex items-center rounded-full bg-[#c5924d]/20 px-2.5 py-0.5 text-[10px] font-sans font-extrabold uppercase tracking-widest text-[#f4b35f] border border-[#c5924d]/40 shrink-0">
+            Portal
+          </span>
+        </h1>
       </div>
-      <div className="flex items-center gap-3">
-
+      <div className="flex items-center gap-2 shrink-0">
         {loading ? (
           <Loader2 className="h-5 w-5 animate-spin text-[#f4b35f]" />
         ) : (
           <div className="relative" ref={containerRef}>
             <button
               onClick={toggleMenu}
-              className="flex items-center gap-2 rounded-xl bg-white/10 hover:bg-white/15 px-3 py-1.5 text-xs sm:text-sm font-semibold text-[#fbf6ec] border border-[#c5924d]/40 transition-all cursor-pointer backdrop-blur-sm"
+              className="flex items-center gap-1.5 sm:gap-2 rounded-xl bg-white/10 hover:bg-white/15 px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-semibold text-[#fbf6ec] border border-[#c5924d]/40 transition-all cursor-pointer backdrop-blur-sm shrink-0"
             >
-              <User className="h-4 w-4 text-[#f4b35f]" />
+              <User className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[#f4b35f] shrink-0" />
               <span className="hidden sm:inline">{admin?.name || t("Admin Account")}</span>
-              <span className="sm:hidden">{t("Account")}</span>
+              <span className="sm:hidden text-xs">{t("Account")}</span>
             </button>
             {menuOpen && (
               <div
-                className="absolute right-0 mt-2.5 w-52 overflow-hidden rounded-xl border border-[#c5924d]/40 bg-[#132636] p-1.5 shadow-2xl z-50 divide-y divide-white/10 backdrop-blur-xl"
+                className="absolute right-0 mt-2 w-48 sm:w-52 overflow-hidden rounded-xl border border-[#c5924d]/40 bg-[#132636] p-1.5 shadow-2xl z-50 divide-y divide-white/10 backdrop-blur-xl"
                 id="admin-header-dropdown"
               >
                 {admin?.email && (
@@ -144,4 +125,6 @@ export default function AdminHeader({ onToggleMobileMenu }: { onToggleMobileMenu
     </header>
   );
 }
+
+
 

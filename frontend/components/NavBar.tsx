@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState, FormEvent } from "react";
-import { Menu, X, Users, Languages, ChevronDown, LogIn } from "lucide-react";
+import { Menu, X, Users, Languages, ChevronDown, LogIn, Sparkles } from "lucide-react";
 import { useTranslation, type Language } from "@/lib/i18n";
 import { createClient } from "@/utils/supabase/client";
 import logo from "@/assets/DN.logo.png"
@@ -22,66 +22,8 @@ export function NavBar() {
 
   // Manage session and fetch user role
   const [role, setRole] = useState<string | null>(null);
-  const [hasGroupUnread, setHasGroupUnread] = useState(false);
-  const [hasLostFoundUnread, setHasLostFoundUnread] = useState(false);
 
   useEffect(() => {
-    // Check group tracker unread status
-    const checkGroupUnread = () => {
-      const activeCode = localStorage.getItem("active_group_code");
-      if (activeCode) {
-        const isUnread = localStorage.getItem(`group_unread_${activeCode}`) === "true";
-        setHasGroupUnread(isUnread);
-      } else {
-        setHasGroupUnread(false);
-      }
-    };
-
-    const checkLostFoundUnread = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.access_token) {
-          const res = await fetch("/api/kumbh/lost-found/notifications/unread-count", {
-            headers: { Authorization: `Bearer ${session.access_token}` },
-          });
-          if (res.ok) {
-            const data = await res.json();
-            setHasLostFoundUnread(data.unreadCount > 0);
-          }
-        } else {
-          setHasLostFoundUnread(false);
-        }
-      } catch (err) {
-        // Ignore silent fetch errors
-      }
-    };
-
-    checkGroupUnread();
-    checkLostFoundUnread();
-
-    const interval = setInterval(() => {
-      checkGroupUnread();
-      checkLostFoundUnread();
-    }, 30000);
-
-    const handleRefreshEvent = () => {
-      checkLostFoundUnread();
-    };
-    if (typeof window !== "undefined") {
-      window.addEventListener("refresh_lost_found_unread", handleRefreshEvent);
-    }
-
-    let bc: BroadcastChannel | null = null;
-    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
-      bc = new BroadcastChannel("discover_group_tracker");
-      bc.onmessage = (event) => {
-        const activeCode = localStorage.getItem("active_group_code");
-        if (activeCode && event.data?.code === activeCode && (event.data?.type === "NEW_NOTE" || event.data?.type === "LOCATION_UPDATE")) {
-          setHasGroupUnread(true);
-        }
-      };
-    }
-
     // Get current session
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
@@ -135,23 +77,9 @@ export function NavBar() {
     });
 
     return () => {
-      clearInterval(interval);
-      if (typeof window !== "undefined") {
-        window.removeEventListener("refresh_lost_found_unread", handleRefreshEvent);
-      }
-      if (bc) bc.close();
       subscription.unsubscribe();
     };
   }, []);
-
-  const handleGroupTrackerClick = () => {
-    const activeCode = localStorage.getItem("active_group_code");
-    if (activeCode) {
-      localStorage.removeItem(`group_unread_${activeCode}`);
-    }
-    setHasGroupUnread(false);
-  };
-
 
   function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -181,31 +109,11 @@ export function NavBar() {
 
         <nav className="hidden items-center space-x-4 md:flex">
           <Link
-            href="/kumbh/lost-found"
-            className="relative flex items-center gap-1.5 rounded-full border border-[#e7b06d] bg-[#fff7ed] px-3 py-2 text-sm font-bold text-[#c9580f] transition-colors hover:bg-[#ffedd5]"
+            href="/kumbh"
+            className="relative flex items-center gap-1.5 rounded-full border border-[#e7b06d] bg-[#fff7ed] px-3.5 py-2 text-sm font-bold text-[#c9580f] transition-all hover:bg-[#ffedd5] shadow-sm hover:scale-[1.02]"
           >
-            <span>{t("Lost & Found")}</span>
-            {hasLostFoundUnread && (
-              <span className="relative flex h-2.5 w-2.5 ml-0.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600"></span>
-              </span>
-            )}
-          </Link>
-
-          <Link
-            href="/group-tracker"
-            onClick={handleGroupTrackerClick}
-            className="relative flex items-center gap-1.5 rounded-full border border-[#e7b06d] bg-[#fff7ed] px-3 py-2 text-sm font-bold text-[#c9580f] transition-colors hover:bg-[#ffedd5]"
-          >
-            <Users className="h-4 w-4" />
-            {t("Group Tracker")}
-            {hasGroupUnread && (
-              <span className="relative flex h-2.5 w-2.5 ml-0.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-orange-600"></span>
-              </span>
-            )}
+            <Sparkles className="h-4 w-4 text-[#e86f18]" />
+            <span>{t("Kumbh Mela 2027")}</span>
           </Link>
 
           {/* Show dashboard link appropriate to the logged‑in role */}
@@ -316,34 +224,12 @@ export function NavBar() {
               )}
             </div>
             <Link
-              href="/kumbh/lost-found"
+              href="/kumbh"
               onClick={() => setIsOpen(false)}
               className="relative flex items-center justify-center gap-2 rounded-xl border border-[#e7b06d] bg-[#fff7ed] px-4 py-3 text-base font-bold text-[#c9580f] hover:bg-[#ffedd5]"
             >
-              <span>{t("Lost & Found")}</span>
-              {hasLostFoundUnread && (
-                <span className="flex h-3 w-3 relative ml-1">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600"></span>
-                </span>
-              )}
-            </Link>
-            <Link
-              href="/group-tracker"
-              onClick={() => {
-                handleGroupTrackerClick();
-                setIsOpen(false);
-              }}
-              className="relative flex items-center justify-center gap-2 rounded-xl border border-[#e7b06d] bg-[#fff7ed] px-4 py-3 text-base font-bold text-[#c9580f] hover:bg-[#ffedd5]"
-            >
-              <Users className="h-5 w-5" />
-              {t("Group Tracker")}
-              {hasGroupUnread && (
-                <span className="flex h-3 w-3 relative">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
-                </span>
-              )}
+              <Sparkles className="h-5 w-5 text-[#e86f18]" />
+              <span>{t("Kumbh Mela 2027")}</span>
             </Link>
             {session?.user && role === 'business' && (
               <Link
