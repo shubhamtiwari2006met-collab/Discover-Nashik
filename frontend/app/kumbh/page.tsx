@@ -11,7 +11,8 @@ import {
   Compass,
   ChevronRight,
   ShieldCheck,
-  Landmark
+  Landmark,
+  Users
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 
@@ -55,16 +56,28 @@ export default function KumbhPage() {
                 {t("Prepare for one of India's largest spiritual gatherings with practical locations, transport, and planning information.")}
               </p>
 
-              <div className="flex flex-wrap items-center gap-3 pt-4">
+              <div className="flex flex-wrap items-center gap-2.5 pt-4">
                 <a
                   href="#explore-sections"
-                  className="px-6 py-3 rounded-full bg-[#d4a359] text-[#2c1810] font-bold text-xs sm:text-sm shadow-md hover:bg-[#e4b66d] transition-all flex items-center gap-2"
+                  className="px-5 py-2.5 rounded-full bg-[#d4a359] text-[#2c1810] font-bold text-xs sm:text-sm shadow-md hover:bg-[#e4b66d] transition-all flex items-center gap-2"
                 >
                   {t("Explore Kumbh")} <ChevronRight className="w-4 h-4" />
                 </a>
                 <Link
+                  href="/kumbh/lost-found"
+                  className="px-4 py-2.5 rounded-full border border-[#fce8c5]/30 bg-white/10 backdrop-blur-sm text-[#fffdf8] font-bold text-xs sm:text-sm hover:bg-white/20 transition-all flex items-center gap-1.5"
+                >
+                  <HelpCircle className="w-4 h-4 text-[#fce8c5]" /> {t("Lost & Found")}
+                </Link>
+                <Link
+                  href="/group-tracker"
+                  className="px-4 py-2.5 rounded-full border border-[#fce8c5]/30 bg-white/10 backdrop-blur-sm text-[#fffdf8] font-bold text-xs sm:text-sm hover:bg-white/20 transition-all flex items-center gap-1.5"
+                >
+                  <Users className="w-4 h-4 text-[#fce8c5]" /> {t("Group Tracker")}
+                </Link>
+                <Link
                   href="/map"
-                  className="px-6 py-3 rounded-full border border-[#fce8c5]/30 bg-white/10 backdrop-blur-sm text-[#fffdf8] font-bold text-xs sm:text-sm hover:bg-white/20 transition-all flex items-center gap-2"
+                  className="px-4 py-2.5 rounded-full border border-[#fce8c5]/30 bg-white/10 backdrop-blur-sm text-[#fffdf8] font-bold text-xs sm:text-sm hover:bg-white/20 transition-all flex items-center gap-1.5"
                 >
                   <Compass className="w-4 h-4 text-[#fce8c5]" /> {t("Open Nashik map")}
                 </Link>
@@ -213,16 +226,16 @@ export default function KumbhPage() {
             <div className="flex flex-col sm:flex-row sm:items-end justify-between border-b border-[#e1cfb0] pb-3 gap-2">
               <div>
                 <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#9e4129]">
-                  02 • PILGRIM SUPPORT
+                  02 • PILGRIM SUPPORT &amp; TOOLS
                 </span>
                 <h2 className="text-2xl md:text-3xl font-serif font-bold text-[#2c1810]">
                   Your Kumbh Journey
                 </h2>
               </div>
-              <p className="text-xs text-[#667883]">Helpline &amp; community support services</p>
+              <p className="text-xs text-[#667883]">Helplines, lost &amp; found &amp; group tracking services</p>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-6 md:grid-cols-3">
               {/* Lost & Found Card */}
               <Link
                 href="/kumbh/lost-found"
@@ -252,15 +265,15 @@ export default function KumbhPage() {
                 </div>
               </Link>
 
-              {/* Interactive Map Quick Card */}
+              {/* Group Tracker Card */}
               <Link
-                href="/map"
+                href="/group-tracker"
                 className="group relative flex flex-col justify-between rounded-2xl border border-[#e1cfb0] bg-[#fffdf8] p-6 shadow-[0_10px_25px_rgba(60,35,15,0.06)] transition-all duration-300 hover:-translate-y-1 hover:border-[#c86218] hover:shadow-xl cursor-pointer"
               >
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100 text-amber-800 transition-colors group-hover:bg-amber-700 group-hover:text-white">
-                      <Compass className="h-6 w-6" />
+                      <Users className="h-6 w-6" />
                     </div>
                     <span className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-amber-800 opacity-0 transition-opacity group-hover:opacity-100">
                       {t("Explore")} <ArrowRight className="h-3.5 w-3.5" />
@@ -268,6 +281,35 @@ export default function KumbhPage() {
                   </div>
                   <div>
                     <h3 className="text-xl font-bold text-[#173247] group-hover:text-amber-800 transition-colors">
+                      {t("Group Tracker")}
+                    </h3>
+                    <p className="mt-2 text-sm leading-relaxed text-[#667883]">
+                      Track family &amp; group members in real-time during Kumbh Mela and explore Nashik safely together.
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-6 flex items-center font-semibold text-amber-800 text-xs sm:text-sm pt-4 border-t border-[#f2e6d5]">
+                  <span>{t("View Details")}</span>
+                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1.5" />
+                </div>
+              </Link>
+
+              {/* Interactive Map Quick Card */}
+              <Link
+                href="/map"
+                className="group relative flex flex-col justify-between rounded-2xl border border-[#e1cfb0] bg-[#fffdf8] p-6 shadow-[0_10px_25px_rgba(60,35,15,0.06)] transition-all duration-300 hover:-translate-y-1 hover:border-[#c86218] hover:shadow-xl cursor-pointer"
+              >
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-100 text-orange-800 transition-colors group-hover:bg-orange-700 group-hover:text-white">
+                      <Compass className="h-6 w-6" />
+                    </div>
+                    <span className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-orange-800 opacity-0 transition-opacity group-hover:opacity-100">
+                      {t("Explore")} <ArrowRight className="h-3.5 w-3.5" />
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-[#173247] group-hover:text-orange-800 transition-colors">
                       {t("Open Nashik map")}
                     </h3>
                     <p className="mt-2 text-sm leading-relaxed text-[#667883]">
@@ -275,7 +317,7 @@ export default function KumbhPage() {
                     </p>
                   </div>
                 </div>
-                <div className="mt-6 flex items-center font-semibold text-amber-800 text-xs sm:text-sm pt-4 border-t border-[#f2e6d5]">
+                <div className="mt-6 flex items-center font-semibold text-orange-800 text-xs sm:text-sm pt-4 border-t border-[#f2e6d5]">
                   <span>{t("View Details")}</span>
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1.5" />
                 </div>
