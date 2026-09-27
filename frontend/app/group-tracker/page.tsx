@@ -464,8 +464,8 @@ export default function GroupTracker() {
 
           {/* Header Banner */}
           <div className="text-center max-w-2xl mx-auto mb-12">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-100 dark:bg-orange-950/60 border border-orange-200 dark:border-orange-800 text-[#c9580f] font-bold text-xs uppercase tracking-wider mb-4 shadow-sm">
-              <Sparkles className="h-4 w-4" />
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-100 dark:bg-orange-950/80 border border-orange-200 dark:border-orange-700 text-[#c9580f] dark:text-orange-200 font-bold text-xs uppercase tracking-wider mb-4 shadow-sm">
+              <Sparkles className="h-4 w-4 text-[#e86f18] dark:text-orange-300" />
               <span>Real-Time Live Tracking</span>
             </div>
 
