@@ -113,7 +113,7 @@ export function NavBar() {
             className="relative flex items-center gap-1.5 rounded-full border border-[#e7b06d] bg-[#fff7ed] px-3.5 py-2 text-sm font-bold text-[#c9580f] transition-all hover:bg-[#ffedd5] shadow-sm hover:scale-[1.02]"
           >
             <Sparkles className="h-4 w-4 text-[#e86f18]" />
-            <span>{t("Kumbh Mela 2027")}</span>
+            <span>{t("Kumbh Mela")}</span>
           </Link>
 
           {/* Show dashboard link appropriate to the logged‑in role */}
