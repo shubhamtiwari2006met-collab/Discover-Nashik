@@ -1,25 +1,35 @@
-// components/AdminSidebar.tsx
+// components/BusinessSidebar.tsx
 "use client";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Home, Users, Building2, MapPin, Bell, Settings, Calendar, ShieldCheck, X } from "lucide-react";
 
+import Link from "next/link";
+import { X, Building2 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 
-const getNavItems = (t: (key: string) => string) => [
-  { href: "/admin/dashboard", label: t("Dashboard"), icon: <Home className="h-5 w-5" /> },
-  { href: "/admin/places", label: t("Places Management"), icon: <MapPin className="h-5 w-5" /> },
-  { href: "/admin/businesses", label: t("Business Management"), icon: <Building2 className="h-5 w-5" /> },
-  { href: "/admin/kumbh", label: t("Kumbh 2027 Management"), icon: <Calendar className="h-5 w-5" /> },
-  { href: "/admin/users", label: t("Users"), icon: <Users className="h-5 w-5" /> },
-  { href: "/admin/notifications", label: t("Notifications"), icon: <Bell className="h-5 w-5" /> },
-  { href: "/admin/settings", label: t("Settings"), icon: <Settings className="h-5 w-5" /> },
-];
+export interface TabItem {
+  id: string;
+  label: string;
+  icon: any;
+}
 
-export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () => void }) {
-  const pathname = usePathname();
+interface BusinessSidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+  category?: string;
+  tabs?: TabItem[];
+  activeTab?: string;
+  onSelectTab?: (tabId: string) => void;
+}
+
+export default function BusinessSidebar({
+  isOpen,
+  onClose,
+  category = "Business",
+  tabs = [],
+  activeTab = "profile",
+  onSelectTab
+}: BusinessSidebarProps) {
   const { t } = useTranslation();
-  const navItems = getNavItems(t);
+
   return (
     <>
       {/* Mobile backdrop overlay */}
@@ -52,33 +62,43 @@ export default function AdminSidebar({ isOpen, onClose }: { isOpen?: boolean; on
             <X className="h-5 w-5" />
           </button>
         </div>
+
+        <div className="mb-4 px-2 flex items-center justify-between">
+          <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#f4b35f]/90">
+            {category} {t("Menu")}
+          </span>
+        </div>
+
         <nav className="space-y-1.5">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href;
+          {tabs.map((item) => {
+            const Icon = item.icon || Building2;
+            const isActive = activeTab === item.id;
             return (
-              <Link
-                key={item.href}
-                href={item.href}
+              <button
+                key={item.id}
+                type="button"
                 onClick={() => {
+                  if (onSelectTab) onSelectTab(item.id);
                   if (onClose) onClose();
                 }}
-                className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-200 ${
+                className={`flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-200 text-left cursor-pointer ${
                   isActive
                     ? "bg-gradient-to-r from-[#e86f18] to-[#c9580f] text-white shadow-md shadow-orange-950/30 border border-orange-400/30"
                     : "text-[#f4ebd9]/85 hover:bg-white/10 hover:text-white hover:translate-x-1"
                 }`}
               >
                 <span className={isActive ? "text-white" : "text-[#f4b35f]/90"}>
-                  {item.icon}
+                  <Icon className="h-4 w-4 shrink-0" />
                 </span>
-                <span>{item.label}</span>
-              </Link>
+                <span className="truncate">{item.label}</span>
+              </button>
             );
           })}
         </nav>
-        {/* Bottom illustration and mantra */}
+
+        {/* Bottom footer info */}
         <div className="mt-12 text-center text-xs text-[#f4ebd9]/60 border-t border-white/10 pt-4">
-          <p className="font-medium">Discover Nashik Administration</p>
+          <p className="font-medium">Discover Nashik Business</p>
           <div className="mt-3 h-16 bg-[url('/placeholder-nashik.svg')] bg-contain bg-center bg-no-repeat opacity-40" />
         </div>
       </aside>

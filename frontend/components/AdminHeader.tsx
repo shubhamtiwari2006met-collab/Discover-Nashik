@@ -1,8 +1,8 @@
 // components/AdminHeader.tsx
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Bell, Loader2, LogOut, User, PlusCircle, Menu } from "lucide-react";
+import { Bell, Loader2, LogOut, User, PlusCircle, Menu, Settings } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { useTranslation } from "@/lib/i18n";
 import { AddPlaceModal } from "./AddPlaceModal";
@@ -47,80 +47,97 @@ export default function AdminHeader({ onToggleMobileMenu }: { onToggleMobileMenu
   const [menuOpen, setMenuOpen] = useState(false);
   const toggleMenu = () => setMenuOpen(!menuOpen);
   const closeMenu = () => setMenuOpen(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest('#admin-header-dropdown') && !target.closest('#admin-header-button')) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         closeMenu();
       }
     };
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   return (
-    <header className="sticky top-16 left-0 right-0 z-20 flex h-16 items-center justify-between border-b border-[#d8c4a3] bg-[#fffdf8]/95 backdrop-blur-md shadow-[0_3px_18px_rgba(74,55,31,0.08)] transition-colors duration-300 px-4">
+    <header className="sticky top-16 left-0 right-0 z-20 flex h-16 items-center justify-between border-b border-[#c5924d]/30 bg-gradient-to-r from-[#102232] via-[#173247] to-[#122434] text-white shadow-[0_4px_20px_rgba(16,34,50,0.18)] transition-all duration-300 px-4 md:px-6">
       <div className="flex items-center w-full justify-between pr-2 sm:pr-4">
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-2.5 min-w-0">
           {onToggleMobileMenu && (
             <button
               type="button"
               onClick={onToggleMobileMenu}
-              className="rounded-lg p-1.5 text-[#173247] hover:bg-[#e86f18]/10 focus:outline-none lg:hidden cursor-pointer"
+              className="rounded-xl p-1.5 text-[#f4ebd9] hover:bg-white/10 hover:text-[#f4b35f] border border-white/10 focus:outline-none lg:hidden cursor-pointer transition-colors"
               aria-label="Toggle navigation menu"
             >
-              <Menu className="h-6 w-6 shrink-0" />
+              <Menu className="h-5 w-5 shrink-0" />
             </button>
           )}
-          <h1 className="text-base sm:text-xl font-semibold text-[#173247] mb-0 truncate">{t("Discover Nashik Admin")}</h1>
+          <h1 className="font-display text-lg sm:text-2xl font-bold tracking-wide text-[#fbf6ec] mb-0 truncate flex items-center gap-2 drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
+            <span>{t("Discover Nashik Admin")}</span>
+            <span className="hidden sm:inline-flex items-center rounded-full bg-[#c5924d]/20 px-2.5 py-0.5 text-[10px] font-sans font-extrabold uppercase tracking-widest text-[#f4b35f] border border-[#c5924d]/40">
+              Portal
+            </span>
+          </h1>
         </div>
         <Link
           href="/admin/add-place"
-          className="flex items-center gap-1.5 rounded-xl bg-[#e86f18] px-2.5 sm:px-3.5 py-1.5 text-xs sm:text-sm font-bold text-white shadow-sm hover:bg-[#c9580f] transition-all hover:scale-105 active:scale-95 cursor-pointer shrink-0"
+          className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#e86f18] to-[#c9580f] px-3 sm:px-4 py-1.5 text-xs sm:text-sm font-bold text-white shadow-md shadow-orange-950/20 border border-orange-400/30 hover:from-[#f07b24] hover:to-[#db6215] transition-all hover:scale-[1.02] active:scale-95 cursor-pointer shrink-0"
           title="Add a new place to Discover Nashik"
         >
           <PlusCircle className="h-4 w-4" />
           <span>{t("Add Place")}</span>
         </Link>
       </div>
-      <div className="flex items-center gap-4">
-        <button
-          className="relative rounded-full p-2 hover:bg-[#e86f18]/10"
-          title="Notifications"
-        >
-          <Bell className="h-5 w-5 text-[#173247]" />
-          {notifications > 0 && (
-            <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#e86f18] text-xs font-bold text-white">
-              {notifications}
-            </span>
-          )}
-        </button>
+      <div className="flex items-center gap-3">
+
         {loading ? (
-          <Loader2 className="h-5 w-5 animate-spin text-[#173247]" />
+          <Loader2 className="h-5 w-5 animate-spin text-[#f4b35f]" />
         ) : (
-          <div className="relative" id="admin-header-button">
+          <div className="relative" ref={containerRef}>
             <button
               onClick={toggleMenu}
-              className="flex items-center gap-2 rounded-full bg-white px-3 py-1 text-sm hover:bg-[#e86f18]/10 border border-[#d8c4a3]"
+              className="flex items-center gap-2 rounded-xl bg-white/10 hover:bg-white/15 px-3 py-1.5 text-xs sm:text-sm font-semibold text-[#fbf6ec] border border-[#c5924d]/40 transition-all cursor-pointer backdrop-blur-sm"
             >
-              <User className="h-4 w-4 text-[#173247]" />
-              <span className="text-[#173247]">{t("Admin Account")}</span>
+              <User className="h-4 w-4 text-[#f4b35f]" />
+              <span className="hidden sm:inline">{admin?.name || t("Admin Account")}</span>
+              <span className="sm:hidden">{t("Account")}</span>
             </button>
-            {menuOpen && <div className="absolute right-0 mt-2 w-48 rounded-md border border-[#d8c4a3] bg-[#fffdf8]/95 backdrop-blur-md shadow-lg z-50" id="admin-header-dropdown">
-                <Link href="/admin/profile" className="block px-4 py-2 text-sm text-[#173247] hover:bg-[#e86f18]/10">
-                  {t("Profile")}
-                </Link>
-                <Link href="/admin/settings" className="block px-4 py-2 text-sm text-[#173247] hover:bg-[#e86f18]/10">
-                  {t("Settings")}
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  className="w-full text-left px-4 py-2 text-sm text-[#173247] hover:bg-[#e86f18]/10"
-                >
-                  <LogOut className="inline-block h-4 w-4 mr-1" /> {t("Logout")}
-                </button>
+            {menuOpen && (
+              <div
+                className="absolute right-0 mt-2.5 w-52 overflow-hidden rounded-xl border border-[#c5924d]/40 bg-[#132636] p-1.5 shadow-2xl z-50 divide-y divide-white/10 backdrop-blur-xl"
+                id="admin-header-dropdown"
+              >
+                {admin?.email && (
+                  <div className="px-3 py-1.5 text-[11px] font-medium text-[#f4b35f]/90 truncate mb-1">
+                    {admin.email}
+                  </div>
+                )}
+                <div className="pt-1 space-y-0.5">
+                  <Link
+                    href="/admin/profile"
+                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs sm:text-sm font-medium text-[#e2e8f0] hover:bg-white/10 hover:text-white transition-colors"
+                  >
+                    <User className="h-4 w-4 text-[#f4b35f]" />
+                    {t("Profile")}
+                  </Link>
+                  <Link
+                    href="/admin/settings"
+                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs sm:text-sm font-medium text-[#e2e8f0] hover:bg-white/10 hover:text-white transition-colors"
+                  >
+                    <Settings className="h-4 w-4 text-[#f4b35f]" />
+                    {t("Settings")}
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2 text-left rounded-lg px-3 py-2 text-xs sm:text-sm font-semibold text-red-300 hover:bg-red-500/20 hover:text-red-200 transition-colors mt-1"
+                  >
+                    <LogOut className="h-4 w-4 text-red-400" />
+                    {t("Logout")}
+                  </button>
+                </div>
               </div>
-            }
+            )}
           </div>
         )}
       </div>
