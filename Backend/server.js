@@ -104,6 +104,11 @@ app.use('/api/kumbh', kumbhRoutes);
 app.use('/api/kumbh/lost-found', lostFoundRoutes);
 app.use('/api/admin', adminRoutes);
 
+// Health check endpoint
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
 // Base route
 app.get("/", (req, res) => {
   res.json({ message: "Welcome to Discover Nashik API" });
