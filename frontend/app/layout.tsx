@@ -15,10 +15,32 @@ const cormorant = Cormorant_Garamond({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://discovernashik.co.in"),
-  title: "Discover Nashik",
-  description: "One platform to discover everything Nashik has to offer. Find temples, food, hotels, nature, and plan your Kumbh Mela 2027 visit.",
+  title: "Discover Nashik | Nashik Travel & Tourism Guide",
+  description: "Explore Nashik's temples, tourist places, food, hotels, nature, vineyards and Kumbh Mela 2027 information with Discover Nashik.",
   alternates: {
     canonical: "./",
+  },
+  openGraph: {
+    title: "Discover Nashik | Nashik Travel & Tourism Guide",
+    description: "Explore Nashik's temples, tourist places, food, hotels, nature, vineyards and Kumbh Mela 2027 information with Discover Nashik.",
+    url: "https://discovernashik.co.in",
+    siteName: "Discover Nashik",
+    locale: "en_US",
+    type: "website",
+    images: [
+      {
+        url: "https://discovernashik.co.in/images/nashik-hero.png",
+        width: 1200,
+        height: 630,
+        alt: "Discover Nashik - Official Travel Guide",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Discover Nashik | Nashik Travel & Tourism Guide",
+    description: "Explore Nashik's temples, tourist places, food, hotels, nature, vineyards and Kumbh Mela 2027 information with Discover Nashik.",
+    images: ["https://discovernashik.co.in/images/nashik-hero.png"],
   },
 };
 
@@ -27,6 +49,32 @@ import { Footer } from "@/components/Footer";
 import { ChatbotWidget } from "@/components/ChatbotWidget";
 import { I18nProvider } from "@/lib/i18n";
 
+const websiteJsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://discovernashik.co.in/#website",
+      "url": "https://discovernashik.co.in",
+      "name": "Discover Nashik",
+      "description": "Explore Nashik's temples, tourist places, food, hotels, nature, vineyards and Kumbh Mela 2027 information with Discover Nashik.",
+      "publisher": { "@id": "https://discovernashik.co.in/#organization" },
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://discovernashik.co.in/search?query={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://discovernashik.co.in/#organization",
+      "name": "Discover Nashik",
+      "url": "https://discovernashik.co.in",
+      "logo": "https://discovernashik.co.in/images/nashik-hero.png"
+    }
+  ]
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -34,6 +82,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${cormorant.variable} h-full antialiased`}>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+        />
+      </head>
       <body className="min-h-full flex flex-col bg-[#f8f2e8] text-[#192f42] selection:bg-orange-500/30">
         <I18nProvider>
           <NavBar />

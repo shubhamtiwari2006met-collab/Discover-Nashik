@@ -39,18 +39,18 @@ export function Footer() {
           <div>
             <h3 className="mb-4 font-semibold text-white">{t("Kumbh 2027")}</h3>
             <ul className="space-y-2 text-sm text-[#dbe7e7]/80">
-              <li><Link href="/kumbh" className="transition-colors hover:text-orange-300">{t("Important Locations")}</Link></li>
-              <li><Link href="/kumbh" className="transition-colors hover:text-orange-300">{t("Transportation")}</Link></li>
-              <li><Link href="/kumbh" className="transition-colors hover:text-orange-300">{t("Emergency Services")}</Link></li>
+              <li><Link href="/kumbh/locations" className="transition-colors hover:text-orange-300">{t("Important Locations")}</Link></li>
+              <li><Link href="/kumbh/getting-around" className="transition-colors hover:text-orange-300">{t("Transportation")}</Link></li>
+              <li><Link href="/kumbh/dates-planning" className="transition-colors hover:text-orange-300">{t("Dates & Planning")}</Link></li>
+              <li><Link href="/kumbh/heritage" className="transition-colors hover:text-orange-300">{t("Heritage & Culture")}</Link></li>
             </ul>
           </div>
 
           <div>
             <h3 className="mb-4 font-semibold text-white">{t("Connect")}</h3>
             <ul className="space-y-2 text-sm text-[#dbe7e7]/80">
-              <li><a href="#" className="transition-colors hover:text-orange-300">{t("About Us")}</a></li>
-              <li><a href="#" className="transition-colors hover:text-orange-300">{t("Contact")}</a></li>
-              <li><a href="#" className="transition-colors hover:text-orange-300">{t("For Businesses")}</a></li>
+              <li><Link href="/business" className="transition-colors hover:text-orange-300">{t("For Businesses")}</Link></li>
+              <li><Link href="/add-place" className="transition-colors hover:text-orange-300">{t("Add a Place")}</Link></li>
             </ul>
           </div>
         </div>
