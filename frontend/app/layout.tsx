@@ -14,8 +14,12 @@ const cormorant = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://discovernashik.co.in"),
   title: "Discover Nashik",
   description: "One platform to discover everything Nashik has to offer. Find temples, food, hotels, nature, and plan your Kumbh Mela 2027 visit.",
+  alternates: {
+    canonical: "./",
+  },
 };
 
 import { NavBar } from "@/components/NavBar";
