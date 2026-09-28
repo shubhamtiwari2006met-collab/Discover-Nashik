@@ -205,7 +205,7 @@ export function NavBar() {
       </div>
 
       {isOpen && (
-        <div className="border-t border-[#d8c4a3] bg-[#fffdf8] md:hidden">
+        <div className="border-t border-[#d8c4a3] bg-[#fffdf8] md:hidden max-h-[85vh] overflow-y-auto">
           <nav className="container mx-auto flex flex-col space-y-4 px-4 py-4">
             <div className="relative flex items-center gap-2 rounded-xl border border-[#e7b06d] bg-[#fff7ed] px-4 py-3 text-base font-bold text-[#c9580f]">
               <Languages className="h-5 w-5" />

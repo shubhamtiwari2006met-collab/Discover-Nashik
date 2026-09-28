@@ -340,7 +340,7 @@ export function ChatbotWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
             transition={{ type: "spring", stiffness: 400, damping: 25 }}
-            className="fixed bottom-24 right-4 z-50 flex h-[520px] w-80 flex-col overflow-hidden rounded-[22px] border border-orange-100 bg-white shadow-[0_22px_70px_rgba(67,31,12,0.28)] dark:border-orange-900/50 dark:bg-slate-900 md:right-8 md:w-96"
+            className="fixed bottom-20 right-3 z-50 flex h-[480px] sm:h-[520px] w-[calc(100vw-1.5rem)] max-w-[360px] sm:w-80 md:w-96 flex-col overflow-hidden rounded-[22px] border border-orange-100 bg-white shadow-[0_22px_70px_rgba(67,31,12,0.28)] dark:border-orange-900/50 dark:bg-slate-900 sm:bottom-24 md:right-8"
           >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-orange-400/20 bg-gradient-to-br from-[#f97316] via-[#ea580c] to-[#c2410c] p-4 text-white">
@@ -468,7 +468,7 @@ export function ChatbotWidget() {
         whileTap={{ scale: 0.95 }}
         onClick={toggleOpen}
         suppressHydrationWarning
-        className="group fixed bottom-6 right-4 z-50 flex h-[62px] w-[62px] items-center justify-center rounded-full border-4 border-[#fff7ed] bg-[#ea580c] text-white shadow-[0_10px_30px_rgba(234,88,12,0.38)] transition-all hover:bg-[#c2410c] hover:shadow-[0_12px_34px_rgba(234,88,12,0.5)] dark:border-[#1a120f] md:right-8"
+        className="group fixed bottom-4 right-3 sm:bottom-6 sm:right-6 md:right-8 z-50 flex h-[52px] w-[52px] sm:h-[62px] sm:w-[62px] items-center justify-center rounded-full border-4 border-[#fff7ed] bg-[#ea580c] text-white shadow-[0_10px_30px_rgba(234,88,12,0.38)] transition-all hover:bg-[#c2410c] hover:shadow-[0_12px_34px_rgba(234,88,12,0.5)] dark:border-[#1a120f]"
         aria-label={isOpen ? "Close chatbot" : "Open Nashik AI Guide"}
       >
         <span className="absolute inset-1 rounded-full border border-white/25" />
