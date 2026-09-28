@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "https://discovernashik.co.in/images/nashik-hero.png",
+        url: "https://discovernashik.co.in/images/nashik-hero.webp",
         width: 1200,
         height: 630,
         alt: "Discover Nashik - Official Travel Guide",
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Discover Nashik | Nashik Travel & Tourism Guide",
     description: "Explore Nashik's temples, tourist places, food, hotels, nature, vineyards and Kumbh Mela 2027 information with Discover Nashik.",
-    images: ["https://discovernashik.co.in/images/nashik-hero.png"],
+    images: ["https://discovernashik.co.in/images/nashik-hero.webp"],
   },
 };
 
@@ -70,7 +70,7 @@ const websiteJsonLd = {
       "@id": "https://discovernashik.co.in/#organization",
       "name": "Discover Nashik",
       "url": "https://discovernashik.co.in",
-      "logo": "https://discovernashik.co.in/images/nashik-hero.png"
+      "logo": "https://discovernashik.co.in/images/nashik-hero.webp"
     }
   ]
 };
