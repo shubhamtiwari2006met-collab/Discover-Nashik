@@ -292,22 +292,38 @@ export default function PlaceClientPage() {
           {/* Photo Carousel */}
           <div className="relative flex flex-col">
             <div
-              className="relative w-full overflow-hidden bg-black/5"
-              style={{ aspectRatio: "4 / 5", maxHeight: "520px" }}
+              className="relative w-full overflow-hidden bg-slate-950"
+              style={{ aspectRatio: "4 / 3", maxHeight: "520px" }}
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
             >
-              {displayPhotos.map((imgUrl, idx) => (
-                <img
-                  key={idx}
-                  src={brokenImages.has(idx) ? DEFAULT_FALLBACK_IMAGE : imgUrl}
-                  alt={`${form.name} photo ${idx + 1}`}
-                  onError={() => setBrokenImages(prev => new Set(prev).add(idx))}
-                  className="absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ease-in-out"
-                  style={{ opacity: safeIndex === idx ? 1 : 0 }}
-                />
-              ))}
+              {displayPhotos.map((imgUrl, idx) => {
+                const src = brokenImages.has(idx) ? DEFAULT_FALLBACK_IMAGE : imgUrl;
+                const isVisible = safeIndex === idx;
+                return (
+                  <div
+                    key={idx}
+                    className="absolute inset-0 h-full w-full transition-opacity duration-500 ease-in-out"
+                    style={{ opacity: isVisible ? 1 : 0, pointerEvents: isVisible ? "auto" : "none" }}
+                  >
+                    {/* Ambient Blurred Background Image */}
+                    <img
+                      src={src}
+                      alt=""
+                      className="absolute inset-0 h-full w-full object-cover opacity-35 blur-xl scale-110 pointer-events-none"
+                      aria-hidden="true"
+                    />
+                    {/* Complete Uncropped Main Image */}
+                    <img
+                      src={src}
+                      alt={`${form.name} photo ${idx + 1}`}
+                      onError={() => setBrokenImages((prev) => new Set(prev).add(idx))}
+                      className="relative z-10 h-full w-full object-contain drop-shadow-md"
+                    />
+                  </div>
+                );
+              })}
 
               {/* Arrow controls — only when multiple photos */}
               {displayPhotos.length > 1 && (
@@ -651,8 +667,9 @@ export default function PlaceClientPage() {
                     return (
                       <div key={room.id} className="overflow-hidden rounded-2xl border border-amber-200 bg-white shadow-sm transition hover:shadow-md flex flex-col">
                         {room.photos && room.photos[0] && (
-                          <div className="h-48 w-full overflow-hidden bg-slate-100">
-                            <img src={room.photos[0]} alt={room.name} className="h-full w-full object-cover" />
+                          <div className="relative h-48 w-full overflow-hidden bg-slate-950">
+                            <img src={room.photos[0]} alt="" className="absolute inset-0 h-full w-full object-cover opacity-35 blur-xl scale-110 pointer-events-none" aria-hidden="true" />
+                            <img src={room.photos[0]} alt={room.name} className="relative z-10 h-full w-full object-contain" />
                           </div>
                         )}
                         <div className="p-5 flex-1 flex flex-col justify-between">
