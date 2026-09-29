@@ -115,19 +115,24 @@ export default function PlaceClientPage() {
           setPlace(item);
           setForm(item);
 
-          const cat = (item.category || "").toLowerCase();
-          if (cat.includes("hotel") || cat.includes("stay")) {
-            try {
-              const hRes = await fetch(`/api/business/hotel-data?id=${item._id}`);
-              if (hRes.ok) {
-                const hData = await hRes.json();
-                if (hData && hData.rooms) {
-                  setHotelData(hData);
-                }
+          try {
+            const hRes = await fetch(`/api/business/hotel-data?id=${item._id}`);
+            if (hRes.ok) {
+              const hData = await hRes.json();
+              if (
+                hData &&
+                (hData.rooms?.length > 0 ||
+                  hData.amenities?.length > 0 ||
+                  hData.customAmenities?.length > 0 ||
+                  hData.offers?.length > 0 ||
+                  hData.packages?.length > 0 ||
+                  hData.reviews?.length > 0)
+              ) {
+                setHotelData(hData);
               }
-            } catch (err) {
-              console.error("Failed to load hotel data", err);
             }
+          } catch (err) {
+            console.error("Failed to load hotel data", err);
           }
         } else {
           setPlace(null);

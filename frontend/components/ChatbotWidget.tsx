@@ -167,6 +167,12 @@ export function ChatbotWidget() {
     setChatLanguage(language);
   }, [language]);
 
+  useEffect(() => {
+    const handleOpen = () => setIsOpen(true);
+    window.addEventListener("open-chatbot", handleOpen);
+    return () => window.removeEventListener("open-chatbot", handleOpen);
+  }, []);
+
   const [messages, setMessages] = useState<{ role: "user" | "ai"; content: string }[]>([
     { role: "ai", content: getGreetingMessage(language) }
   ]);
