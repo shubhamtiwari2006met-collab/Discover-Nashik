@@ -99,7 +99,15 @@ export function PlaceDetailModal({ place, onClose }: PlaceDetailModalProps) {
         onClick={(e) => e.stopPropagation()}
       >
         {/* FIXED / STICKY IMAGE AREA AT TOP */}
-        <div className="relative shrink-0 w-full h-[210px] xs:h-[240px] sm:h-[300px] md:h-[340px] overflow-hidden bg-stone-900 border-b border-[#e1cfb0]">
+        <div className="relative shrink-0 w-full h-[220px] xs:h-[250px] sm:h-[310px] md:h-[350px] overflow-hidden bg-slate-950 border-b border-[#e1cfb0]">
+          {/* Ambient Blurred Background Image */}
+          <img
+            src={currentImageUrl}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover opacity-35 blur-xl scale-110 pointer-events-none"
+            aria-hidden="true"
+          />
+          {/* Complete Uncropped Main Image */}
           <img
             src={currentImageUrl}
             alt={place.name}
@@ -109,9 +117,9 @@ export function PlaceDetailModal({ place, onClose }: PlaceDetailModalProps) {
                 target.src = DEFAULT_FALLBACK_IMAGE;
               }
             }}
-            className="h-full w-full object-cover transition-all duration-300"
+            className="relative z-10 h-full w-full object-contain transition-all duration-300 drop-shadow-md"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#173247]/80 via-transparent to-black/40" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#173247]/80 via-transparent to-black/30 pointer-events-none z-15" />
 
           {/* CLOSE BUTTON (X) Top-Right */}
           <button

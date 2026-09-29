@@ -229,8 +229,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Business ID is required" }, { status: 400 });
     }
 
+    // Only return data if the business has explicitly saved hotel data.
+    // Do NOT generate fake/mock data for businesses that haven't configured it.
     if (!hotelDataStore.has(id)) {
-      hotelDataStore.set(id, getInitialHotelData(id));
+      return NextResponse.json(null);
     }
 
     const data = hotelDataStore.get(id);
@@ -255,7 +257,28 @@ export async function POST(request: Request) {
       if (!reviewerName || !rating || !comment) {
         return NextResponse.json({ error: "Name, rating and comment are required" }, { status: 400 });
       }
-      const existing = hotelDataStore.get(businessId) || getInitialHotelData(businessId);
+      const existing = hotelDataStore.get(businessId) || {
+        businessId,
+        rooms: [],
+        amenities: [],
+        customAmenities: [],
+        checkInTime: "",
+        checkOutTime: "",
+        offers: [],
+        packages: [],
+        reviews: [],
+        stats: {
+          profileViews: 0,
+          roomViews: 0,
+          contactClicks: 0,
+          directionClicks: 0,
+          offerViews: 0,
+          prevProfileViews: 0,
+          prevRoomViews: 0,
+          prevContactClicks: 0,
+          prevDirectionClicks: 0,
+        },
+      } as HotelData;
       const newReview: GuestReview = {
         id: `rev-${Date.now()}`,
         reviewerName: String(reviewerName).trim(),
@@ -287,7 +310,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized access to this business profile" }, { status: 403 });
     }
 
-    const existing = hotelDataStore.get(businessId) || getInitialHotelData(businessId);
+    const existing = hotelDataStore.get(businessId) || {
+      businessId,
+      rooms: [],
+      amenities: [],
+      customAmenities: [],
+      checkInTime: "",
+      checkOutTime: "",
+      offers: [],
+      packages: [],
+      reviews: [],
+      stats: {
+        profileViews: 0,
+        roomViews: 0,
+        contactClicks: 0,
+        directionClicks: 0,
+        offerViews: 0,
+        prevProfileViews: 0,
+        prevRoomViews: 0,
+        prevContactClicks: 0,
+        prevDirectionClicks: 0,
+      },
+    } as HotelData;
     const updated: HotelData = {
       ...existing,
       ...payload,
