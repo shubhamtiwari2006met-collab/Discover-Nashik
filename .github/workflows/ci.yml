@@ -4,6 +4,9 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   frontend-ci:
     name: Frontend CI
@@ -26,6 +29,9 @@ jobs:
         run: npm ci
 
       - name: Production build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: "https://ci-dummy.supabase.co"
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_dummy_key_for_ci_build"
         run: npm run build
 
       - name: TypeScript check
