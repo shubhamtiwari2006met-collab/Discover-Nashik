@@ -122,11 +122,10 @@ export async function POST(request: Request) {
       }
     }
 
-    // Append user prompt with system context
-    const userPromptText = `[System Context: ${systemInstruction}]\n\nUser Question: ${sanitizedQuestion}`;
+    // Append user prompt
     contents.push({
       role: "user",
-      parts: [{ text: userPromptText }],
+      parts: [{ text: sanitizedQuestion }],
     });
 
     let lastError: string | null = null;
@@ -142,6 +141,9 @@ export async function POST(request: Request) {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
+              systemInstruction: {
+                parts: [{ text: systemInstruction }],
+              },
               contents,
               generationConfig: {
                 temperature: 0.4,
