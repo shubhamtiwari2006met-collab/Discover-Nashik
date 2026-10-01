@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useId } from "react";
+import { useState, useEffect, useRef, useId, startTransition } from "react";
 import {
   Users,
   UserPlus,
@@ -22,7 +22,6 @@ import {
   Compass
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import { useTranslation } from "@/lib/i18n";
 import { createClient } from "@/utils/supabase/client";
 import dynamic from "next/dynamic";
 
@@ -80,7 +79,6 @@ const PRESET_MESSAGES = [
 ];
 
 export default function GroupTracker() {
-  const { t } = useTranslation();
   const supabase = createClient();
   const instanceId = useId();
 
@@ -104,6 +102,29 @@ export default function GroupTracker() {
   const realtimeChannelRef = useRef<any>(null);
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
 
+  // Load group details, notes, members from persistence layer
+  const loadGroupData = (code: string) => {
+    // Coordinator name
+    const storedCoord = localStorage.getItem(STORAGE_KEYS.COORDINATOR(code));
+    if (storedCoord) setCoordinatorName(storedCoord);
+
+    // Notes
+    const storedNotes = localStorage.getItem(STORAGE_KEYS.NOTES(code));
+    if (storedNotes) {
+      try {
+        setNotes(JSON.parse(storedNotes));
+      } catch {}
+    }
+
+    // Members
+    const storedMembers = localStorage.getItem(STORAGE_KEYS.MEMBERS(code));
+    if (storedMembers) {
+      try {
+        setMembers(JSON.parse(storedMembers));
+      } catch {}
+    }
+  };
+
   // 1. Initialize user from Supabase session or localStorage
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -125,13 +146,15 @@ export default function GroupTracker() {
     const savedRole = (localStorage.getItem(STORAGE_KEYS.ACTIVE_ROLE) as Role) || "none";
     const savedName = localStorage.getItem(STORAGE_KEYS.ACTIVE_USER_NAME) || "";
 
-    if (savedName) setUserName(savedName);
+    startTransition(() => {
+      if (savedName) setUserName(savedName);
 
-    if (savedCode && savedRole !== "none") {
-      setGroupCode(savedCode);
-      setRole(savedRole);
-      loadGroupData(savedCode);
-    }
+      if (savedCode && savedRole !== "none") {
+        setGroupCode(savedCode);
+        setRole(savedRole);
+        loadGroupData(savedCode);
+      }
+    });
   }, []);
 
   // 2. Set up BroadcastChannel & Supabase Realtime channel whenever active group code changes
@@ -207,29 +230,6 @@ export default function GroupTracker() {
       }
     };
   }, [groupCode, role]);
-
-  // Load group details, notes, members from persistence layer
-  const loadGroupData = (code: string) => {
-    // Coordinator name
-    const storedCoord = localStorage.getItem(STORAGE_KEYS.COORDINATOR(code));
-    if (storedCoord) setCoordinatorName(storedCoord);
-
-    // Notes
-    const storedNotes = localStorage.getItem(STORAGE_KEYS.NOTES(code));
-    if (storedNotes) {
-      try {
-        setNotes(JSON.parse(storedNotes));
-      } catch (e) {}
-    }
-
-    // Members
-    const storedMembers = localStorage.getItem(STORAGE_KEYS.MEMBERS(code));
-    if (storedMembers) {
-      try {
-        setMembers(JSON.parse(storedMembers));
-      } catch (e) {}
-    }
-  };
 
   // Helper to notify other tabs/devices
   const notifyBroadcast = (type: "NEW_NOTE" | "MEMBER_JOINED" | "LOCATION_UPDATE", payload: any) => {
@@ -320,12 +320,12 @@ export default function GroupTracker() {
     setCoordinatorName(existingCoord);
 
     const existingMembersStr = localStorage.getItem(STORAGE_KEYS.MEMBERS(code));
-    let currentMembers: Member[] = existingMembersStr ? JSON.parse(existingMembersStr) : [
+    const currentMembers: Member[] = existingMembersStr ? JSON.parse(existingMembersStr) : [
       { id: 'coord_id', name: existingCoord, role: 'coordinator', lat: 20.006, lng: 73.79, lastUpdated: 'Just now' }
     ];
 
     // Check if member is already in list
-    let existingIndex = currentMembers.findIndex(m => m.id === currentUserId || m.name.toLowerCase() === nameToUse.toLowerCase());
+    const existingIndex = currentMembers.findIndex(m => m.id === currentUserId || m.name.toLowerCase() === nameToUse.toLowerCase());
     const newMemberObj: Member = {
       id: currentUserId,
       name: nameToUse,
@@ -689,7 +689,7 @@ export default function GroupTracker() {
                     )}
                   </div>
                   <p className="text-slate-800 text-lg font-medium leading-relaxed">
-                    "{latestNote.message}"
+                    &quot;{latestNote.message}&quot;
                   </p>
                 </div>
               ) : (
