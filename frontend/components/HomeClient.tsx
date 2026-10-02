@@ -60,16 +60,16 @@ export function HomeClient({ initialPlaces }: HomeClientProps) {
           <div className="container mx-auto max-w-6xl">
             {/* Restricted to ~50-55% max width on left so temples and ghats on right side are prominently visible */}
             <div className="w-full max-w-[78%] sm:max-w-[58%] md:max-w-[52%] lg:max-w-[48%] text-left">
-              <p className="mb-1 sm:mb-1.5 text-[9px] sm:text-[11px] font-bold uppercase tracking-[0.18em] text-[#f5ad45] drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
+              <p className="mb-1 sm:mb-1.5 text-[9px] sm:text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#FFE082] drop-shadow-[0_2px_8px_rgba(0,0,0,1)]">
                 {t("Kumbh Mela 2027 · The river remembers")}
               </p>
 
-              <h1 className="font-display mb-1.5 sm:mb-2.5 text-xl sm:text-3xl md:text-4xl font-bold leading-[1.12] text-white drop-shadow-[0_4px_18px_rgba(0,0,0,0.9)]">
+              <h1 className="font-display mb-1.5 sm:mb-2.5 text-xl sm:text-3xl md:text-4xl font-extrabold leading-[1.12] text-white drop-shadow-[0_4px_16px_rgba(0,0,0,1)]">
                 {t("A sacred journey")}{" "}
-                <span className="text-[#f5ad45]">{t("begins in Nashik")}</span>
+                <span className="text-[#FFE082] drop-shadow-[0_3px_10px_rgba(0,0,0,1)]">{t("begins in Nashik")}</span>
               </h1>
 
-              <p className="mb-3 sm:mb-4 text-[11px] sm:text-xs md:text-sm font-medium leading-relaxed text-white/95 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+              <p className="mb-3 sm:mb-4 text-[11px] sm:text-xs md:text-sm font-semibold leading-relaxed text-white drop-shadow-[0_2px_8px_rgba(0,0,0,1)]">
                 {t("Plan your Kumbh 2027 pilgrimage, then stay for the temples, vineyards, trails and stories that make Nashik timeless.")}
               </p>
 
