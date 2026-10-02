@@ -6,8 +6,24 @@ type Props = {
   params: Promise<{ id: string }>;
 };
 
+import { places as staticPlaces } from "@/lib/places";
+
 async function getPlaceRecord(id: string) {
   try {
+    // 1. Check static places first
+    const staticMatch = staticPlaces.find((p) => p._id === id || (p as any).id === id);
+    if (staticMatch) {
+      return {
+        id: staticMatch._id,
+        name: staticMatch.name,
+        category: staticMatch.category || "Attraction",
+        description: staticMatch.description || `${staticMatch.name} in Nashik.`,
+        address: staticMatch.location,
+        image: staticMatch.image,
+      };
+    }
+
+    // 2. Check approved business registrations in Supabase
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
     if (!supabaseUrl || !supabaseKey) return null;

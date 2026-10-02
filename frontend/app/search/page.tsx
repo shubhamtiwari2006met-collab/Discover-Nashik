@@ -47,6 +47,7 @@ function SearchResults() {
           const firstPhoto = photos[0] || DEFAULT_FALLBACK_IMAGE;
           return {
             _id: b.id,
+            id: b.id,
             name: b.business_name,
             category: b.category,
             subcategory: b.subcategory,
@@ -66,7 +67,7 @@ function SearchResults() {
           };
         });
 
-        let combinedPlaces: Place[] = [...registeredPlaces, ...staticPlaces];
+        let combinedPlaces: Place[] = [...registeredPlaces, ...staticPlaces.map(p => ({ ...p, id: p._id }))];
 
         // Fetch from /api/places to guarantee all approved & admin added places are merged
         try {
@@ -76,7 +77,7 @@ function SearchResults() {
             [...combinedPlaces, ...apiRes].forEach((p) => {
               if (p && (p._id || (p as any).id)) {
                 const id = p._id || (p as any).id;
-                placesMap.set(id, { ...p, _id: id });
+                placesMap.set(id, { ...p, _id: id, id: id });
               }
             });
             combinedPlaces = Array.from(placesMap.values());
