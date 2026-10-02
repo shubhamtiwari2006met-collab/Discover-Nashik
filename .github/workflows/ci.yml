@@ -59,3 +59,96 @@ jobs:
 
       - name: Syntax check server.js
         run: node -c server.js
+
+  post-deploy-verify:
+    name: Post-Deploy Verification
+    runs-on: ubuntu-latest
+    needs: [frontend-ci, backend-ci]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Wait for deployments to propagate
+        run: |
+          echo "Waiting 120 seconds for Vercel and Render deployments to propagate..."
+          sleep 120
+
+      - name: Backend health check (with retry)
+        run: |
+          for i in 1 2 3 4 5; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 30 \
+              https://discover-nashik-api.onrender.com/api/health)
+            echo "Attempt $i: HTTP $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ Backend health check passed"
+              exit 0
+            fi
+            echo "Retrying in 30 seconds..."
+            sleep 30
+          done
+          echo "❌ Backend health check failed after 5 attempts"
+          exit 1
+
+      - name: Frontend reachability check (with retry)
+        run: |
+          for i in 1 2 3; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 30 \
+              https://discovernashik.co.in)
+            echo "Attempt $i: HTTP $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ Frontend reachability check passed"
+              exit 0
+            fi
+            echo "Retrying in 20 seconds..."
+            sleep 20
+          done
+          echo "❌ Frontend reachability check failed after 3 attempts"
+          exit 1
+
+      - name: Backend smoke test - Places API
+        run: |
+          STATUS=$(curl -s -o /tmp/places_response.json -w "%{http_code}" \
+            --max-time 30 \
+            https://discover-nashik-api.onrender.com/api/places)
+          echo "HTTP status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "❌ Places API returned HTTP $STATUS"
+            exit 1
+          fi
+          python3 -c "
+          import json, sys
+          try:
+              with open('/tmp/places_response.json') as f:
+                  data = json.load(f)
+              if not isinstance(data, list):
+                  print('❌ Places API response is not a JSON array')
+                  sys.exit(1)
+              print(f'✅ Places API returned valid JSON array ({len(data)} items)')
+          except json.JSONDecodeError as e:
+              print(f'❌ Places API returned invalid JSON: {e}')
+              sys.exit(1)
+          "
+
+      - name: Backend smoke test - Kumbh Locations API
+        run: |
+          STATUS=$(curl -s -o /tmp/kumbh_response.json -w "%{http_code}" \
+            --max-time 30 \
+            https://discover-nashik-api.onrender.com/api/kumbh/locations)
+          echo "HTTP status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "❌ Kumbh Locations API returned HTTP $STATUS"
+            exit 1
+          fi
+          python3 -c "
+          import json, sys
+          try:
+              with open('/tmp/kumbh_response.json') as f:
+                  data = json.load(f)
+              if not isinstance(data, list):
+                  print('❌ Kumbh Locations API response is not a JSON array')
+                  sys.exit(1)
+              print(f'✅ Kumbh Locations API returned valid JSON array ({len(data)} items)')
+          except json.JSONDecodeError as e:
+              print(f'❌ Kumbh Locations API returned invalid JSON: {e}')
+              sys.exit(1)
+          "
