@@ -46,11 +46,28 @@ async function purgeSampleReportsFromDb() {
   } catch (err) {}
 }
 
+// Helper to escape regex special characters for safe literal matching
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 // 1. GET /api/kumbh/lost-found — Public published reports
 exports.getPublicReports = async (req, res) => {
   try {
     // purgeSampleReportsFromDb removed – no DB write on each request
-    const { reportType, category, search, status, page = 1, limit = 30 } = req.query;
+    const { reportType, category, search, status } = req.query;
+
+    let pageNum = Number(req.query.page);
+    if (!Number.isInteger(pageNum) || pageNum < 1) {
+      pageNum = 1;
+    }
+
+    let limitNum = Number(req.query.limit);
+    if (!Number.isInteger(limitNum) || limitNum < 1) {
+      limitNum = 30;
+    } else if (limitNum > 50) {
+      limitNum = 50;
+    }
 
     const query = {
       status: { $nin: ["rejected"] },
@@ -60,8 +77,9 @@ exports.getPublicReports = async (req, res) => {
     if (category && category !== "all") query.category = category;
     if (status && status !== "all") query.status = status;
 
-    if (search) {
-      const searchRegex = new RegExp(search.trim(), "i");
+    if (search && search.trim()) {
+      const sanitizedSearch = escapeRegExp(search.trim());
+      const searchRegex = new RegExp(sanitizedSearch, "i");
       query.$or = [
         { title: searchRegex },
         { description: searchRegex },
@@ -78,9 +96,9 @@ exports.getPublicReports = async (req, res) => {
     let total = 0;
 
     try {
-      const skip = (parseInt(page) - 1) * parseInt(limit);
+      const skip = (pageNum - 1) * limitNum;
       [reports, total] = await Promise.all([
-        LostFoundReport.find(query).sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)),
+        LostFoundReport.find(query).sort({ createdAt: -1 }).skip(skip).limit(limitNum),
         LostFoundReport.countDocuments(query),
       ]);
     } catch (dbErr) {
@@ -89,7 +107,7 @@ exports.getPublicReports = async (req, res) => {
 
     let sanitized = reports.map((r) => sanitizePublicReport(r, currentUserId, isAdmin));
 
-    res.json({ reports: sanitized, total, page: parseInt(page), pages: Math.ceil(total / limit) });
+    res.json({ reports: sanitized, total, page: pageNum, pages: Math.ceil(total / limitNum) });
   } catch (error) {
     console.error("Error fetching public reports:", error);
     res.json({ reports: [], total: 0, page: 1, pages: 1 });

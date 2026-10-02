@@ -46,7 +46,8 @@ exports.registerBusiness = async (req, res) => {
     await User.findByIdAndUpdate(req.user._id, { role: 'business', businessStatus: 'pending' });
     res.status(existing ? 200 : 201).json(business);
   } catch (error) {
-    res.status(400).json({ message: 'Business registration failed', error: error.message });
+    console.error('Business registration error:', error);
+    res.status(400).json({ message: 'Business registration failed' });
   }
 };
 
@@ -78,6 +79,7 @@ exports.reviewBusiness = async (req, res) => {
 
     res.status(200).json(business);
   } catch (error) {
-    res.status(400).json({ message: 'Business review failed', error: error.message });
+    console.error('Business review error:', error);
+    res.status(400).json({ message: 'Business review failed' });
   }
 };

@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
       // Fallback: If RPC is not created yet in SQL editor, perform client-side fallback query on business_registrations
       const { data: businesses, error: dbError } = await supabase
         .from("business_registrations")
-        .select("*")
+        .select("id, business_name, category, subcategory, contact_name, phone, email, address, city_area, description, opening_time, closing_time, working_days, website_url, photos, latitude, longitude, verification_status, admin_remarks")
         .eq("verification_status", "approved");
 
       if (dbError || !businesses) {

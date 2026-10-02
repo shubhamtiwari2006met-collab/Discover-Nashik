@@ -201,16 +201,6 @@ UPDATE public.profiles
 SET role = 'BUSINESS'
 WHERE id IN (SELECT owner_id FROM public.business_registrations);
 
--- Backfill: promote the first registered user to ADMIN if none exists yet
-UPDATE public.profiles
-SET role = 'ADMIN'
-WHERE id = (
-  SELECT id FROM auth.users ORDER BY created_at ASC LIMIT 1
-)
-AND NOT EXISTS (
-  SELECT 1 FROM public.profiles WHERE role = 'ADMIN'
-);
-
 
 -- ============================================================
 -- 6. NOTIFICATIONS table
@@ -298,15 +288,15 @@ CREATE POLICY "Anyone can view groups by code"              ON public.groups    
 CREATE POLICY "Anyone can insert groups"                    ON public.groups          FOR INSERT WITH CHECK (true);
 
 CREATE POLICY "Anyone can view group members"               ON public.group_members   FOR SELECT USING (true);
-CREATE POLICY "Anyone can insert group members"             ON public.group_members   FOR INSERT WITH CHECK (true);
-CREATE POLICY "Anyone can delete group members"             ON public.group_members   FOR DELETE USING (true);
 
 CREATE POLICY "Anyone can view group notes"                 ON public.group_notes     FOR SELECT USING (true);
-CREATE POLICY "Anyone can insert group notes"               ON public.group_notes     FOR INSERT WITH CHECK (true);
+CREATE POLICY "Anyone can insert group notes for existing groups" ON public.group_notes FOR INSERT WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.groups g WHERE g.code = group_code
+  )
+);
 
 CREATE POLICY "Anyone can view group locations"             ON public.group_locations FOR SELECT USING (true);
-CREATE POLICY "Anyone can insert/update group locations"    ON public.group_locations FOR INSERT WITH CHECK (true);
-CREATE POLICY "Anyone can update group locations"           ON public.group_locations FOR UPDATE USING (true);
 
 
 -- ============================================================
