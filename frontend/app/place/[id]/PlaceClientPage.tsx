@@ -75,12 +75,14 @@ export default function PlaceClientPage() {
         let item: PlaceRecord | null = null;
         if (res.ok) {
           const data = await res.json();
-          const found = Array.isArray(data) ? data.find((p: PlaceRecord) => p._id === id) : null;
-          if (found) item = found;
+          const found = Array.isArray(data) ? data.find((p: PlaceRecord) => p._id === id || (p as any).id === id) : null;
+          if (found) {
+            item = { ...found, _id: found._id || (found as any).id };
+          }
         }
 
         if (!item) {
-          // Direct fallback for approved business in Supabase
+          // Direct fallback for approved business in Supabase by exact ID
           const { data: bus } = await supabase
             .from("business_registrations")
             .select("*")

@@ -9,8 +9,65 @@ const GEMINI_MODELS = [
   "gemini-3.6-flash"
 ];
 
+// Rate Limiter Configuration: 10 requests per 60 seconds per IP
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const MAX_REQUESTS_PER_WINDOW = 10;
+const ipRequestStore = new Map<string, number[]>();
+
+function getClientIp(request: Request): string {
+  const xForwardedFor = request.headers.get("x-forwarded-for");
+  if (xForwardedFor) {
+    const ips = xForwardedFor.split(",").map(ip => ip.trim());
+    if (ips[0]) return ips[0].slice(0, 45);
+  }
+  const xRealIp = request.headers.get("x-real-ip");
+  if (xRealIp) return xRealIp.trim().slice(0, 45);
+
+  const cfConnectingIp = request.headers.get("cf-connecting-ip");
+  if (cfConnectingIp) return cfConnectingIp.trim().slice(0, 45);
+
+  return "127.0.0.1";
+}
+
+function isRateLimited(clientIp: string): boolean {
+  const now = Date.now();
+  const windowStart = now - RATE_LIMIT_WINDOW_MS;
+
+  // Cleanup stale entries if store grows large
+  if (ipRequestStore.size > 1000) {
+    for (const [ip, timestamps] of ipRequestStore.entries()) {
+      const validTimestamps = timestamps.filter(ts => ts > windowStart);
+      if (validTimestamps.length === 0) {
+        ipRequestStore.delete(ip);
+      } else {
+        ipRequestStore.set(ip, validTimestamps);
+      }
+    }
+  }
+
+  const timestamps = ipRequestStore.get(clientIp) || [];
+  const validTimestamps = timestamps.filter(ts => ts > windowStart);
+
+  if (validTimestamps.length >= MAX_REQUESTS_PER_WINDOW) {
+    ipRequestStore.set(clientIp, validTimestamps);
+    return true;
+  }
+
+  validTimestamps.push(now);
+  ipRequestStore.set(clientIp, validTimestamps);
+  return false;
+}
+
 export async function POST(request: Request) {
   try {
+    const clientIp = getClientIp(request);
+    if (isRateLimited(clientIp)) {
+      return NextResponse.json(
+        { error: "Too many requests. Please wait a moment before sending another message." },
+        { status: 429 }
+      );
+    }
+
     const rawApiKey = process.env.GEMINI_API_KEY;
     const apiKey = rawApiKey?.trim().replace(/^["']|["']$/g, "");
 
@@ -65,11 +122,10 @@ export async function POST(request: Request) {
       }
     }
 
-    // Append user prompt with system context
-    const userPromptText = `[System Context: ${systemInstruction}]\n\nUser Question: ${sanitizedQuestion}`;
+    // Append user prompt
     contents.push({
       role: "user",
-      parts: [{ text: userPromptText }],
+      parts: [{ text: sanitizedQuestion }],
     });
 
     let lastError: string | null = null;
@@ -85,6 +141,9 @@ export async function POST(request: Request) {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
+              systemInstruction: {
+                parts: [{ text: systemInstruction }],
+              },
               contents,
               generationConfig: {
                 temperature: 0.4,

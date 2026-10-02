@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useMemo, startTransition } from "react";
 
 export type Language = "en" | "hi" | "mr";
 
@@ -1071,7 +1071,7 @@ function getSessionLanguage(): Language {
   try {
     const saved = window.sessionStorage.getItem("discover-nashik-language") as Language | null;
     return saved && (saved === "en" || saved === "hi" || saved === "mr") ? saved : "en";
-  } catch (e) {
+  } catch {
     return "en";
   }
 }
@@ -1081,7 +1081,11 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const initialLang = getSessionLanguage();
-    setLanguageState(initialLang);
+    if (initialLang !== "en") {
+      startTransition(() => {
+        setLanguageState(initialLang);
+      });
+    }
   }, []);
 
   useEffect(() => {
@@ -1095,7 +1099,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     if (typeof window !== "undefined") {
       try {
         window.sessionStorage.setItem("discover-nashik-language", next);
-      } catch (e) {
+      } catch {
         // ignore storage errors
       }
     }

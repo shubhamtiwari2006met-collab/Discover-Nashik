@@ -12,6 +12,7 @@ const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:5000";
 
 export type SavedPlace = {
   _id: string;
+  id?: string;
   name: string;
   category: string;
   location: string;
@@ -41,6 +42,7 @@ import { places as staticPlaces } from "@/lib/places";
 function getStaticPlaces(): SavedPlace[] {
   return staticPlaces.map((p) => ({
     _id: p._id,
+    id: p._id,
     name: p.name,
     category: p.category,
     location: p.location,
@@ -168,6 +170,7 @@ export async function GET() {
           const isAdminPlace = b.contact_name === "Admin Added" || b.admin_remarks === "Added directly by Admin";
           return {
             _id: b.id,
+            id: b.id,
             name: b.business_name,
             category: b.category,
             location: b.city_area ? `${b.city_area}, ${b.address}` : b.address,
@@ -204,20 +207,24 @@ export async function GET() {
     if (mongoRes.ok) {
       const data = await mongoRes.json();
       if (Array.isArray(data)) {
-        mongoPlaces = data.map((item: any) => ({
-          _id: String(item._id || item.id),
-          name: item.name,
-          category: item.category,
-          location: item.location,
-          description: item.description,
-          tagline: item.tagline || item.subcategory,
-          famousThing: item.famousThing,
-          image: item.image,
-          images: item.images,
-          rating: item.rating || 4.8,
-          phone: item.phone,
-          email: item.email,
-        }));
+        mongoPlaces = data.map((item: any) => {
+          const pid = String(item._id || item.id);
+          return {
+            _id: pid,
+            id: pid,
+            name: item.name,
+            category: item.category,
+            location: item.location,
+            description: item.description,
+            tagline: item.tagline || item.subcategory,
+            famousThing: item.famousThing,
+            image: item.image,
+            images: item.images,
+            rating: item.rating || 4.8,
+            phone: item.phone,
+            email: item.email,
+          };
+        });
       }
     }
   } catch {
@@ -230,7 +237,7 @@ export async function GET() {
   // 1. Add base places
   [...registeredPlaces, ...mongoPlaces, ...staticPlacesList].forEach((p) => {
     if (p && p._id && !deletedPlaceIds.has(p._id)) {
-      placesMap.set(p._id, p);
+      placesMap.set(p._id, { ...p, id: p._id });
     }
   });
 
