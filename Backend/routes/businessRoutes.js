@@ -41,7 +41,7 @@ function isValidImageBuffer(buffer) {
 }
 
 // Secure Business Photo Upload Endpoint (Enforcing strictly 1 MB = 1,048,576 bytes)
-router.post('/upload', uploadLimiter, optionalAuthenticate, async (req, res) => {
+router.post('/upload', uploadLimiter, authenticate, async (req, res) => {
   try {
     const { imageBase64, image } = req.body;
     const rawData = imageBase64 || image;

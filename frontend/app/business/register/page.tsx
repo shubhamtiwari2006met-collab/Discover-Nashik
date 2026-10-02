@@ -181,6 +181,14 @@ export default function BusinessRegisterPage() {
     setUploadingPhoto(true);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session || !session.access_token) {
+        setUploadError(t("You must be logged in to upload images."));
+        setUploadingPhoto(false);
+        e.target.value = "";
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = async () => {
         const base64Data = reader.result as string;
@@ -189,7 +197,10 @@ export default function BusinessRegisterPage() {
         try {
           const res = await fetch("/api/business/upload", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${session.access_token}`,
+            },
             body: JSON.stringify({ imageBase64: base64Data }),
           });
           const data = await res.json();

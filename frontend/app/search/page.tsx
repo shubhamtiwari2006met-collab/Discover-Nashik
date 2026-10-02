@@ -35,7 +35,7 @@ function SearchResults() {
         setLoading(true);
         const { data: businesses, error: dbError } = await supabase
           .from("business_registrations")
-          .select("*")
+          .select("id, business_name, category, subcategory, contact_name, phone, email, address, city_area, description, opening_time, closing_time, working_days, website_url, photos, latitude, longitude, verification_status, admin_remarks")
           .eq("verification_status", "approved");
 
         if (dbError) {
