@@ -126,12 +126,6 @@ export default function KumbhPage() {
                 >
                   <Route className="w-4 h-4 text-[#2c1810]" /> Plan My Kumbh Journey <ChevronRight className="w-4 h-4" />
                 </button>
-                <a
-                  href="#explore-sections"
-                  className="px-4 py-2.5 rounded-full border border-[#fce8c5]/30 bg-white/10 backdrop-blur-sm text-[#fffdf8] font-bold text-xs sm:text-sm hover:bg-white/20 transition-all flex items-center gap-1.5"
-                >
-                  {t("Explore Kumbh")} <ChevronRight className="w-4 h-4" />
-                </a>
                 <Link
                   href="/kumbh/lost-found"
                   className="px-4 py-2.5 rounded-full border border-[#fce8c5]/30 bg-white/10 backdrop-blur-sm text-[#fffdf8] font-bold text-xs sm:text-sm hover:bg-white/20 transition-all flex items-center gap-1.5"
