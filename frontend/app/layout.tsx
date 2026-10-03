@@ -47,7 +47,9 @@ export const metadata: Metadata = {
 import { NavBar } from "@/components/NavBar";
 import { Footer } from "@/components/Footer";
 import { ChatbotWidget } from "@/components/ChatbotWidget";
+import { UserAuthModal } from "@/components/UserAuthModal";
 import { I18nProvider } from "@/lib/i18n";
+import { UserAuthProvider } from "@/context/UserAuthContext";
 
 const websiteJsonLd = {
   "@context": "https://schema.org",
@@ -90,10 +92,13 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col bg-[#f8f2e8] text-[#192f42] selection:bg-orange-500/30">
         <I18nProvider>
-          <NavBar />
-          <main className="flex-1 pt-16">{children}</main>
-          <Footer />
-          <ChatbotWidget />
+          <UserAuthProvider>
+            <NavBar />
+            <main className="flex-1 pt-16">{children}</main>
+            <Footer />
+            <ChatbotWidget />
+            <UserAuthModal />
+          </UserAuthProvider>
         </I18nProvider>
       </body>
     </html>
