@@ -5,16 +5,23 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Send, MessageCircle, Sparkles, Mic, Volume2, VolumeX } from "lucide-react";
 import { useTranslation, type Language } from "@/lib/i18n";
 
-type SpeechRecognitionEventLike = Event & { results: SpeechRecognitionResultList };
+type SpeechRecognitionEventLike = Event & {
+  results: SpeechRecognitionResultList;
+};
+type SpeechRecognitionErrorEventLike = Event & { error: string };
 type SpeechRecognitionInstance = {
   continuous: boolean;
   interimResults: boolean;
   lang: string;
   start: () => void;
   stop: () => void;
+  abort: () => void;
+  onstart: (() => void) | null;
+  onaudiostart: (() => void) | null;
+  onspeechstart: (() => void) | null;
   onresult: ((event: SpeechRecognitionEventLike) => void) | null;
   onend: (() => void) | null;
-  onerror: (() => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null;
 };
 type SpeechRecognitionConstructor = new () => SpeechRecognitionInstance;
 
@@ -179,6 +186,7 @@ export function ChatbotWidget() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [voiceError, setVoiceError] = useState("");
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [speakingIndex, setSpeakingIndex] = useState<number | null>(null);
 
@@ -187,6 +195,32 @@ export function ChatbotWidget() {
   const activeSpeechIdRef = useRef<number>(0);
   const activeRequestIdRef = useRef<number>(0);
   const chatbotPanelRef = useRef<HTMLDivElement | null>(null);
+  const toggleButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  // Close chatbot when clicking outside the panel and toggle button
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node;
+      if (
+        chatbotPanelRef.current &&
+        !chatbotPanelRef.current.contains(target) &&
+        toggleButtonRef.current &&
+        !toggleButtonRef.current.contains(target)
+      ) {
+        closeChatbot();
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -234,7 +268,8 @@ export function ChatbotWidget() {
   // Component unmount cleanup
   useEffect(() => {
     return () => {
-      recognitionRef.current?.stop();
+      recognitionRef.current?.abort();
+      recognitionRef.current = null;
       if (typeof window !== "undefined" && window.speechSynthesis) {
         window.speechSynthesis.cancel();
       }
@@ -297,7 +332,7 @@ export function ChatbotWidget() {
     const recognitionConstructor = getSpeechRecognition();
     if (!recognitionConstructor) return;
 
-    if (isListening) {
+    if (recognitionRef.current) {
       recognitionRef.current?.stop();
       return;
     }
@@ -306,17 +341,62 @@ export function ChatbotWidget() {
     recognition.continuous = false;
     recognition.interimResults = false;
     recognition.lang = speechLocale[chatLanguage];
+    recognition.onstart = () => {
+      if (recognitionRef.current === recognition) {
+        setVoiceError("");
+        setIsListening(true);
+      }
+    };
     recognition.onresult = event => {
       const transcript = Array.from(event.results)
+        .filter(result => result.isFinal)
         .map(result => result[0]?.transcript || "")
         .join(" ");
-      setInput(transcript);
+      if (transcript.trim()) {
+        setInput(transcript.trim());
+        setVoiceError("");
+      }
     };
-    recognition.onend = () => setIsListening(false);
-    recognition.onerror = () => setIsListening(false);
+    recognition.onaudiostart = () => {
+      if (recognitionRef.current === recognition) setIsListening(true);
+    };
+    recognition.onspeechstart = () => {
+      if (recognitionRef.current === recognition) setIsListening(true);
+    };
+    recognition.onend = () => {
+      if (recognitionRef.current === recognition) {
+        recognitionRef.current = null;
+        setIsListening(false);
+      }
+    };
+    recognition.onerror = event => {
+      if (recognitionRef.current !== recognition) return;
+      const errorMessages: Record<string, string> = {
+        "not-allowed": "Microphone permission was denied. Allow microphone access and try again.",
+        "permission-denied": "Microphone permission was denied. Allow microphone access and try again.",
+        "service-not-allowed": "Microphone access is blocked. Allow microphone access and try again.",
+        "no-speech": "No speech detected. Tap the microphone and try again.",
+        "audio-capture": "The microphone is unavailable. Check your device and try again.",
+        network: "Voice recognition is unavailable due to a network issue. Try again.",
+        "language-not-supported": "Voice recognition does not support the selected language in this browser.",
+      };
+      if (event.error !== "aborted") {
+        setVoiceError(errorMessages[event.error] || "Voice recognition could not start. Check microphone access and try again.");
+      }
+      recognitionRef.current = null;
+      setIsListening(false);
+      recognition.abort();
+    };
     recognitionRef.current = recognition;
-    setIsListening(true);
-    recognition.start();
+    setVoiceError("");
+    try {
+      recognition.start();
+    } catch (error) {
+      recognitionRef.current = null;
+      setIsListening(false);
+      setVoiceError("Voice recognition could not start. Check microphone access and try again.");
+      console.warn("Speech recognition could not start:", error);
+    }
   };
 
   const handleSend = async () => {
@@ -358,6 +438,9 @@ export function ChatbotWidget() {
   };
 
   const closeChatbot = () => {
+    recognitionRef.current?.abort();
+    recognitionRef.current = null;
+    setIsListening(false);
     stopSpeaking();
     setIsOpen(false);
   };
@@ -366,6 +449,9 @@ export function ChatbotWidget() {
     setIsOpen(prev => {
       const nextState = !prev;
       if (!nextState) {
+        recognitionRef.current?.abort();
+        recognitionRef.current = null;
+        setIsListening(false);
         stopSpeaking();
       }
       return nextState;
@@ -418,6 +504,9 @@ export function ChatbotWidget() {
                     type="button"
                     onClick={() => {
                       stopSpeaking();
+                      recognitionRef.current?.abort();
+                      recognitionRef.current = null;
+                      setIsListening(false);
                       setChatLanguage(lang);
                     }}
                     className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
@@ -477,7 +566,10 @@ export function ChatbotWidget() {
               <input
                 type="text"
                 value={input}
-                onChange={e => setInput(e.target.value)}
+                onChange={e => {
+                  setInput(e.target.value);
+                  setVoiceError("");
+                }}
                 onKeyDown={e => e.key === "Enter" && !isLoading && handleSend()}
                 placeholder={t("Ask about Nashik...")}
                 className="chatbot-message-input min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-800 px-3 text-sm outline-none transition-colors placeholder:text-slate-400 focus:border-orange-700 focus:ring-2 focus:ring-orange-900/30 sm:px-4"
@@ -487,8 +579,8 @@ export function ChatbotWidget() {
                   type="button"
                   onClick={toggleVoiceInput}
                   className={`flex-shrink-0 rounded-xl p-2.5 text-white shadow-sm transition-all hover:-translate-y-0.5 ${isListening ? "bg-red-500 hover:bg-red-600" : "bg-slate-700 hover:bg-slate-800"}`}
-                  aria-label={isListening ? t("Stop voice input") : t("Start voice input")}
-                  title={isListening ? t("Stop voice input") : t("Start voice input")}
+                  aria-label={voiceError || (isListening ? t("Stop voice input") : t("Start voice input"))}
+                  title={voiceError || (isListening ? t("Stop voice input") : t("Start voice input"))}
                 >
                   <Mic className={`h-4 w-4 ${isListening ? "animate-pulse" : ""}`} />
                 </button>
@@ -506,6 +598,7 @@ export function ChatbotWidget() {
       </AnimatePresence>
 
       <motion.button
+        ref={toggleButtonRef}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={toggleOpen}
