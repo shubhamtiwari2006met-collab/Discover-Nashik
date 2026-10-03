@@ -1,5 +1,7 @@
 "use client";
+import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   CalendarDays,
   MapPin,
@@ -12,17 +14,77 @@ import {
   ChevronRight,
   ShieldCheck,
   Landmark,
-  Users
+  Users,
+  Route,
+  X,
+  Lock
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
+import { useUserAuth } from "@/context/UserAuthContext";
 
 export default function KumbhPage() {
   const { t } = useTranslation();
+  const { isAuthenticated, openAuthModal } = useUserAuth();
+  const router = useRouter();
+  const [showPlannerAuthPrompt, setShowPlannerAuthPrompt] = useState(false);
+
+  const handlePlanJourneyClick = () => {
+    if (isAuthenticated) {
+      router.push("/kumbh/planner");
+    } else {
+      setShowPlannerAuthPrompt(true);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-[#f7f2e9] text-[#173247] py-8 md:py-14 relative overflow-hidden">
       {/* Subtle Heritage Background Motif (Scoped SVG pattern) */}
       <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#b86628_1px,transparent_1px)] [background-size:24px_24px]" />
+
+      {/* Auth Requirement Prompt Modal for Unauthenticated Users */}
+      {showPlannerAuthPrompt && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm transition-opacity">
+          <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-[#e7b06d] bg-[#fffdf8] p-6 shadow-2xl">
+            <button
+              type="button"
+              onClick={() => setShowPlannerAuthPrompt(false)}
+              className="absolute right-4 top-4 rounded-full p-2 text-[#667883] hover:bg-[#fff1e6] hover:text-[#c9580f] transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div className="text-center space-y-4 pt-2">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#fff7ed] border border-[#e7b06d] text-[#e86f18]">
+                <Lock className="h-7 w-7" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold font-serif text-[#173247]">Personalized Kumbh Journey</h3>
+                <p className="mt-2 text-xs text-[#667883] leading-relaxed">
+                  Create or sign in to your Discover Nashik account to create and save your personalized Kumbh journey.
+                </p>
+              </div>
+              <div className="flex flex-col gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPlannerAuthPrompt(false);
+                    openAuthModal();
+                  }}
+                  className="w-full py-3 rounded-xl bg-[#e86f18] text-white font-bold text-sm shadow-md hover:bg-[#c9580f] transition-all flex items-center justify-center gap-2"
+                >
+                  <ShieldCheck className="w-4 h-4" /> Sign In / Create Account
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPlannerAuthPrompt(false)}
+                  className="w-full py-2.5 rounded-xl border border-[#d8c4a3] text-[#667883] font-bold text-xs hover:bg-orange-50 transition-all"
+                >
+                  Continue Browsing Public Guides
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="container mx-auto px-4 max-w-6xl relative z-10">
         
@@ -57,9 +119,16 @@ export default function KumbhPage() {
               </p>
 
               <div className="flex flex-wrap items-center gap-2.5 pt-4">
+                <button
+                  type="button"
+                  onClick={handlePlanJourneyClick}
+                  className="px-6 py-3 rounded-full bg-[#d4a359] text-[#2c1810] font-bold text-xs sm:text-sm shadow-lg hover:bg-[#e4b66d] transition-all flex items-center gap-2 border border-[#fffdf8]/30 hover:scale-[1.02]"
+                >
+                  <Route className="w-4 h-4 text-[#2c1810]" /> Plan My Kumbh Journey <ChevronRight className="w-4 h-4" />
+                </button>
                 <a
                   href="#explore-sections"
-                  className="px-5 py-2.5 rounded-full bg-[#d4a359] text-[#2c1810] font-bold text-xs sm:text-sm shadow-md hover:bg-[#e4b66d] transition-all flex items-center gap-2"
+                  className="px-4 py-2.5 rounded-full border border-[#fce8c5]/30 bg-white/10 backdrop-blur-sm text-[#fffdf8] font-bold text-xs sm:text-sm hover:bg-white/20 transition-all flex items-center gap-1.5"
                 >
                   {t("Explore Kumbh")} <ChevronRight className="w-4 h-4" />
                 </a>

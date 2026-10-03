@@ -23,6 +23,7 @@ const businessRoutes = require('./routes/businessRoutes');
 const kumbhRoutes = require('./routes/kumbhRoutes');
 const lostFoundRoutes = require('./routes/lostFoundRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const tripRoutes = require('./routes/tripRoutes');
 
 const app = express();
 
@@ -104,6 +105,7 @@ app.use("/api/auth", authRoutes);
 app.use('/api/business', businessRoutes);
 app.use('/api/kumbh', kumbhRoutes);
 app.use('/api/kumbh/lost-found', lostFoundRoutes);
+app.use('/api/kumbh/trips', tripRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Health check endpoint
