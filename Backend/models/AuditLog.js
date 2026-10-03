@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const auditLogSchema = new mongoose.Schema({
   action: {
     type: String,
-    enum: ['ADMIN_CREATED', 'ADMIN_ACCESS_REVOKED'],
+    enum: ['ADMIN_CREATED', 'ADMIN_ACCESS_REVOKED', 'USER_DELETED', 'USER_BLOCKED', 'USER_UNBLOCKED'],
     required: true,
   },
   performedBy: {

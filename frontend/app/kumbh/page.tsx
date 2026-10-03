@@ -144,12 +144,6 @@ export default function KumbhPage() {
                 >
                   <Users className="w-4 h-4 text-[#fce8c5]" /> {t("Group Tracker")}
                 </Link>
-                <Link
-                  href="/map"
-                  className="px-4 py-2.5 rounded-full border border-[#fce8c5]/30 bg-white/10 backdrop-blur-sm text-[#fffdf8] font-bold text-xs sm:text-sm hover:bg-white/20 transition-all flex items-center gap-1.5"
-                >
-                  <Compass className="w-4 h-4 text-[#fce8c5]" /> {t("Open Nashik map")}
-                </Link>
               </div>
             </div>
 
