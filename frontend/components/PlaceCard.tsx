@@ -71,6 +71,7 @@ export function PlaceCard({ place, onExplore }: { place: Place; onExplore?: (pla
         <div className="absolute inset-0 bg-gradient-to-t from-[#3b1c11]/60 via-[#3b1c11]/10 to-transparent z-10" />
         <div className="absolute inset-0 bg-slate-200 animate-pulse" />
         <img
+          key={`${place._id}:${imageUrl}`}
           src={imageUrl}
           alt={place.name}
           onError={(e) => {
@@ -152,4 +153,3 @@ export function PlaceCard({ place, onExplore }: { place: Place; onExplore?: (pla
     </motion.div>
   );
 }
-
