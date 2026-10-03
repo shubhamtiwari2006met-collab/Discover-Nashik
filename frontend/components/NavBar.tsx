@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState, FormEvent } from "react";
-import { Menu, X, Users, Languages, ChevronDown, LogIn, Sparkles } from "lucide-react";
+import { useEffect, useState, useRef, FormEvent } from "react";
+import { Menu, X, Users, Languages, ChevronDown, LogIn, Sparkles, User as UserIcon, LogOut } from "lucide-react";
 import { useTranslation, type Language } from "@/lib/i18n";
 import { createClient } from "@/utils/supabase/client";
-import logo from "@/assets/DN.logo.png"
+import { useUserAuth } from "@/context/UserAuthContext";
+import logo from "@/assets/DN.logo.png";
 
 const supabase = createClient();
 
@@ -15,12 +16,34 @@ export function NavBar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isUserAccountOpen, setIsUserAccountOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [session, setSession] = useState<any>(null);
   const { language, setLanguage, t } = useTranslation();
   const languageLabels: Record<Language, string> = { en: "English", hi: "हिन्दी", mr: "मराठी" };
 
-  // Manage session and fetch user role
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu dropdown when clicking anywhere outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+        setIsLoginOpen(false);
+        setIsLanguageOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // Normal user auth state
+  const { user, isAuthenticated, openAuthModal, logout: normalUserLogout } = useUserAuth();
+
+  // Manage session and fetch user role for admin/business
   const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
@@ -104,7 +127,6 @@ export function NavBar() {
           </span>
         </Link>
 
-
         <div className="hidden lg:flex flex-1" />
 
         <nav className="hidden items-center space-x-4 md:flex">
@@ -116,7 +138,7 @@ export function NavBar() {
             <span>{t("Kumbh Mela")}</span>
           </Link>
 
-          {/* Show dashboard link appropriate to the logged‑in role */}
+          {/* Show dashboard link appropriate to logged-in admin/business role */}
           {session?.user && role === 'admin' && (
             <Link
               href="/admin/dashboard"
@@ -136,7 +158,8 @@ export function NavBar() {
             </Link>
           )}
 
-          <div className="relative ml-1">
+          {/* Menu Dropdown (User Auth, Languages & Admin/Business Login options) */}
+          <div ref={menuRef} className="relative ml-1">
             <button
               type="button"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -147,7 +170,8 @@ export function NavBar() {
               {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
             {isMenuOpen && (
-              <div className="absolute right-0 top-full z-50 mt-2 min-w-52 overflow-hidden rounded-xl border border-[#f4b35f] bg-[#fffaf0] p-2 shadow-xl dark:border-orange-800 dark:bg-orange-950">
+              <div className="absolute right-0 top-full z-50 mt-2 min-w-56 overflow-hidden rounded-xl border border-[#f4b35f] bg-[#fffaf0] p-2 shadow-xl dark:border-orange-800 dark:bg-orange-950">
+                {/* Language Selector */}
                 <div className="relative mb-1 border-b border-[#f1d9b6] pb-2">
                   <button type="button" onClick={() => setIsLanguageOpen(!isLanguageOpen)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#c2410c] hover:bg-orange-100 dark:text-orange-300 dark:hover:bg-orange-900/50" aria-label="Language" aria-expanded={isLanguageOpen}>
                     <Languages className="h-4 w-4" />
@@ -164,6 +188,8 @@ export function NavBar() {
                     </div>
                   )}
                 </div>
+
+                {/* Login Dropdown (User Login, Admin Login, Business Login) */}
                 {!session && (
                   <div className="relative mb-1 border-b border-[#f1d9b6] pb-2">
                     <button type="button" onClick={() => setIsLoginOpen(!isLoginOpen)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#c2410c] hover:bg-orange-100 dark:text-orange-300 dark:hover:bg-orange-900/50" aria-label="Login" aria-expanded={isLoginOpen}>
@@ -181,19 +207,50 @@ export function NavBar() {
                           <LogIn className="h-4 w-4" />
                           {t("Business Login")}
                         </a>
+                        {isAuthenticated && user ? (
+                          <div className="mt-1 border-t border-[#f1d9b6] pt-2">
+                            <p className="px-3 py-2 text-xs font-semibold text-[#667883]">
+                              Signed in as {user.name || user.email || user.mobile || user.platformId}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                await normalUserLogout();
+                                setIsLoginOpen(false);
+                                setIsMenuOpen(false);
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-red-600 hover:bg-red-50"
+                            >
+                              <LogOut className="h-4 w-4" />
+                              {t("Sign Out")}
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsLoginOpen(false);
+                              setIsMenuOpen(false);
+                              openAuthModal();
+                            }}
+                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#c2410c] hover:bg-orange-100 dark:text-orange-300 dark:hover:bg-orange-900/50"
+                          >
+                            <UserIcon className="h-4 w-4" />
+                            {t("User Login")}
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
                 )}
                 {session?.user && (
                   <button type="button" onClick={async () => { await supabase.auth.signOut(); setIsMenuOpen(false); window.location.href = "/"; }} className="mt-1 w-full rounded-lg border-t border-[#f1d9b6] px-3 py-2 text-left text-sm font-bold text-[#667883] hover:bg-orange-100 dark:hover:bg-orange-900/50">
-                    {t("Sign Out")}
+                    {t("Sign Out Admin/Business")}
                   </button>
                 )}
               </div>
             )}
           </div>
-
         </nav>
 
         <button
@@ -204,9 +261,11 @@ export function NavBar() {
         </button>
       </div>
 
+      {/* Mobile Drawer */}
       {isOpen && (
         <div className="border-t border-[#d8c4a3] bg-[#fffdf8] md:hidden max-h-[85vh] overflow-y-auto">
           <nav className="container mx-auto flex flex-col space-y-4 px-4 py-4">
+            {/* Language Selector */}
             <div className="relative flex items-center gap-2 rounded-xl border border-[#e7b06d] bg-[#fff7ed] px-4 py-3 text-base font-bold text-[#c9580f]">
               <Languages className="h-5 w-5" />
               <button type="button" onClick={() => setIsLanguageOpen(!isLanguageOpen)} className="flex flex-1 items-center justify-between text-left" aria-label="Language" aria-expanded={isLanguageOpen}>
@@ -223,6 +282,45 @@ export function NavBar() {
                 </div>
               )}
             </div>
+
+            {/* Mobile User Auth Button */}
+            {isAuthenticated && user ? (
+              <div className="rounded-xl border border-[#e7b06d] bg-[#fff7ed] p-3">
+                <div className="flex items-center gap-3 pb-2 border-b border-[#f1d9b6] mb-2">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e86f18] text-white text-sm font-bold">
+                    {(user.name ? user.name.charAt(0) : user.email ? user.email.charAt(0) : user.mobile ? user.mobile.charAt(0) : "U").toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-[#173247]">{user.name || "Discover Nashik User"}</p>
+                    <p className="text-xs text-[#667883]">{user.email || user.mobile}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await normalUserLogout();
+                    setIsOpen(false);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 rounded-lg bg-red-50 py-2.5 text-sm font-bold text-red-600 hover:bg-red-100"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>{t("Sign Out")}</span>
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOpen(false);
+                  openAuthModal();
+                }}
+                className="relative flex items-center justify-center gap-2 rounded-xl border border-[#e86f18] bg-[#e86f18] px-4 py-3 text-base font-bold text-white shadow-sm hover:bg-[#c9580f]"
+              >
+                <UserIcon className="h-5 w-5" />
+                <span>{t("Login / Sign Up")}</span>
+              </button>
+            )}
+
             <Link
               href="/kumbh"
               onClick={() => setIsOpen(false)}
@@ -231,6 +329,7 @@ export function NavBar() {
               <Sparkles className="h-5 w-5 text-[#e86f18]" />
               <span>{t("Kumbh Mela 2027")}</span>
             </Link>
+
             {session?.user && role === 'business' && (
               <Link
                 href="/business/dashboard"
@@ -251,7 +350,8 @@ export function NavBar() {
                 {t("Admin Dashboard")}
               </Link>
             )}
-            {!session ? (
+
+            {!session && (
               <div className="rounded-xl border border-[#e7b06d] bg-[#fff7ed] p-2">
                 <p className="px-3 pb-1 pt-2 text-xs font-bold uppercase tracking-wider text-[#a45317]">{t("Login")}</p>
                 <a href="/login?role=admin" onClick={() => setIsOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-3 text-base font-bold text-[#c2410c] hover:bg-orange-100">
@@ -262,11 +362,20 @@ export function NavBar() {
                   <LogIn className="h-5 w-5" />
                   {t("Business Login")}
                 </a>
+                {!isAuthenticated && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsOpen(false);
+                      openAuthModal();
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-3 text-base font-bold text-[#c2410c] hover:bg-orange-100"
+                  >
+                    <UserIcon className="h-5 w-5" />
+                    {t("User Login")}
+                  </button>
+                )}
               </div>
-            ) : (
-              <button type="button" onClick={async () => { await supabase.auth.signOut(); setIsOpen(false); window.location.href = "/"; }} className="w-full rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-base font-bold text-red-600 hover:bg-red-100 hover:text-red-700">
-                {t("Sign Out")}
-              </button>
             )}
           </nav>
         </div>

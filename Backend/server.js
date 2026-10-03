@@ -7,6 +7,7 @@ const fs = require("fs");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const mongoSanitize = require("express-mongo-sanitize");
+const cookieParser = require("cookie-parser");
 require("dotenv").config();
 
 // Ensure public/uploads directory exists
@@ -85,6 +86,7 @@ app.use("/api/", globalLimiter);
 // Body Parsers (Strict 2MB limit for standard JSON/URL-encoded API requests)
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ limit: "2mb", extended: true }));
+app.use(cookieParser());
 
 // Serve uploaded static files safely
 app.use("/uploads", express.static(uploadsDir));
