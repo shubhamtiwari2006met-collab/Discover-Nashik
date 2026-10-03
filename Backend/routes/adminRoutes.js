@@ -2,6 +2,15 @@ const express = require('express');
 const router = express.Router();
 const { authenticate, requireRoles, requirePrimaryAdmin } = require('../middleware/auth');
 const { getAdmins, createAdmin, revokeAdmin } = require('../controllers/adminController');
+const {
+  getUsers,
+  getUserStats,
+  getUserDetail,
+  deleteUser,
+  blockUser,
+  unblockUser,
+  getBlockedIdentifiers
+} = require('../controllers/userManagementController');
 
 // Admin Authorization Verification & Management Routes
 router.get('/verify', authenticate, requireRoles('admin'), (req, res) => {
@@ -20,5 +29,14 @@ router.get('/verify', authenticate, requireRoles('admin'), (req, res) => {
 router.get('/admins', authenticate, requireRoles('admin'), getAdmins);
 router.post('/admins', authenticate, requirePrimaryAdmin, createAdmin);
 router.delete('/admins/:id', authenticate, requirePrimaryAdmin, revokeAdmin);
+
+// User Management Routes
+router.get('/users', authenticate, requireRoles('admin'), getUsers);
+router.get('/users/stats', authenticate, requireRoles('admin'), getUserStats);
+router.get('/users/blocked', authenticate, requireRoles('admin'), getBlockedIdentifiers);
+router.get('/users/:id', authenticate, requireRoles('admin'), getUserDetail);
+router.delete('/users/:id', authenticate, requireRoles('admin'), deleteUser);
+router.post('/users/:id/block', authenticate, requireRoles('admin'), blockUser);
+router.post('/users/:id/unblock', authenticate, requireRoles('admin'), unblockUser);
 
 module.exports = router;

@@ -186,6 +186,41 @@ export function ChatbotWidget() {
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const activeSpeechIdRef = useRef<number>(0);
   const activeRequestIdRef = useRef<number>(0);
+  const chatbotPanelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const panel = chatbotPanelRef.current;
+    const viewport = window.visualViewport;
+    if (!panel || !viewport) return;
+
+    const updatePanelViewport = () => {
+      const isMobile = window.matchMedia("(max-width: 639px)").matches;
+      const keyboardIsOpen = isMobile && window.innerHeight - viewport.height > 120;
+
+      if (keyboardIsOpen) {
+        panel.style.setProperty("--chatbot-visible-height", `calc(${viewport.height}px - env(safe-area-inset-top))`);
+        panel.style.setProperty("--chatbot-visual-top", `max(${viewport.offsetTop}px, env(safe-area-inset-top))`);
+        panel.style.setProperty("--chatbot-height-offset", "1rem");
+      } else {
+        panel.style.removeProperty("--chatbot-visible-height");
+        panel.style.removeProperty("--chatbot-visual-top");
+        panel.style.setProperty("--chatbot-height-offset", "6rem");
+      }
+    };
+
+    updatePanelViewport();
+    viewport.addEventListener("resize", updatePanelViewport);
+    viewport.addEventListener("scroll", updatePanelViewport);
+    window.addEventListener("resize", updatePanelViewport);
+
+    return () => {
+      viewport.removeEventListener("resize", updatePanelViewport);
+      viewport.removeEventListener("scroll", updatePanelViewport);
+      window.removeEventListener("resize", updatePanelViewport);
+    };
+  }, [isOpen]);
 
   const stopSpeaking = () => {
     activeSpeechIdRef.current += 1;
@@ -342,14 +377,15 @@ export function ChatbotWidget() {
       <AnimatePresence>
         {isOpen && (
           <motion.div
+            ref={chatbotPanelRef}
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
             transition={{ type: "spring", stiffness: 400, damping: 25 }}
-            className="fixed bottom-20 right-3 z-50 flex h-[480px] sm:h-[520px] w-[calc(100vw-1.5rem)] max-w-[360px] sm:w-80 md:w-96 flex-col overflow-hidden rounded-[22px] border border-orange-100 bg-white shadow-[0_22px_70px_rgba(67,31,12,0.28)] dark:border-orange-900/50 dark:bg-slate-900 sm:bottom-24 md:right-8"
+            className="fixed bottom-20 left-1/2 right-auto top-[var(--chatbot-visual-top,auto)] z-50 flex h-[min(420px,calc(var(--chatbot-visible-height,100dvh)-var(--chatbot-height-offset,6rem)))] max-h-[calc(var(--chatbot-visible-height,100dvh)-1rem)] w-[calc(100vw-2rem-env(safe-area-inset-left)-env(safe-area-inset-right))] max-w-[360px] -translate-x-1/2 sm:bottom-24 sm:left-auto sm:right-3 sm:top-auto sm:h-[520px] sm:max-h-none sm:w-80 sm:translate-x-0 md:w-96 flex-col overflow-hidden rounded-[22px] border border-orange-100 bg-white shadow-[0_22px_70px_rgba(67,31,12,0.28)] dark:border-orange-900/50 dark:bg-slate-900 md:right-8"
           >
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-orange-400/20 bg-gradient-to-br from-[#f97316] via-[#ea580c] to-[#c2410c] p-4 text-white">
+            <div className="flex shrink-0 items-center justify-between border-b border-orange-400/20 bg-gradient-to-br from-[#f97316] via-[#ea580c] to-[#c2410c] p-3 sm:p-4 text-white">
               <div className="flex items-center gap-3">
                 <div className="relative flex h-11 w-11 items-center justify-center rounded-full border border-white/50 bg-[#fff7ed] text-orange-600 shadow-[0_4px_14px_rgba(93,35,8,0.22)]">
                   <div className="absolute inset-1 rounded-full border border-orange-200" />
@@ -373,7 +409,7 @@ export function ChatbotWidget() {
             </div>
 
             {/* Chatbot Language Selector */}
-            <div className="flex items-center justify-between border-b border-orange-100 bg-[#fffaf5] px-4 py-2 text-xs dark:border-slate-800 dark:bg-slate-950">
+            <div className="flex shrink-0 items-center justify-between border-b border-orange-100 bg-[#fffaf5] px-3 py-2 text-xs sm:px-4 dark:border-slate-800 dark:bg-slate-950">
               <span className="font-semibold text-slate-600 dark:text-slate-400">{t("Language")}:</span>
               <div className="flex items-center gap-1">
                 {(["en", "hi", "mr"] as Language[]).map((lang) => (
@@ -397,7 +433,7 @@ export function ChatbotWidget() {
             </div>
 
             {/* Chat Area */}
-            <div className="flex flex-1 flex-col gap-4 overflow-y-auto bg-[#fffaf5] p-4 dark:bg-slate-950">
+            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto bg-[#fffaf5] p-3 sm:gap-4 sm:p-4 dark:bg-slate-950">
               {messages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                   <div className={`group relative max-w-[82%] rounded-2xl px-4 py-2.5 text-sm leading-6 whitespace-pre-line shadow-sm ${
@@ -437,14 +473,14 @@ export function ChatbotWidget() {
             </div>
 
             {/* Input Area */}
-            <div className="flex gap-2 border-t border-orange-100 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex shrink-0 gap-2 border-t border-orange-100 bg-white p-2.5 sm:p-3 dark:border-slate-800 dark:bg-slate-900">
               <input
                 type="text"
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && !isLoading && handleSend()}
                 placeholder={t("Ask about Nashik...")}
-                className="chatbot-message-input flex-1 rounded-xl border border-slate-700 bg-slate-800 px-4 text-sm outline-none transition-colors placeholder:text-slate-400 focus:border-orange-700 focus:ring-2 focus:ring-orange-900/30"
+                className="chatbot-message-input min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-800 px-3 text-sm outline-none transition-colors placeholder:text-slate-400 focus:border-orange-700 focus:ring-2 focus:ring-orange-900/30 sm:px-4"
               />
               {voiceAvailable && getSpeechRecognition() && (
                 <button
