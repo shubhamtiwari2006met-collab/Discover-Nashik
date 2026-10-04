@@ -803,7 +803,7 @@ function AdminDashboardContent({ defaultFilter = "pending" }: { defaultFilter?: 
 
                     {report.photoUrl && (
                       <div className="mb-3 aspect-[16/9] w-full overflow-hidden rounded-xl bg-slate-100 border border-slate-200">
-                        <img src={report.photoUrl} alt={report.title} className="h-full w-full object-cover" />
+                        <img src={report.photoUrl} alt={report.title} className="h-full w-full object-contain sm:object-cover" />
                       </div>
                     )}
 
@@ -1130,7 +1130,7 @@ function AdminDashboardContent({ defaultFilter = "pending" }: { defaultFilter?: 
             <div className="mt-4 space-y-4 text-sm text-[#173247]">
               {selectedReport.photoUrl && (
                 <div className="aspect-[16/9] w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
-                  <img src={selectedReport.photoUrl} alt={selectedReport.title} className="h-full w-full object-cover" />
+                  <img src={selectedReport.photoUrl} alt={selectedReport.title} className="h-full w-full object-contain sm:object-cover" />
                 </div>
               )}
 
@@ -1328,4 +1328,3 @@ export default function AdminDashboardPage({ defaultFilter = "pending" }: { defa
     </Suspense>
   );
 }
-

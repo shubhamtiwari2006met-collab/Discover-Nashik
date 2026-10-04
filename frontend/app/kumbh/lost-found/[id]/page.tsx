@@ -306,6 +306,7 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
     );
   }
 
+
   const isMissingPerson = ["missing_child", "missing_elderly"].includes(report.category);
   const isFoundPerson = ["found_child", "found_elderly"].includes(report.category);
   const isResolved = report.status === "resolved";
@@ -436,7 +437,7 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
               <div>
                 {report.photoUrl ? (
                   <div className="relative aspect-[4/3] rounded-2xl overflow-hidden border border-[#d8c4a3] shadow-md">
-                    <img src={report.photoUrl} alt={report.title} className="h-full w-full object-cover" />
+                    <img src={report.photoUrl} alt={report.title} className="h-full w-full object-contain sm:object-cover" />
                   </div>
                 ) : (
                   <div className="aspect-[4/3] rounded-2xl bg-orange-50 border border-orange-200/60 flex items-center justify-center text-orange-300">
@@ -699,4 +700,3 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
     </main>
   );
 }
-
