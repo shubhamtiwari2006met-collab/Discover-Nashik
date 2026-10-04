@@ -1,6 +1,8 @@
 const mongoose = require("mongoose");
 const LostFoundReport = require("../models/LostFoundReport");
 const LostFoundInquiry = require("../models/LostFoundInquiry");
+const User = require("../models/User");
+const notificationService = require("../services/notificationService");
 
 const SAMPLE_REPORTS = [];
 
@@ -226,6 +228,24 @@ exports.createReport = async (req, res) => {
 
     await newReport.save();
 
+    if (newReport.status === "published") {
+      void (async () => {
+        const recipients = await notificationService.findAllRecipientIds();
+        await notificationService.createBulkNotifications({
+          type: "LOST_FOUND_REPORT_PUBLISHED",
+          category: "lost_found",
+          title: "New Lost & Found Report",
+          message: `${newReport.reportType === "lost" ? "Lost" : "Found"} report: ${newReport.title}`,
+          source: "AUTOMATED",
+          referenceId: newReport.reportId,
+          referenceType: "lost_found_report",
+          deduplicationKey: `lost-found:report:${newReport._id}:published`,
+        }, recipients);
+      })().catch((notificationError) => {
+        console.error("[Notifications] Lost & Found report notification failed:", notificationError);
+      });
+    }
+
     res.status(201).json({
       message: "Report submitted successfully and is now publicly visible.",
       reportId: newReport.reportId,
@@ -279,6 +299,27 @@ exports.submitInquiry = async (req, res) => {
     });
 
     await inquiry.save();
+
+    if (report.reporterContact?.userId) {
+      void (async () => {
+        const owner = await User.findOne({ supabaseId: report.reporterContact.userId }).select("_id").lean();
+        if (!owner) return;
+        const recipientId = await notificationService.resolveRecipient("platform", owner._id);
+        await notificationService.createNotification({
+          recipientId,
+          type: "LOST_FOUND_INQUIRY_RECEIVED",
+          category: "lost_found",
+          title: "New Information on Your Report",
+          message: `A community member shared information about "${report.title}".`,
+          source: "AUTOMATED",
+          referenceId: report.reportId,
+          referenceType: "lost_found_report",
+          deduplicationKey: `lost-found:inquiry:${inquiry._id}:owner`,
+        });
+      })().catch((notificationError) => {
+        console.error("[Notifications] Lost & Found inquiry notification failed:", notificationError);
+      });
+    }
 
     res.status(201).json({
       message: "Thank you! Your inquiry/information has been submitted successfully.",
@@ -391,6 +432,45 @@ exports.updateReportStatus = async (req, res) => {
       },
       { new: true }
     );
+
+    if (status === "published" && report.status !== "published") {
+      void (async () => {
+        const recipients = await notificationService.findAllRecipientIds();
+        await notificationService.createBulkNotifications({
+          type: "LOST_FOUND_REPORT_PUBLISHED",
+          category: "lost_found",
+          title: "New Lost & Found Report",
+          message: `${updated.reportType === "lost" ? "Lost" : "Found"} report: ${updated.title}`,
+          source: "AUTOMATED",
+          referenceId: updated.reportId,
+          referenceType: "lost_found_report",
+          deduplicationKey: `lost-found:report:${updated._id}:published`,
+        }, recipients);
+      })().catch((notificationError) => {
+        console.error("[Notifications] Published Lost & Found report notification failed:", notificationError);
+      });
+    }
+
+    if (status !== report.status && report.reporterContact?.userId) {
+      void (async () => {
+        const owner = await User.findOne({ supabaseId: report.reporterContact.userId }).select("_id").lean();
+        if (!owner) return;
+        const recipientId = await notificationService.resolveRecipient("platform", owner._id);
+        await notificationService.createNotification({
+          recipientId,
+          type: "LOST_FOUND_REPORT_STATUS",
+          category: "lost_found",
+          title: "Your Lost & Found Report Was Updated",
+          message: `The status of "${report.title}" is now ${status.replaceAll("_", " ")}.`,
+          source: "AUTOMATED",
+          referenceId: report.reportId,
+          referenceType: "lost_found_report",
+          deduplicationKey: `lost-found:report:${report._id}:status:${status}`,
+        });
+      })().catch((notificationError) => {
+        console.error("[Notifications] Lost & Found status notification failed:", notificationError);
+      });
+    }
 
     res.json({
       message: `Report status updated to ${status}`,
@@ -564,4 +644,3 @@ exports.adminDeleteReport = async (req, res) => {
     res.status(500).json({ message: "Failed to delete report" });
   }
 };
-

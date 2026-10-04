@@ -24,6 +24,8 @@ const kumbhRoutes = require('./routes/kumbhRoutes');
 const lostFoundRoutes = require('./routes/lostFoundRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const tripRoutes = require('./routes/tripRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+const groupSyncRoutes = require('./routes/groupSyncRoutes');
 
 const app = express();
 
@@ -106,6 +108,8 @@ app.use('/api/business', businessRoutes);
 app.use('/api/kumbh', kumbhRoutes);
 app.use('/api/kumbh/lost-found', lostFoundRoutes);
 app.use('/api/kumbh/trips', tripRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/group-sync', groupSyncRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Health check endpoint
@@ -123,8 +127,8 @@ app.use((err, req, res, next) => {
   console.error("Express backend error:", err);
   const status = err.status || err.statusCode || 500;
   const isProd = process.env.NODE_ENV === "production";
-  const safeMessage = isProd && status === 500 
-    ? "Internal server error" 
+  const safeMessage = isProd && status === 500
+    ? "Internal server error"
     : (err.message || "An error occurred");
   res.status(status).json({ message: safeMessage });
 });
@@ -138,6 +142,7 @@ mongoose.connect(process.env.MONGO_URI)
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
+      require('./services/notificationService').startNotificationScheduler();
 
       // Run Kumbh seed asynchronously after server starts listening
       const { seedDefaultDataIfEmpty } = require('./controllers/kumbhController');
@@ -152,4 +157,4 @@ mongoose.connect(process.env.MONGO_URI)
   })
   .catch((error) => {
     console.error("MongoDB connection failed:", error.message);
-  });
+  });
