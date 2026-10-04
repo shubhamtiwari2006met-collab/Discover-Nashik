@@ -1481,7 +1481,7 @@ function AdminKumbhContent() {
 
             {selectedLostFound.photoUrl && (
               <div className="aspect-[16/9] w-full rounded-2xl overflow-hidden border border-slate-200">
-                <img src={selectedLostFound.photoUrl} alt="Report Photo" className="h-full w-full object-cover" />
+                <img src={selectedLostFound.photoUrl} alt="Report Photo" className="h-full w-full object-contain sm:object-cover" />
               </div>
             )}
 
@@ -1602,4 +1602,3 @@ export default function AdminKumbhPage() {
     </Suspense>
   );
 }
-

@@ -278,7 +278,7 @@ export default function LostFoundMainPage() {
                             <img
                               src={report.photoUrl}
                               alt={report.title}
-                              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                              className="h-full w-full object-contain transition-transform duration-500 sm:group-hover:scale-105 sm:object-cover"
                             />
                           ) : (
                             <div className="flex h-full w-full items-center justify-center bg-orange-50/60 text-orange-300">
