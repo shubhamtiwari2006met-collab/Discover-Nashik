@@ -38,13 +38,14 @@ app.use(
 );
 
 // Restricted CORS Configuration
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
-  : [
-      "https://discover-nashik.vercel.app",
-      "http://localhost:3000",
-      "http://localhost:5000"
-    ];
+const allowedOrigins = [
+  "https://discovernashik.co.in",
+  "https://www.discovernashik.co.in",
+  "https://discover-nashik.vercel.app",
+  "http://localhost:3000",
+  "http://localhost:5000",
+  ...(process.env.ALLOWED_ORIGINS || "").split(",").map((origin) => origin.trim()).filter(Boolean),
+];
 
 app.use(
   cors({
