@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
       cache: "no-store",
     });
 
-    const data = await res.json();
+    const data = await res.json().catch(() => ({ message: "Backend returned an invalid response." }));
     return NextResponse.json(data, { status: res.status });
   } catch (error) {
     console.error("[Next.js Proxy API] Error in /api/admin/verify:", error);

@@ -13,6 +13,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     setMobileMenuOpen(false);
   }, [pathname]);
 
+  if (pathname === "/admin") {
+    return <div className="min-h-screen bg-[#f8f2e8] text-[#192f42]">{children}</div>;
+  }
+
   return (
     <div className="flex min-h-screen bg-[#f8f2e8] text-[#192f42]">
       <AdminSidebar isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />

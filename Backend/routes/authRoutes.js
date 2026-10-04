@@ -57,6 +57,8 @@ router.get('/me', async (req, res, next) => {
 });
 
 // Preserved Admin & Business authentication endpoints (Supabase based)
+const { adminLogin } = require('../controllers/adminController');
+router.post('/admin/login', authLimiter, adminLogin);
 router.post('/business/register', authenticate, registerBusiness);
 router.get('/admin/businesses', authenticate, requireRoles('admin'), listBusinesses);
 router.patch('/admin/businesses/:id', authenticate, requireRoles('admin'), reviewBusiness);

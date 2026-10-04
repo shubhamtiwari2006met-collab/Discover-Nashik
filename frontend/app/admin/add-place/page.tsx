@@ -47,7 +47,7 @@ export default function AdminAddPlacePage() {
     void (async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        router.replace("/login?role=admin");
+        router.replace("/admin");
         return;
       }
 
@@ -60,7 +60,7 @@ export default function AdminAddPlacePage() {
       const userRole = profile?.role?.toLowerCase() || "";
 
       if (userRole !== "admin") {
-        router.replace("/login?role=admin");
+        router.replace("/admin");
         return;
       }
       setCheckingAccess(false);

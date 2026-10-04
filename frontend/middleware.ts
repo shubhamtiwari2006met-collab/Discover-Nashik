@@ -122,8 +122,11 @@ export async function middleware(request: NextRequest) {
 
   // Admin protection
   if (pathname.startsWith("/admin") && role !== "admin") {
-    console.log(`[Middleware] BLOCKING admin access — redirecting to login`);
-    const loginUrl = new URL("/login?role=admin", request.url);
+    if (pathname === "/admin") {
+      return supabaseResponse;
+    }
+    console.log(`[Middleware] BLOCKING admin access — redirecting to /admin`);
+    const loginUrl = new URL("/admin", request.url);
     return NextResponse.redirect(loginUrl);
   }
 
