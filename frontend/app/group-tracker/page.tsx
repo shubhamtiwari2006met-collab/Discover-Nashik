@@ -58,6 +58,7 @@ interface Note {
   senderRole: "coordinator" | "member";
   message: string;
   timestamp: string;
+  createdAt?: string;
 }
 
 type GroupBroadcastPayload = {
@@ -85,6 +86,69 @@ const PRESET_MESSAGES = [
   "Near Trimbakeshwar Mandir 🛕",
   "Need assistance / call me 📞"
 ];
+
+const createRandomSegment = () => {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID().slice(0, 8);
+  }
+  return Math.random().toString(36).substring(2, 10);
+};
+
+const buildNoteId = () => {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `note_${Date.now()}_${createRandomSegment()}`;
+};
+
+const createGroupCode = () => createRandomSegment().toUpperCase().replace(/-/g, "").slice(0, 6);
+const createMemberId = () => `user_${createRandomSegment()}`;
+const createMemberFallbackName = () => `Member ${Math.floor(100 + Math.random() * 900)}`;
+const createMemberLocation = () => ({
+  lat: 20.00 + (Math.random() * 0.02 - 0.01),
+  lng: 73.78 + (Math.random() * 0.02 - 0.01),
+});
+
+const formatNoteTimestamp = (value?: string | number | Date) => {
+  if (!value) return "";
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
+const normalizeStoredNote = (note: Partial<Note> & { created_at?: string; sender_name?: string; sender_role?: string; senderRole?: "coordinator" | "member"; message?: string; createdAt?: string; }) => {
+  const createdAt = note.createdAt || note.created_at || new Date().toISOString();
+  const senderRole = note.senderRole || (note.sender_role === "coordinator" ? "coordinator" : "member");
+  const senderName = note.senderName || note.sender_name || "Group Member";
+  const message = note.message || "";
+  return {
+    id: String(note.id || `${senderName}-${createdAt}`),
+    senderName,
+    senderRole,
+    message,
+    timestamp: note.timestamp || formatNoteTimestamp(createdAt),
+    createdAt,
+  } satisfies Note;
+};
+
+const mergeNotesById = (items: Note[]) => {
+  const seen = new Map<string, Note>();
+  items.forEach((item) => {
+    if (!item?.id) return;
+    seen.set(item.id, item);
+  });
+
+  return [...seen.values()].sort((left, right) => {
+    const leftTime = left.createdAt ? new Date(left.createdAt).getTime() : Number.NEGATIVE_INFINITY;
+    const rightTime = right.createdAt ? new Date(right.createdAt).getTime() : Number.NEGATIVE_INFINITY;
+    if (Number.isNaN(leftTime) || Number.isNaN(rightTime)) {
+      return 0;
+    }
+    return rightTime - leftTime;
+  });
+};
 
 export default function GroupTracker() {
   const instanceId = useId();
@@ -160,15 +224,48 @@ export default function GroupTracker() {
     setSyncError("");
   }, [syncExistingGroup]);
 
+  const loadGroupNotesFromSupabase = useCallback(async (code: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("group_notes")
+        .select("id, group_code, sender_name, sender_role, message, created_at")
+        .eq("group_code", code)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.warn("Could not load persisted group notes:", error.message);
+        return [] as Note[];
+      }
+
+      const normalized = (data || []).map((item) => normalizeStoredNote({
+        id: item.id,
+        sender_name: item.sender_name,
+        sender_role: item.sender_role,
+        message: item.message,
+        created_at: item.created_at,
+      }));
+
+      const merged = mergeNotesById(normalized);
+      setNotes(merged);
+      localStorage.setItem(STORAGE_KEYS.NOTES(code), JSON.stringify(merged));
+      return merged;
+    } catch (error) {
+      console.warn("Unexpected error loading persisted group notes:", error);
+      return [] as Note[];
+    }
+  }, []);
+
   // Load group details, notes, members from persistence layer
-  const loadGroupData = (code: string) => {
+  const loadGroupData = useCallback(async (code: string) => {
     const storedCoord = localStorage.getItem(STORAGE_KEYS.COORDINATOR(code));
     if (storedCoord) setCoordinatorName(storedCoord);
 
     const storedNotes = localStorage.getItem(STORAGE_KEYS.NOTES(code));
     if (storedNotes) {
       try {
-        setNotes(JSON.parse(storedNotes));
+        const parsedNotes = JSON.parse(storedNotes) as Note[];
+        const mergedPersistedNotes = mergeNotesById(parsedNotes.map((note) => normalizeStoredNote(note)));
+        setNotes(mergedPersistedNotes);
       } catch {}
     }
 
@@ -178,7 +275,12 @@ export default function GroupTracker() {
         setMembers(JSON.parse(storedMembers));
       } catch {}
     }
-  };
+
+    const persistedNotes = await loadGroupNotesFromSupabase(code);
+    if (persistedNotes.length > 0) {
+      setNotes(persistedNotes);
+    }
+  }, [loadGroupNotesFromSupabase]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -189,7 +291,7 @@ export default function GroupTracker() {
           setUserName(metaName);
         }
       } else {
-        const savedUserId = localStorage.getItem(STORAGE_KEYS.ACTIVE_USER_ID) || `user_${Math.random().toString(36).substring(2, 7)}`;
+        const savedUserId = localStorage.getItem(STORAGE_KEYS.ACTIVE_USER_ID) || createMemberId();
         localStorage.setItem(STORAGE_KEYS.ACTIVE_USER_ID, savedUserId);
         setUserId(savedUserId);
       }
@@ -207,10 +309,10 @@ export default function GroupTracker() {
       if (savedCode && savedRole !== "none") {
         setGroupCode(savedCode);
         setRole(savedRole);
-        loadGroupData(savedCode);
+        void loadGroupData(savedCode);
       }
     });
-  }, []);
+  }, [loadGroupData, userName]);
 
   useEffect(() => {
     if (!groupCode || role === "none") return;
@@ -222,7 +324,7 @@ export default function GroupTracker() {
       broadcastChannelRef.current = bc;
       bc.onmessage = (event) => {
         if (event.data?.code === groupCode) {
-          loadGroupData(groupCode);
+          void loadGroupData(groupCode);
         }
       };
     }
@@ -235,7 +337,12 @@ export default function GroupTracker() {
     channel
       .on("broadcast", { event: "NEW_NOTE" }, (payload) => {
         if (payload?.payload?.note) {
-          setNotes((prev) => [payload.payload.note, ...prev.filter((n) => n.id !== payload.payload.note.id)]);
+          const incomingNote = normalizeStoredNote(payload.payload.note);
+          setNotes((prev) => {
+            const nextNotes = mergeNotesById([incomingNote, ...prev]);
+            localStorage.setItem(STORAGE_KEYS.NOTES(groupCode), JSON.stringify(nextNotes));
+            return nextNotes;
+          });
           localStorage.setItem(`group_unread_${groupCode}`, "true");
         }
       })
@@ -276,7 +383,7 @@ export default function GroupTracker() {
     realtimeChannelRef.current = channel;
 
     const interval = setInterval(() => {
-      loadGroupData(groupCode);
+      void loadGroupData(groupCode);
     }, 3000);
 
     return () => {
@@ -290,7 +397,7 @@ export default function GroupTracker() {
         realtimeChannelRef.current = null;
       }
     };
-  }, [groupCode, reconcileGroup, role]);
+  }, [groupCode, loadGroupData, reconcileGroup, role]);
 
   const notifyBroadcast = (type: "NEW_NOTE" | "MEMBER_JOINED" | "LOCATION_UPDATE", payload: GroupBroadcastPayload) => {
     if (broadcastChannelRef.current) {
@@ -315,8 +422,8 @@ export default function GroupTracker() {
 
   const handleCreateGroup = async () => {
     const nameToUse = userName.trim() || t("Group Coordinator");
-    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const currentUserId = userId || `user_${Math.random().toString(36).substring(2, 7)}`;
+    const code = createGroupCode();
+    const currentUserId = userId || createMemberId();
 
     setGroupCode(code);
     setRole("coordinator");
@@ -333,11 +440,12 @@ export default function GroupTracker() {
     };
 
     const initialNote: Note = {
-      id: `note_${Date.now()}`,
+      id: buildNoteId(),
       senderName: nameToUse,
       senderRole: "coordinator",
       message: `${t("Welcome to")} ${createGroupTitle.trim() || 'our Nashik group'}!`,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      timestamp: formatNoteTimestamp(new Date()),
+      createdAt: new Date().toISOString(),
     };
 
     const initialMembersList = [initialMember];
@@ -367,11 +475,30 @@ export default function GroupTracker() {
     localStorage.setItem(STORAGE_KEYS.MEMBERS(code), JSON.stringify(initialMembersList));
     localStorage.setItem(STORAGE_KEYS.NOTES(code), JSON.stringify(initialNotesList));
 
-    supabase.from("groups").insert({
-      code,
-      group_name: createGroupTitle.trim() || "Nashik Yatra Group",
-      coordinator_name: nameToUse,
-    }).then(() => {});
+    void (async () => {
+      try {
+        await supabase.from("groups").insert({
+          code,
+          group_name: createGroupTitle.trim() || "Nashik Yatra Group",
+          coordinator_name: nameToUse,
+        });
+      } catch (error) {
+        console.warn("Group record could not be persisted:", error);
+      }
+
+      try {
+        await supabase.from("group_notes").insert({
+          id: initialNote.id,
+          group_code: code,
+          sender_name: initialNote.senderName,
+          sender_role: initialNote.senderRole,
+          message: initialNote.message,
+          created_at: initialNote.createdAt,
+        });
+      } catch (error) {
+        console.warn("Group welcome note could not be persisted:", error);
+      }
+    })();
     void reconcileGroup(code).catch((error: Error) => {
       console.error("Created group membership synchronization failed:", error);
       setSyncError("Live membership sync is temporarily unavailable. Existing group sharing still works.");
@@ -382,8 +509,8 @@ export default function GroupTracker() {
     const code = joinCodeInput.trim().toUpperCase();
     if (code.length < 3) return;
 
-    const nameToUse = userName.trim() || `Member ${Math.floor(100 + Math.random() * 900)}`;
-    const currentUserId = userId || `user_${Math.random().toString(36).substring(2, 7)}`;
+    const nameToUse = userName.trim() || createMemberFallbackName();
+    const currentUserId = userId || createMemberId();
 
     setGroupCode(code);
     setRole("member");
@@ -397,12 +524,13 @@ export default function GroupTracker() {
     ];
 
     const existingIndex = currentMembers.findIndex(m => m.id === currentUserId || m.name.toLowerCase() === nameToUse.toLowerCase());
+    const memberLocation = createMemberLocation();
     const newMemberObj: Member = {
       id: currentUserId,
       name: nameToUse,
       role: "member",
-      lat: 20.00 + (Math.random() * 0.02 - 0.01),
-      lng: 73.78 + (Math.random() * 0.02 - 0.01),
+      lat: memberLocation.lat,
+      lng: memberLocation.lng,
       lastUpdated: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
@@ -461,7 +589,7 @@ export default function GroupTracker() {
     localStorage.setItem(STORAGE_KEYS.ACTIVE_USER_ID, currentUserId);
     localStorage.setItem(STORAGE_KEYS.MEMBERS(code), JSON.stringify(currentMembers));
 
-    loadGroupData(code);
+    void loadGroupData(code);
     if (!backendJoined) notifyBroadcast("MEMBER_JOINED", { member: newMemberObj });
     void reconcileGroup(code).catch((error: Error) => {
       console.error("Joined group membership synchronization failed:", error);
@@ -469,20 +597,23 @@ export default function GroupTracker() {
     });
   };
 
-  const handlePostNote = (textToPost?: string) => {
+  const handlePostNote = async (textToPost?: string) => {
     const messageText = (textToPost || noteInput).trim();
     if (!messageText || !groupCode) return;
 
     const sender = userName.trim() || (role === "coordinator" ? t("Group Coordinator") : t("Group Member"));
+    const createdAt = new Date().toISOString();
+    const noteId = buildNoteId();
     const newNote: Note = {
-      id: `note_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`,
+      id: noteId,
       senderName: sender,
       senderRole: role === "coordinator" ? "coordinator" : "member",
       message: messageText,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      timestamp: formatNoteTimestamp(createdAt),
+      createdAt,
     };
 
-    const updatedNotes = [newNote, ...notes];
+    const updatedNotes = mergeNotesById([newNote, ...notes]);
     setNotes(updatedNotes);
     setNoteInput("");
 
@@ -496,8 +627,23 @@ export default function GroupTracker() {
 
     notifyBroadcast("NEW_NOTE", { note: newNote });
     localStorage.setItem(`group_unread_${groupCode}`, "true");
+
+    try {
+      await supabase.from("group_notes").insert({
+        id: noteId,
+        group_code: groupCode,
+        sender_name: sender,
+        sender_role: role === "coordinator" ? "coordinator" : "member",
+        message: messageText,
+        created_at: createdAt,
+      });
+      await loadGroupData(groupCode);
+    } catch (error) {
+      console.warn("Group note persistence failed, keeping local copy for sync:", error);
+    }
+
     void syncGroupRequest(`/groups/${encodeURIComponent(groupCode)}/messages`, {
-      messageId: newNote.id,
+      messageId: noteId,
       senderId: userId,
       senderName: sender,
       senderRole: role,
@@ -505,13 +651,6 @@ export default function GroupTracker() {
     }).catch((error: Error) => {
       console.error("Group message notification sync failed:", error);
     });
-
-    supabase.from("group_notes").insert({
-      group_code: groupCode,
-      sender_name: sender,
-      sender_role: role === "coordinator" ? "coordinator" : "member",
-      message: messageText
-    }).then(() => {});
   };
 
   const handleUpdateLocation = (lat: number, lng: number) => {
@@ -688,7 +827,8 @@ export default function GroupTracker() {
     );
   }
 
-  const latestNote = notes.length > 0 ? notes[0] : null;
+  const latestCoordinatorNote = notes.find((note) => note.senderRole === "coordinator") || null;
+  const latestNote = latestCoordinatorNote || (notes.length > 0 ? notes[0] : null);
 
   return (
     <div className="min-h-screen bg-[#fffdf8] py-8 px-4 sm:px-6 md:px-8 text-slate-800">
