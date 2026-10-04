@@ -12,9 +12,42 @@ import {
   Bookmark,
   Landmark,
   Feather,
-  Info
+  Info,
+  Languages
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
+
+type HeritageLanguage = "en" | "hi" | "mr";
+
+type HeritageBookVersion =
+  | { type: "reader" }
+  | { type: "url"; href: string };
+
+interface HeritageBook {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  cover: string | null;
+  languages: Partial<Record<HeritageLanguage, HeritageBookVersion>>;
+}
+
+const LANGUAGES: { id: HeritageLanguage; label: string; action: string; unavailable: string }[] = [
+  { id: "en", label: "English", action: "Read in English", unavailable: "English unavailable" },
+  { id: "hi", label: "हिन्दी", action: "हिन्दी में पढ़ें", unavailable: "हिन्दी संस्करण उपलब्ध नहीं" },
+  { id: "mr", label: "मराठी", action: "मराठीत वाचा", unavailable: "मराठी आवृत्ती उपलब्ध नाही" },
+];
+
+const HERITAGE_BOOKS: HeritageBook[] = [
+  {
+    id: "sacred-journey-of-nashik",
+    title: "The Sacred Journey of Nashik",
+    description: "A comprehensive heritage and cultural guide to Kumbh Mela, the sacred Godavari, Trimbakeshwar, Panchavati, and the living spiritual traditions of Nashik.",
+    category: "Kumbh Mela · Nashik Heritage",
+    cover: null,
+    languages: { en: { type: "reader" } },
+  },
+];
 
 interface Chapter {
   id: string;
@@ -182,6 +215,7 @@ export default function HeritageBookPage() {
   const [isFlipping, setIsFlipping] = useState<boolean>(false);
   const [showTocModal, setShowTocModal] = useState<boolean>(false);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [isReading, setIsReading] = useState<boolean>(false);
 
   // Cover(0) + TOC(1) + 16 chapters × 2 pages + Final page(34) = 35
   const totalPages = 35;
@@ -231,6 +265,110 @@ export default function HeritageBookPage() {
     }
     setTouchStartX(null);
   };
+
+  if (!isReading) {
+    return (
+      <main className="min-h-screen bg-[#f8f2e8] text-[#173247] py-8 md:py-12 px-4">
+        <div className="container mx-auto max-w-5xl">
+          <header className="flex flex-wrap items-center justify-between gap-4 mb-8">
+            <Link
+              href="/kumbh"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#d8c4a3] bg-white text-xs font-bold text-[#667883] hover:bg-orange-50 hover:text-orange-700 transition-colors shadow-sm"
+            >
+              <ArrowLeft className="w-4 h-4" /> {t("Back to Kumbh Guide")}
+            </Link>
+            <span className="inline-flex items-center gap-2 text-sm font-bold text-[#8c6b43]">
+              <Languages className="w-4 h-4 text-orange-600" /> English · हिन्दी · मराठी
+            </span>
+          </header>
+
+          <section className="mb-7">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange-700 mb-2">Discover Nashik</p>
+            <h1 className="text-3xl md:text-4xl font-serif font-bold text-[#173247]">Heritage Library</h1>
+            <p className="mt-2 max-w-2xl text-sm md:text-base leading-relaxed text-[#667883]">
+              Explore books about Nashik’s heritage and choose an available language to begin reading.
+            </p>
+          </section>
+
+          <section aria-label="Heritage books" className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {HERITAGE_BOOKS.map((book) => (
+              <article
+                key={book.id}
+                className="min-w-0 overflow-hidden rounded-3xl border border-[#e1cfb0] bg-white shadow-sm"
+              >
+                <div className="flex flex-col sm:flex-row">
+                  <div className="shrink-0 p-4 sm:w-44">
+                    {book.cover ? (
+                      // Future books can provide their own cover image.
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={book.cover}
+                        alt={`${book.title} cover`}
+                        className="h-52 w-full rounded-2xl object-contain bg-[#faf4e8]"
+                      />
+                    ) : (
+                      <div className="flex h-52 w-full flex-col items-center justify-center rounded-2xl border-4 border-[#b8860b]/40 bg-[#faf4e8] px-3 text-center shadow-inner">
+                        <BookOpen className="mb-3 h-8 w-8 text-orange-700" />
+                        <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#8c6b43]">Kumbh Mela 2027</span>
+                        <span className="mt-2 font-serif text-sm font-bold leading-snug text-[#173247]">{book.title}</span>
+                        <span className="mt-3 text-[9px] font-semibold uppercase tracking-widest text-[#8c6b43]">Heritage Edition</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex min-w-0 flex-1 flex-col p-4 pt-0 sm:py-5 sm:pl-1 sm:pr-5">
+                    <div className="mb-2">
+                      <span className="inline-flex rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-orange-800">
+                        {book.category}
+                      </span>
+                    </div>
+                    <h2 className="font-serif text-xl font-bold leading-snug text-[#173247]">{book.title}</h2>
+                    <p className="mt-2 text-sm leading-relaxed text-[#667883]">{book.description}</p>
+
+                    <div className="mt-5 border-t border-[#e1cfb0]/70 pt-4">
+                      <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[#8c6b43]">Available languages</p>
+                      <div className="flex flex-col gap-2">
+                        {LANGUAGES.map((language) => {
+                          const version = book.languages[language.id];
+                          return version?.type === "reader" ? (
+                            <button
+                              key={language.id}
+                              type="button"
+                              onClick={() => setIsReading(true)}
+                              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-600 focus-visible:ring-offset-2"
+                            >
+                              <BookOpen className="h-4 w-4" /> {language.action}
+                            </button>
+                          ) : version?.type === "url" ? (
+                            <a
+                              key={language.id}
+                              href={version.href}
+                              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-600 focus-visible:ring-offset-2"
+                            >
+                              <BookOpen className="h-4 w-4" /> {language.action}
+                            </a>
+                          ) : (
+                            <div
+                              key={language.id}
+                              aria-disabled="true"
+                              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#e1cfb0] bg-[#faf8f3] px-4 py-2.5 text-sm font-semibold text-[#8b8b83]"
+                            >
+                              <span>{language.label}</span>
+                              <span className="text-xs font-medium">· {language.unavailable}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </section>
+        </div>
+      </main>
+    );
+  }
 
   const renderPageContent = (pageNo: number) => {
     // Page 0: Cover
@@ -518,6 +656,13 @@ export default function HeritageBookPage() {
           </Link>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsReading(false)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white border border-[#d8c4a3] text-xs font-bold text-[#173247] hover:border-orange-500 hover:text-orange-600 shadow-sm transition-all"
+            >
+              <ArrowLeft className="w-4 h-4 text-orange-600" /> Heritage Library
+            </button>
             <button
               onClick={() => setShowTocModal(true)}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white border border-[#d8c4a3] text-xs font-bold text-[#173247] hover:border-orange-500 hover:text-orange-600 shadow-sm transition-all"

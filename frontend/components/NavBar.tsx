@@ -7,6 +7,8 @@ import { Menu, X, Users, Languages, ChevronDown, LogIn, Sparkles, User as UserIc
 import { useTranslation, type Language } from "@/lib/i18n";
 import { createClient } from "@/utils/supabase/client";
 import { useUserAuth } from "@/context/UserAuthContext";
+import NotificationBell from "@/components/NotificationBell";
+import type { Session } from "@supabase/supabase-js";
 import logo from "@/assets/DN.logo.png";
 
 const supabase = createClient();
@@ -18,7 +20,7 @@ export function NavBar() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isUserAccountOpen, setIsUserAccountOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const { language, setLanguage, t } = useTranslation();
   const languageLabels: Record<Language, string> = { en: "English", hi: "हिन्दी", mr: "मराठी" };
 
@@ -128,6 +130,7 @@ export function NavBar() {
         </Link>
 
         <div className="hidden lg:flex flex-1" />
+        <NotificationBell />
 
         <nav className="hidden items-center space-x-4 md:flex">
           <Link

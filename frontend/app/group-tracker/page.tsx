@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useId, startTransition } from "react";
+import { useState, useEffect, useRef, useId, startTransition, useCallback } from "react";
 import {
   Users,
   UserPlus,
@@ -25,6 +25,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { createClient } from "@/utils/supabase/client";
 import { useTranslation } from "@/lib/i18n";
 import dynamic from "next/dynamic";
+const supabase = createClient();
 
 // Dynamic import for Leaflet map component (SSRs safely)
 const GroupMapComponent = dynamic(() => import("@/components/GroupMapComponent"), {
@@ -59,6 +60,12 @@ interface Note {
   timestamp: string;
 }
 
+type GroupBroadcastPayload = {
+  member?: Member;
+  note?: Note;
+  location?: { memberId: string; lat: number; lng: number; lastUpdated: string };
+};
+
 const STORAGE_KEYS = {
   ACTIVE_CODE: "active_group_code",
   ACTIVE_USER_NAME: "group_user_name",
@@ -80,7 +87,6 @@ const PRESET_MESSAGES = [
 ];
 
 export default function GroupTracker() {
-  const supabase = createClient();
   const instanceId = useId();
   const { t } = useTranslation();
 
@@ -95,14 +101,64 @@ export default function GroupTracker() {
   const [coordinatorName, setCoordinatorName] = useState("");
   const [members, setMembers] = useState<Member[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
+  const [syncError, setSyncError] = useState("");
+  const [joinNotice, setJoinNotice] = useState("");
 
   const [noteInput, setNoteInput] = useState("");
   const [copied, setCopied] = useState(false);
   const [shared, setShared] = useState(false);
 
   // References for subscriptions & polling
-  const realtimeChannelRef = useRef<any>(null);
+  const realtimeChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
+
+  const syncGroupRequest = useCallback(async (path: string, body: Record<string, unknown>) => {
+    const { data } = await supabase.auth.getSession();
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (data.session?.access_token) headers.Authorization = `Bearer ${data.session.access_token}`;
+    const response = await fetch(`/api/group-sync${path}`, {
+      method: "POST",
+      credentials: "include",
+      headers,
+      body: JSON.stringify(body),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.message || "Group synchronization failed");
+    return payload;
+  }, []);
+
+  const syncExistingGroup = useCallback(async (code: string, roster: Member[]) => {
+    await syncGroupRequest("/groups", {
+      groupCode: code,
+      groupName: createGroupTitle,
+      reconcileOnly: true,
+    });
+    return syncGroupRequest(`/groups/${encodeURIComponent(code)}/sync`, {
+      currentMemberId: userId,
+      members: roster,
+    });
+  }, [createGroupTitle, syncGroupRequest, userId]);
+
+  const reconcileGroup = useCallback(async (code: string) => {
+    const storedMembers = localStorage.getItem(STORAGE_KEYS.MEMBERS(code));
+    let roster: Member[] = [];
+    if (storedMembers) {
+      try {
+        roster = JSON.parse(storedMembers) as Member[];
+      } catch {
+        roster = [];
+      }
+    }
+    const data = await syncExistingGroup(code, roster);
+    const currentById = new Map(roster.map((member) => [member.id, member]));
+    const synchronized = (data.members || []).map((member: Member) => ({
+      ...currentById.get(member.id),
+      ...member,
+    }));
+    setMembers(synchronized);
+    localStorage.setItem(STORAGE_KEYS.MEMBERS(code), JSON.stringify(synchronized));
+    setSyncError("");
+  }, [syncExistingGroup]);
 
   // Load group details, notes, members from persistence layer
   const loadGroupData = (code: string) => {
@@ -142,9 +198,11 @@ export default function GroupTracker() {
     const savedCode = localStorage.getItem(STORAGE_KEYS.ACTIVE_CODE);
     const savedRole = (localStorage.getItem(STORAGE_KEYS.ACTIVE_ROLE) as Role) || "none";
     const savedName = localStorage.getItem(STORAGE_KEYS.ACTIVE_USER_NAME) || "";
+    const linkedGroupCode = new URLSearchParams(window.location.search).get("code")?.trim().toUpperCase();
 
     startTransition(() => {
       if (savedName) setUserName(savedName);
+      if (linkedGroupCode && /^[A-Z0-9]{3,12}$/.test(linkedGroupCode)) setJoinCodeInput(linkedGroupCode);
 
       if (savedCode && savedRole !== "none") {
         setGroupCode(savedCode);
@@ -183,9 +241,14 @@ export default function GroupTracker() {
       })
       .on("broadcast", { event: "MEMBER_JOINED" }, (payload) => {
         if (payload?.payload?.member) {
+          const joinedName = payload.payload.member.name;
+          setJoinNotice(`${joinedName} joined the group.`);
+          window.setTimeout(() => setJoinNotice(""), 5000);
           setMembers((prev) => {
             if (prev.some((m) => m.id === payload.payload.member.id)) return prev;
-            return [...prev, payload.payload.member];
+            const updated = [...prev, payload.payload.member];
+            localStorage.setItem(STORAGE_KEYS.MEMBERS(groupCode), JSON.stringify(updated));
+            return updated;
           });
         }
       })
@@ -201,7 +264,14 @@ export default function GroupTracker() {
           );
         }
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          void reconcileGroup(groupCode).catch((error: Error) => {
+            console.error("Group realtime reconnect reconciliation failed:", error);
+            setSyncError("Live membership sync is temporarily unavailable. Existing group sharing still works.");
+          });
+        }
+      });
 
     realtimeChannelRef.current = channel;
 
@@ -220,9 +290,9 @@ export default function GroupTracker() {
         realtimeChannelRef.current = null;
       }
     };
-  }, [groupCode, role]);
+  }, [groupCode, reconcileGroup, role]);
 
-  const notifyBroadcast = (type: "NEW_NOTE" | "MEMBER_JOINED" | "LOCATION_UPDATE", payload: any) => {
+  const notifyBroadcast = (type: "NEW_NOTE" | "MEMBER_JOINED" | "LOCATION_UPDATE", payload: GroupBroadcastPayload) => {
     if (broadcastChannelRef.current) {
       try {
         broadcastChannelRef.current.postMessage({ code: groupCode, type, payload });
@@ -243,7 +313,7 @@ export default function GroupTracker() {
     }
   };
 
-  const handleCreateGroup = () => {
+  const handleCreateGroup = async () => {
     const nameToUse = userName.trim() || t("Group Coordinator");
     const code = Math.random().toString(36).substring(2, 8).toUpperCase();
     const currentUserId = userId || `user_${Math.random().toString(36).substring(2, 7)}`;
@@ -273,6 +343,19 @@ export default function GroupTracker() {
     const initialMembersList = [initialMember];
     const initialNotesList = [initialNote];
 
+    try {
+      await syncGroupRequest("/groups", {
+        groupCode: code,
+        groupName: createGroupTitle.trim() || "Nashik Yatra Group",
+        memberId: currentUserId,
+        displayName: nameToUse,
+      });
+      setSyncError("");
+    } catch (error) {
+      console.error("Group registration failed:", error);
+      setSyncError("Live membership sync is temporarily unavailable. Existing group sharing still works.");
+    }
+
     setMembers(initialMembersList);
     setNotes(initialNotesList);
 
@@ -289,9 +372,13 @@ export default function GroupTracker() {
       group_name: createGroupTitle.trim() || "Nashik Yatra Group",
       coordinator_name: nameToUse,
     }).then(() => {});
+    void reconcileGroup(code).catch((error: Error) => {
+      console.error("Created group membership synchronization failed:", error);
+      setSyncError("Live membership sync is temporarily unavailable. Existing group sharing still works.");
+    });
   };
 
-  const handleJoinGroup = () => {
+  const handleJoinGroup = async () => {
     const code = joinCodeInput.trim().toUpperCase();
     if (code.length < 3) return;
 
@@ -325,6 +412,47 @@ export default function GroupTracker() {
       currentMembers.push(newMemberObj);
     }
 
+    let backendJoined = false;
+    try {
+      let joinResult;
+      try {
+        joinResult = await syncGroupRequest(`/groups/${encodeURIComponent(code)}/join`, {
+          memberId: currentUserId,
+          displayName: nameToUse,
+        });
+      } catch (joinError) {
+        const { data: legacyGroup } = await supabase
+          .from("groups")
+          .select("code, group_name")
+          .eq("code", code)
+          .maybeSingle();
+        if (!legacyGroup) throw joinError;
+        await syncGroupRequest("/groups", { groupCode: code, groupName: legacyGroup.group_name, reconcileOnly: true });
+        const savedMembers = localStorage.getItem(STORAGE_KEYS.MEMBERS(code));
+        if (savedMembers) {
+          await syncGroupRequest(`/groups/${encodeURIComponent(code)}/sync`, {
+            currentMemberId: userId,
+            members: JSON.parse(savedMembers),
+          });
+        }
+        joinResult = await syncGroupRequest(`/groups/${encodeURIComponent(code)}/join`, {
+          memberId: currentUserId,
+          displayName: nameToUse,
+        });
+      }
+      const oldMembers = new Map(currentMembers.map((member) => [member.id, member]));
+      const serverMembers = (joinResult.members || []).map((member: Member) => ({
+        ...oldMembers.get(member.id),
+        ...member,
+      }));
+      currentMembers.splice(0, currentMembers.length, ...serverMembers);
+      backendJoined = true;
+      setSyncError("");
+    } catch (error) {
+      console.error("Group join synchronization failed:", error);
+      setSyncError("Live membership sync is temporarily unavailable. Existing group sharing still works.");
+    }
+
     setMembers(currentMembers);
 
     localStorage.setItem(STORAGE_KEYS.ACTIVE_CODE, code);
@@ -334,7 +462,11 @@ export default function GroupTracker() {
     localStorage.setItem(STORAGE_KEYS.MEMBERS(code), JSON.stringify(currentMembers));
 
     loadGroupData(code);
-    notifyBroadcast("MEMBER_JOINED", { member: newMemberObj });
+    if (!backendJoined) notifyBroadcast("MEMBER_JOINED", { member: newMemberObj });
+    void reconcileGroup(code).catch((error: Error) => {
+      console.error("Joined group membership synchronization failed:", error);
+      setSyncError("Live membership sync is temporarily unavailable. Existing group sharing still works.");
+    });
   };
 
   const handlePostNote = (textToPost?: string) => {
@@ -364,6 +496,15 @@ export default function GroupTracker() {
 
     notifyBroadcast("NEW_NOTE", { note: newNote });
     localStorage.setItem(`group_unread_${groupCode}`, "true");
+    void syncGroupRequest(`/groups/${encodeURIComponent(groupCode)}/messages`, {
+      messageId: newNote.id,
+      senderId: userId,
+      senderName: sender,
+      senderRole: role,
+      message: messageText,
+    }).catch((error: Error) => {
+      console.error("Group message notification sync failed:", error);
+    });
 
     supabase.from("group_notes").insert({
       group_code: groupCode,
@@ -414,6 +555,8 @@ export default function GroupTracker() {
   };
 
   const handleLeaveGroup = () => {
+    void syncGroupRequest(`/groups/${encodeURIComponent(groupCode)}/leave`, { memberId: userId })
+      .catch((error: Error) => console.error("Group membership leave sync failed:", error));
     localStorage.removeItem(STORAGE_KEYS.ACTIVE_CODE);
     localStorage.removeItem(STORAGE_KEYS.ACTIVE_ROLE);
 
@@ -588,6 +731,17 @@ export default function GroupTracker() {
             </button>
           </div>
         </div>
+
+        {syncError && (
+          <p role="status" className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-900">
+            {syncError}
+          </p>
+        )}
+        {joinNotice && (
+          <p role="status" className="rounded-xl border border-green-200 bg-green-50 px-4 py-2 text-sm font-semibold text-green-800">
+            {joinNotice}
+          </p>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
