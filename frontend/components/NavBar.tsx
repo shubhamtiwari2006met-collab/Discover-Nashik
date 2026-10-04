@@ -130,22 +130,27 @@ export function NavBar() {
         </Link>
 
         <div className="hidden lg:flex flex-1" />
-        <NotificationBell />
-
-        <nav className="hidden items-center space-x-4 md:flex">
+        <nav className="ml-auto flex items-center gap-2 md:ml-0 md:gap-0 md:space-x-4">
           <Link
             href="/kumbh"
-            className="relative flex items-center gap-1.5 rounded-full border border-[#e7b06d] bg-[#fff7ed] px-3.5 py-2 text-sm font-bold text-[#c9580f] transition-all hover:bg-[#ffedd5] shadow-sm hover:scale-[1.02]"
+            className="relative hidden items-center gap-1.5 rounded-full border border-[#e7b06d] bg-[#fff7ed] px-3.5 py-2 text-sm font-bold text-[#c9580f] transition-all hover:bg-[#ffedd5] shadow-sm hover:scale-[1.02] md:flex"
           >
             <Sparkles className="h-4 w-4 text-[#e86f18]" />
             <span>{t("Kumbh Mela")}</span>
           </Link>
+          <NotificationBell />
+          <button
+            className="p-2 text-[#e86f18] transition-colors hover:text-[#c9580f] md:hidden"
+            onClick={() => setIsOpen(!isOpen)}
+          >
+            {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
 
           {/* Show dashboard link appropriate to logged-in admin/business role */}
           {session?.user && role === 'admin' && (
             <Link
               href="/admin/dashboard"
-              className="flex items-center gap-1.5 rounded-full border border-[#e7b06d] bg-[#fff7ed] px-3 py-2 text-sm font-bold text-[#c9580f] hover:bg-[#ffedd5]"
+              className="hidden items-center gap-1.5 rounded-full border border-[#e7b06d] bg-[#fff7ed] px-3 py-2 text-sm font-bold text-[#c9580f] hover:bg-[#ffedd5] md:flex"
             >
               <Users className="h-4 w-4" />
               {t("Admin Dashboard")}
@@ -154,7 +159,7 @@ export function NavBar() {
           {session?.user && role === 'business' && (
             <Link
               href="/business/dashboard"
-              className="ml-2 flex items-center gap-1.5 rounded-full border border-[#e7b06d] bg-[#fff7ed] px-3 py-2 text-sm font-bold text-[#c9580f] hover:bg-[#ffedd5]"
+              className="ml-2 hidden items-center gap-1.5 rounded-full border border-[#e7b06d] bg-[#fff7ed] px-3 py-2 text-sm font-bold text-[#c9580f] hover:bg-[#ffedd5] md:flex"
             >
               <Users className="h-4 w-4" />
               {t("Business Dashboard")}
@@ -162,7 +167,7 @@ export function NavBar() {
           )}
 
           {/* Menu Dropdown (User Auth, Languages & Admin/Business Login options) */}
-          <div ref={menuRef} className="relative ml-1">
+          <div ref={menuRef} className="relative ml-1 hidden md:block">
             <button
               type="button"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -256,12 +261,6 @@ export function NavBar() {
           </div>
         </nav>
 
-        <button
-          className="p-2 text-[#e86f18] transition-colors hover:text-[#c9580f] md:hidden"
-          onClick={() => setIsOpen(!isOpen)}
-        >
-          {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
       </div>
 
       {/* Mobile Drawer */}
