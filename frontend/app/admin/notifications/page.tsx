@@ -64,6 +64,7 @@ export default function AdminNotificationsPage() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [minimumScheduledAt, setMinimumScheduledAt] = useState("");
+  const [minimumExpiresAt, setMinimumExpiresAt] = useState("");
   const [form, setForm] = useState({
     title: "",
     message: "",
@@ -176,6 +177,13 @@ export default function AdminNotificationsPage() {
       const scheduledTime = new Date(form.scheduledAt).getTime();
       if (!Number.isFinite(scheduledTime) || scheduledTime <= Date.now() + 60_000) {
         setCentralError("Choose a schedule time at least one minute in the future.");
+        return;
+      }
+    }
+    if (form.expiresAt) {
+      const expiryTime = new Date(form.expiresAt).getTime();
+      if (!Number.isFinite(expiryTime) || expiryTime <= Date.now() + 60_000) {
+        setCentralError("Choose an expiry time at least one minute in the future.");
         return;
       }
     }
@@ -360,7 +368,7 @@ export default function AdminNotificationsPage() {
           </label>
           <label className="space-y-1 text-sm font-semibold text-[#334b5a]">
             Expiry (optional)
-            <input type="datetime-local" value={form.expiresAt} onChange={(event) => setForm({ ...form, expiresAt: event.target.value })} className="w-full rounded-lg border border-[#d8c4a3] bg-white px-3 py-2" />
+            <input type="datetime-local" min={minimumExpiresAt} onFocus={() => setMinimumExpiresAt(toDateTimeLocalValue(new Date(Date.now() + 120_000)))} value={form.expiresAt} onChange={(event) => setForm({ ...form, expiresAt: event.target.value })} className="w-full rounded-lg border border-[#d8c4a3] bg-white px-3 py-2" />
           </label>
           <button disabled={saving} className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 py-3 font-bold text-white hover:bg-orange-700 disabled:opacity-50 sm:col-span-2">
             <Send className="h-4 w-4" /> {form.scheduledAt ? "Schedule notification" : "Send notification"}

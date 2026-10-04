@@ -218,7 +218,7 @@ export default function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-[60] mt-2 w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-[#e1cfb0] bg-[#fffdf8] shadow-2xl">
+        <div className="fixed inset-x-3 top-[4.5rem] z-[60] max-h-[calc(100dvh-5.5rem)] overflow-y-auto rounded-2xl border border-[#e1cfb0] bg-[#fffdf8] shadow-2xl md:absolute md:inset-x-auto md:right-0 md:top-full md:mt-2 md:max-h-[calc(100dvh-6rem)] md:w-[min(24rem,calc(100vw-2rem))]">
           <div className="flex items-center justify-between border-b border-[#e1cfb0] p-4">
             <div>
               <h2 className="font-serif text-lg font-bold text-[#173247]">Notifications</h2>
