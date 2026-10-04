@@ -200,22 +200,6 @@ exports.seedPlaces = async (req, res) => {
   try {
     const mockPlaces = [
       {
-        name: "Trimbakeshwar Shiva Temple",
-        category: "Temples",
-        location: "Trimbak, Nashik",
-        description: "An ancient Hindu temple in the town of Trimbak, dedicated to Lord Shiva and one of the twelve Jyotirlingas.",
-        rating: 4.8,
-        image: "https://images.unsplash.com/photo-1596700508005-4f05ab04c997?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-      },
-      {
-        name: "Sula Vineyards",
-        category: "Vineyards",
-        location: "Gangapur-Savargaon Road, Nashik",
-        description: "India's most famous vineyard offering wine tasting, tours, and a beautiful resort experience.",
-        rating: 4.6,
-        image: "https://images.unsplash.com/photo-1502758151829-47000d6fdb0c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-      },
-      {
         name: "Dugarwadi Waterfall",
         category: "Waterfalls",
         location: "Trimbakeshwar Road, Nashik",
@@ -241,4 +225,3 @@ exports.seedPlaces = async (req, res) => {
     res.status(500).json({ message: 'Server error while seeding data' });
   }
 };
-
