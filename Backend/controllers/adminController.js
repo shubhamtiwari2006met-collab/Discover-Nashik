@@ -248,3 +248,92 @@ exports.revokeAdmin = async (req, res) => {
     res.status(500).json({ message: 'Failed to revoke admin access' });
   }
 };
+
+// 4. POST /api/admin/login — Dedicated Admin ID + Password authentication with backend role verification
+exports.adminLogin = async (req, res) => {
+  try {
+    const { adminId, password } = req.body;
+    const rawId = (adminId || req.body.identifier || req.body.email || '').trim();
+
+    if (!rawId || !password) {
+      return res.status(400).json({ message: 'Admin ID and password are required.' });
+    }
+
+    const cleanIdentifier = rawId.toLowerCase();
+
+    // Look up admin account in MongoDB User model by adminId, email, or supabaseId
+    let adminUser = await User.findOne({
+      $or: [
+        { email: cleanIdentifier },
+        { adminId: cleanIdentifier },
+        { adminId: rawId },
+        { supabaseId: rawId }
+      ]
+    });
+
+    const isPrimary = cleanIdentifier === PRIMARY_ADMIN_EMAIL.toLowerCase();
+
+    if (isPrimary && !adminUser) {
+      adminUser = await User.findOneAndUpdate(
+        { email: PRIMARY_ADMIN_EMAIL },
+        {
+          $set: {
+            email: PRIMARY_ADMIN_EMAIL,
+            role: 'admin',
+            adminStatus: 'active',
+            isPrimaryAdmin: true,
+            name: 'Primary Admin'
+          }
+        },
+        { upsert: true, new: true }
+      );
+    }
+
+    // Must exist in MongoDB as an active admin
+    if (!adminUser) {
+      return res.status(401).json({ message: 'Invalid Admin ID or password.' });
+    }
+
+    const isAuthorizedAdmin =
+      (adminUser.email?.toLowerCase() === PRIMARY_ADMIN_EMAIL.toLowerCase() || adminUser.isPrimaryAdmin === true) ||
+      (adminUser.role === 'admin' && adminUser.adminStatus === 'active');
+
+    if (!isAuthorizedAdmin) {
+      return res.status(401).json({ message: 'Invalid Admin ID or password.' });
+    }
+
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase backend configuration is missing.' });
+    }
+
+    // Authenticate password via Supabase Auth using the registered admin email
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      email: adminUser.email,
+      password: password
+    });
+
+    if (signInError || !signInData.session) {
+      return res.status(401).json({ message: 'Invalid Admin ID or password.' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Admin authenticated successfully.',
+      session: signInData.session,
+      token: signInData.session.access_token,
+      user: {
+        id: adminUser._id.toString(),
+        supabaseId: adminUser.supabaseId || signInData.user.id,
+        name: adminUser.name || 'Admin',
+        email: adminUser.email,
+        role: 'admin',
+        adminStatus: adminUser.adminStatus || 'active',
+        isPrimaryAdmin: Boolean(adminUser.isPrimaryAdmin || adminUser.email === PRIMARY_ADMIN_EMAIL)
+      }
+    });
+  } catch (error) {
+    console.error('Error during admin login:', error);
+    return res.status(500).json({ message: 'Authentication failed due to a server error.' });
+  }
+};
+

@@ -33,7 +33,7 @@ export default function AdminHeader({ onToggleMobileMenu }: { onToggleMobileMenu
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    window.location.href = "/login?role=admin";
+    window.location.href = "/admin";
   };
 
   const [menuOpen, setMenuOpen] = useState(false);

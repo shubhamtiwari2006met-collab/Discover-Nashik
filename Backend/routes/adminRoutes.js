@@ -1,8 +1,9 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const { authenticate, requireRoles, requirePrimaryAdmin } = require('../middleware/auth');
 const notificationController = require('../controllers/notificationController');
-const { getAdmins, createAdmin, revokeAdmin } = require('../controllers/adminController');
+const { getAdmins, createAdmin, revokeAdmin, adminLogin } = require('../controllers/adminController');
 const {
   getUsers,
   getUserStats,
@@ -12,6 +13,18 @@ const {
   unblockUser,
   getBlockedIdentifiers
 } = require('../controllers/userManagementController');
+
+// Rate limiter for admin authentication
+const adminAuthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many authentication attempts. Please try again later.' }
+});
+
+// Admin Authentication Route
+router.post('/login', adminAuthLimiter, adminLogin);
 
 // Admin Authorization Verification & Management Routes
 router.get('/verify', authenticate, requireRoles('admin'), (req, res) => {

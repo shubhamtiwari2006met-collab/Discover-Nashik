@@ -207,10 +207,6 @@ export function NavBar() {
                     </button>
                     {isLoginOpen && (
                       <div className="mt-1 overflow-hidden rounded-lg border border-[#f4b35f] bg-white p-1 dark:border-orange-800 dark:bg-orange-950">
-                        <a href="/login?role=admin" onClick={() => { setIsLoginOpen(false); setIsMenuOpen(false); }} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-[#c2410c] hover:bg-orange-100 dark:text-orange-300 dark:hover:bg-orange-900/50">
-                          <LogIn className="h-4 w-4" />
-                          {t("Admin Login")}
-                        </a>
                         <a href="/login?role=business" onClick={() => { setIsLoginOpen(false); setIsMenuOpen(false); }} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-[#c2410c] hover:bg-orange-100 dark:text-orange-300 dark:hover:bg-orange-900/50">
                           <LogIn className="h-4 w-4" />
                           {t("Business Login")}
@@ -356,10 +352,6 @@ export function NavBar() {
             {!session && (
               <div className="rounded-xl border border-[#e7b06d] bg-[#fff7ed] p-2">
                 <p className="px-3 pb-1 pt-2 text-xs font-bold uppercase tracking-wider text-[#a45317]">{t("Login")}</p>
-                <a href="/login?role=admin" onClick={() => setIsOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-3 text-base font-bold text-[#c2410c] hover:bg-orange-100">
-                  <LogIn className="h-5 w-5" />
-                  {t("Admin Login")}
-                </a>
                 <a href="/login?role=business" onClick={() => setIsOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-3 text-base font-bold text-[#c2410c] hover:bg-orange-100">
                   <LogIn className="h-5 w-5" />
                   {t("Business Login")}

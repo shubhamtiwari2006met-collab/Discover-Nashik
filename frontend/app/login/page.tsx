@@ -17,9 +17,15 @@ function LoginContent() {
   const { t } = useTranslation();
   const searchParams = useSearchParams();
   const requestedRole = searchParams.get("role");
-  const role: LoginRole = requestedRole === "admin" || requestedRole === "business" ? requestedRole : "visitor";
+  const role: LoginRole = requestedRole === "business" ? "business" : "visitor";
   const requestedMode = searchParams.get("mode");
   const [mode, setMode] = useState<AuthMode>(requestedMode === "reset" ? "reset" : "signIn");
+
+  useEffect(() => {
+    if (requestedRole === "admin") {
+      window.location.href = "/admin";
+    }
+  }, [requestedRole]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -365,7 +371,7 @@ function LoginContent() {
     }
   }
 
-  const title = role === "admin" ? t("Admin Login") : role === "business" ? t("Business Login") : t("Welcome back");
+  const title = role === "business" ? t("Business Login") : t("Welcome back");
 
   const emailFieldName = `email-${role}`;
   const passwordFieldName = `password-${role}`;
