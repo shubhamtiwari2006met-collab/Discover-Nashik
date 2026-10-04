@@ -11,6 +11,10 @@ const notificationGroupMemberSchema = new mongoose.Schema({
   status: { type: String, enum: ['active', 'left'], default: 'active', index: true },
   joinedAt: { type: Date, default: Date.now },
   leftAt: { type: Date, default: null },
+  lastSeenAt: { type: Date, default: Date.now, index: true },
+  lastLocationUpdatedAt: { type: Date, default: null },
+  lastLocationLat: { type: Number, default: null },
+  lastLocationLng: { type: Number, default: null },
 }, { timestamps: true });
 
 notificationGroupMemberSchema.index({ groupCode: 1, memberId: 1 }, { unique: true });

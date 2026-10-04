@@ -511,9 +511,13 @@ exports.syncGroupMembership = async (req, res) => {
       const recipientId = isCurrentIdentity
         ? await service.resolveRecipient(identityType, identityId)
         : null;
-      const existing = await NotificationGroupMember.findOne({ groupCode, memberId }).select('recipientId').lean();
+      const existing = await NotificationGroupMember.findOne({ groupCode, memberId }).select('recipientId lastSeenAt lastLocationUpdatedAt lastLocationLat lastLocationLng').lean();
       if (existing?.recipientId && existing.recipientId !== recipientId) continue;
       const fields = { status: 'active', displayName };
+      if (member.lastSeenAt) fields.lastSeenAt = new Date(member.lastSeenAt);
+      if (member.lastLocationUpdatedAt) fields.lastLocationUpdatedAt = new Date(member.lastLocationUpdatedAt);
+      if (typeof member.lastLocationLat === 'number') fields.lastLocationLat = member.lastLocationLat;
+      if (typeof member.lastLocationLng === 'number') fields.lastLocationLng = member.lastLocationLng;
       if (isCurrentIdentity) Object.assign(fields, { identityType, identityId, recipientId });
       await NotificationGroupMember.updateOne(
         { groupCode, memberId },
@@ -521,14 +525,24 @@ exports.syncGroupMembership = async (req, res) => {
           $setOnInsert: {
             groupCode, memberId, joinedAt: new Date(), identityType, identityId, recipientId,
             role: member.role === 'coordinator' ? 'coordinator' : 'member',
+            lastSeenAt: Date.now() ? new Date() : new Date(),
           },
           $set: fields,
         },
         { upsert: true }
       );
     }
-    const stored = await NotificationGroupMember.find({ groupCode, status: 'active' }).select('memberId displayName role joinedAt').lean();
-    return res.json({ members: stored.map((member) => ({ id: member.memberId, name: member.displayName, role: member.role, joinedAt: member.joinedAt })) });
+    const stored = await NotificationGroupMember.find({ groupCode, status: 'active' }).select('memberId displayName role joinedAt lastSeenAt lastLocationUpdatedAt lastLocationLat lastLocationLng').lean();
+    return res.json({ members: stored.map((member) => ({
+      id: member.memberId,
+      name: member.displayName,
+      role: member.role,
+      joinedAt: member.joinedAt,
+      lastSeenAt: member.lastSeenAt,
+      lastLocationUpdatedAt: member.lastLocationUpdatedAt,
+      lastLocationLat: member.lastLocationLat,
+      lastLocationLng: member.lastLocationLng,
+    })) });
   } catch (error) {
     console.error('[Group Sync] Failed to synchronize membership:', error);
     return res.status(500).json({ message: 'Failed to synchronize group membership' });
@@ -550,9 +564,16 @@ exports.getGroupMembers = async (req, res) => {
         return res.status(403).json({ message: 'Group membership identity does not match' });
       }
     }
-    const members = await NotificationGroupMember.find({ groupCode, status: 'active' }).select('memberId displayName role joinedAt').lean();
+    const members = await NotificationGroupMember.find({ groupCode, status: 'active' }).select('memberId displayName role joinedAt lastSeenAt lastLocationUpdatedAt lastLocationLat lastLocationLng').lean();
     return res.json({ members: members.map((item) => ({
-      id: item.memberId, name: item.displayName, role: item.role, joinedAt: item.joinedAt,
+      id: item.memberId,
+      name: item.displayName,
+      role: item.role,
+      joinedAt: item.joinedAt,
+      lastSeenAt: item.lastSeenAt,
+      lastLocationUpdatedAt: item.lastLocationUpdatedAt,
+      lastLocationLat: item.lastLocationLat,
+      lastLocationLng: item.lastLocationLng,
     })) });
   } catch (error) {
     console.error('[Group Sync] Failed to load group members:', error);

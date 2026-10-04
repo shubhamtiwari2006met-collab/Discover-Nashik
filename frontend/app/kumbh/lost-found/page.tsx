@@ -48,13 +48,13 @@ interface LostFoundReport {
   reportId: string;
   reportType: "lost" | "found";
   category:
-    | "missing_child"
-    | "missing_elderly"
-    | "found_child"
-    | "found_elderly"
-    | "lost_valuable"
-    | "found_valuable"
-    | "other";
+  | "missing_child"
+  | "missing_elderly"
+  | "found_child"
+  | "found_elderly"
+  | "lost_valuable"
+  | "found_valuable"
+  | "other";
   title: string;
   description: string;
   photoUrl?: string;
@@ -196,7 +196,7 @@ export default function LostFoundMainPage() {
               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-4 text-base font-bold text-orange-600 shadow-lg hover:bg-orange-50 transition-all transform hover:-translate-y-0.5 shrink-0"
             >
               <Plus className="h-5 w-5 stroke-[3]" />
-              <span>+ Report Lost or Found</span>
+              <span> Report Lost or Found</span>
             </Link>
           </div>
         </div>
@@ -229,11 +229,10 @@ export default function LostFoundMainPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`rounded-xl px-4 py-2 text-xs md:text-sm font-bold transition-all shrink-0 ${
-                  activeTab === tab.id
-                    ? "bg-orange-600 text-white shadow-md"
-                    : "bg-[#fffdf8] border border-[#e1cfb0] text-[#667883] hover:bg-orange-50 hover:text-orange-600"
-                }`}
+                className={`rounded-xl px-4 py-2 text-xs md:text-sm font-bold transition-all shrink-0 ${activeTab === tab.id
+                  ? "bg-orange-600 text-white shadow-md"
+                  : "bg-[#fffdf8] border border-[#e1cfb0] text-[#667883] hover:bg-orange-50 hover:text-orange-600"
+                  }`}
               >
                 {tab.label}
               </button>

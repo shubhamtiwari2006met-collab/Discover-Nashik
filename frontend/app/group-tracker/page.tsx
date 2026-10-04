@@ -49,6 +49,10 @@ interface Member {
   lat?: number;
   lng?: number;
   lastUpdated?: string;
+  lastSeenAt?: string;
+  lastLocationUpdatedAt?: string;
+  lastLocationLat?: number;
+  lastLocationLng?: number;
   note?: string;
 }
 
@@ -150,6 +154,29 @@ const mergeNotesById = (items: Note[]) => {
   });
 };
 
+const toRelativeMinutes = (isoDate?: string | null) => {
+  if (!isoDate) return null;
+  const time = new Date(isoDate).getTime();
+  if (Number.isNaN(time)) return null;
+  const diffMinutes = Math.max(0, Math.round((Date.now() - time) / 60000));
+  if (diffMinutes === 0) return 'just now';
+  if (diffMinutes === 1) return '1 min ago';
+  return `${diffMinutes} min ago`;
+};
+
+const getMemberPresenceLabel = (member: Member) => {
+  const lastSeen = member.lastSeenAt ? new Date(member.lastSeenAt) : null;
+  const isOnline = lastSeen && Date.now() - lastSeen.getTime() < 3 * 60 * 1000;
+  if (isOnline) {
+    return { status: 'online', label: '🟢 Online', lastSeenText: 'Active now' };
+  }
+  return {
+    status: 'offline',
+    label: '⚪ Offline',
+    lastSeenText: member.lastSeenAt ? `Last seen ${toRelativeMinutes(member.lastSeenAt) || 'recently'}` : 'Last seen just now',
+  };
+};
+
 export default function GroupTracker() {
   const instanceId = useId();
   const { t } = useTranslation();
@@ -214,13 +241,23 @@ export default function GroupTracker() {
       }
     }
     const data = await syncExistingGroup(code, roster);
-    const currentById = new Map(roster.map((member) => [member.id, member]));
-    const synchronized = (data.members || []).map((member: Member) => ({
-      ...currentById.get(member.id),
-      ...member,
-    }));
-    setMembers(synchronized);
-    localStorage.setItem(STORAGE_KEYS.MEMBERS(code), JSON.stringify(synchronized));
+    const mergedMembers = (data.members || []).map((member: Member) => {
+      const existing = roster.find((item) => item.id === member.id) || ({} as Partial<Member>);
+      const nextMember = {
+        ...existing,
+        ...member,
+        lastSeenAt: member.lastSeenAt || existing.lastSeenAt || new Date().toISOString(),
+        lastLocationUpdatedAt: member.lastLocationUpdatedAt || existing.lastLocationUpdatedAt,
+        lastLocationLat: typeof member.lastLocationLat === 'number' ? member.lastLocationLat : existing.lastLocationLat,
+        lastLocationLng: typeof member.lastLocationLng === 'number' ? member.lastLocationLng : existing.lastLocationLng,
+      } as Member;
+      if (!nextMember.lat && typeof member.lastLocationLat === 'number') nextMember.lat = member.lastLocationLat;
+      if (!nextMember.lng && typeof member.lastLocationLng === 'number') nextMember.lng = member.lastLocationLng;
+      if (!nextMember.lastUpdated && member.lastLocationUpdatedAt) nextMember.lastUpdated = new Date(member.lastLocationUpdatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return nextMember;
+    });
+    setMembers(mergedMembers);
+    localStorage.setItem(STORAGE_KEYS.MEMBERS(code), JSON.stringify(mergedMembers));
     setSyncError("");
   }, [syncExistingGroup]);
 
@@ -653,14 +690,23 @@ export default function GroupTracker() {
     });
   };
 
-  const handleUpdateLocation = (lat: number, lng: number) => {
+  const handleUpdateLocation = async (lat: number, lng: number) => {
     if (!groupCode) return;
-    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const timestamp = new Date();
+    const timeStr = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const currentMemberId = userId || userName;
+    const locationPayload = {
+      memberId: currentMemberId,
+      lat,
+      lng,
+      lastUpdated: timeStr,
+      lastLocationUpdatedAt: timestamp.toISOString(),
+      lastSeenAt: timestamp.toISOString(),
+    };
 
     const updatedMembers = members.map((m) =>
       m.id === currentMemberId || m.name === userName
-        ? { ...m, lat, lng, lastUpdated: timeStr }
+        ? { ...m, lat, lng, lastUpdated: timeStr, lastLocationUpdatedAt: locationPayload.lastLocationUpdatedAt, lastLocationLat: lat, lastLocationLng: lng, lastSeenAt: locationPayload.lastSeenAt }
         : m
     );
 
@@ -670,6 +716,26 @@ export default function GroupTracker() {
     notifyBroadcast("LOCATION_UPDATE", {
       location: { memberId: currentMemberId, lat, lng, lastUpdated: timeStr }
     });
+
+    try {
+      await syncGroupRequest(`/groups/${encodeURIComponent(groupCode)}/sync`, {
+        currentMemberId: currentMemberId,
+        members: updatedMembers.map((member) => ({
+          id: member.id,
+          name: member.name,
+          role: member.role,
+          lat: member.lat,
+          lng: member.lng,
+          lastUpdated: member.lastUpdated,
+          lastSeenAt: member.lastSeenAt,
+          lastLocationUpdatedAt: member.lastLocationUpdatedAt,
+          lastLocationLat: member.lastLocationLat,
+          lastLocationLng: member.lastLocationLng,
+        })),
+      });
+    } catch (error) {
+      console.warn('Group location persistence sync failed:', error);
+    }
   };
 
   const copyCode = () => {
@@ -1084,49 +1150,59 @@ export default function GroupTracker() {
               </div>
 
               <div className="space-y-3 max-h-60 overflow-y-auto">
-                {members.map((m, idx) => (
-                  <div
-                    key={m.id || idx}
-                    className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 hover:bg-orange-50/50 transition-colors border border-slate-100"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div
-                        className={`h-9 w-9 rounded-full font-bold flex items-center justify-center text-sm shadow-sm ${
-                          m.role === "coordinator"
-                            ? "bg-gradient-to-br from-amber-400 to-orange-500 text-white"
-                            : "bg-blue-500 text-white"
-                        }`}
-                      >
-                        {m.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="font-bold text-slate-900 text-sm flex items-center gap-1">
-                          <span>{m.name}</span>
-                          {m.name === userName && (
-                            <span className="text-[10px] text-slate-400 font-normal">({t("You")})</span>
-                          )}
-                        </div>
-                        {m.lastUpdated && (
-                          <div className="text-[10px] text-slate-400">
-                            Seen: {m.lastUpdated}
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                {members.map((m, idx) => {
+                  const presence = getMemberPresenceLabel(m);
+                  const lastLocationLabel = m.lastLocationUpdatedAt
+                    ? `Location ${toRelativeMinutes(m.lastLocationUpdatedAt) || 'updated recently'}`
+                    : m.lastUpdated
+                      ? `Last update ${m.lastUpdated}`
+                      : 'Location unavailable';
 
-                    <div>
-                      {m.role === "coordinator" ? (
-                        <span className="bg-orange-100 text-orange-700 text-[10px] font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1 border border-orange-200">
-                          <Crown className="h-3 w-3 text-orange-500" /> {t("Leader")}
-                        </span>
-                      ) : (
-                        <span className="bg-blue-50 text-blue-600 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-blue-100">
-                          {t("Member")}
-                        </span>
-                      )}
+                  return (
+                    <div
+                      key={m.id || idx}
+                      className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 hover:bg-orange-50/50 transition-colors border border-slate-100 gap-3"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div
+                          className={`h-9 w-9 rounded-full font-bold flex items-center justify-center text-sm shadow-sm ${
+                            m.role === "coordinator"
+                              ? "bg-gradient-to-br from-amber-400 to-orange-500 text-white"
+                              : "bg-blue-500 text-white"
+                          }`}
+                        >
+                          {m.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-bold text-slate-900 text-sm flex items-center gap-1">
+                            <span className="truncate">{m.name}</span>
+                            {m.name === userName && (
+                              <span className="text-[10px] text-slate-400 font-normal">({t("You")})</span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-slate-500 flex items-center gap-1.5 flex-wrap">
+                            <span className={presence.status === "online" ? "text-emerald-600" : "text-slate-500"}>{presence.label}</span>
+                            <span className="text-slate-400">•</span>
+                            <span>{lastLocationLabel}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-end gap-1.5">
+                        {m.role === "coordinator" ? (
+                          <span className="bg-orange-100 text-orange-700 text-[10px] font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1 border border-orange-200">
+                            <Crown className="h-3 w-3 text-orange-500" /> {t("Leader")}
+                          </span>
+                        ) : (
+                          <span className="bg-blue-50 text-blue-600 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-blue-100">
+                            {t("Member")}
+                          </span>
+                        )}
+                        <span className="text-[10px] text-slate-400">{presence.lastSeenText}</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
