@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState, useRef, FormEvent } from "react";
-import { Menu, X, Users, Languages, ChevronDown, LogIn, Sparkles, User as UserIcon, LogOut } from "lucide-react";
+import { Menu, X, Users, Languages, ChevronDown, LogIn, Sparkles, User as UserIcon, LogOut, Search } from "lucide-react";
 import { useTranslation, type Language } from "@/lib/i18n";
 import { createClient } from "@/utils/supabase/client";
 import { useUserAuth } from "@/context/UserAuthContext";
@@ -129,7 +129,27 @@ export function NavBar() {
           </span>
         </Link>
 
-        <div className="hidden lg:flex flex-1" />
+        {/* Compact Navbar Search */}
+        <form
+          onSubmit={handleSearch}
+          className="hidden sm:flex flex-1 max-w-xs lg:max-w-sm mx-3 items-center gap-1.5 rounded-full border border-[#e1cfb0] bg-[#f8f2e8] px-3 py-1.5 transition-colors focus-within:border-[#e86f18] focus-within:bg-white focus-within:shadow-sm"
+        >
+          <Search className="h-3.5 w-3.5 text-[#667883] shrink-0" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t("Search places, temples...")}
+            className="flex-1 min-w-0 bg-transparent text-[#173247] placeholder-[#667883] outline-none text-xs"
+          />
+          <button
+            type="submit"
+            className="rounded-full bg-[#e86f18] px-2.5 py-1 text-[10px] font-bold text-white hover:bg-[#c9580f] shrink-0 transition-colors"
+          >
+            {t("Go")}
+          </button>
+        </form>
+
         <nav className="ml-auto flex items-center gap-2 md:ml-0 md:gap-0 md:space-x-4">
           <Link
             href="/kumbh"
@@ -139,6 +159,14 @@ export function NavBar() {
             <span>{t("Kumbh Mela")}</span>
           </Link>
           <NotificationBell />
+          {/* Mobile Search Icon — next to hamburger */}
+          <Link
+            href="/search"
+            className="p-2 text-[#667883] hover:text-[#e86f18] transition-colors sm:hidden"
+            aria-label="Search"
+          >
+            <Search className="h-5 w-5" />
+          </Link>
           <button
             className="p-2 text-[#e86f18] transition-colors hover:text-[#c9580f] md:hidden"
             onClick={() => setIsOpen(!isOpen)}
