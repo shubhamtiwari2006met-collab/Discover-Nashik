@@ -8,7 +8,6 @@ import {
   User as UserIcon,
   ArrowRight,
   ShieldCheck,
-  KeyRound,
   Copy,
   Check,
   Sparkles,
@@ -20,7 +19,7 @@ import { useUserAuth } from "@/context/UserAuthContext";
 import { useTranslation } from "@/lib/i18n";
 
 type AuthTab = "platformId" | "emailMobile";
-type AuthMode = "login" | "register" | "forgot" | "reset" | "registeredSuccess";
+type AuthMode = "login" | "register" | "forgot" | "registeredSuccess";
 
 export function UserAuthModal() {
   const { user, isAuthenticated, isAuthModalOpen, closeAuthModal, login, register, logout } = useUserAuth();
@@ -35,8 +34,6 @@ export function UserAuthModal() {
   const [emailOrMobile, setEmailOrMobile] = useState("");
   const [platformIdInput, setPlatformIdInput] = useState("");
   const [password, setPassword] = useState("");
-  const [otp, setOtp] = useState("");
-  const [newPassword, setNewPassword] = useState("");
 
   // UI state
   const [submitting, setSubmitting] = useState(false);
@@ -80,9 +77,9 @@ export function UserAuthModal() {
 
   const handleForgotPasswordRequest = async (e: React.FormEvent) => {
     e.preventDefault();
-    const identifier = activeTab === "platformId" ? platformIdInput : emailOrMobile;
-    if (!identifier.trim()) {
-      setErrorMsg("Please enter your Email, Mobile Number, or Discover Nashik ID");
+    const email = emailOrMobile.trim();
+    if (!email) {
+      setErrorMsg("Please enter your email address");
       return;
     }
     setSubmitting(true);
@@ -92,54 +89,18 @@ export function UserAuthModal() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ identifier }),
+        body: JSON.stringify({ email }),
       });
       const data = await res.json();
       setSubmitting(false);
       if (res.ok) {
-        setSuccessMsg(data.message || "If an account matches the information provided, instructions to reset your password have been issued.");
-        setAuthMode("reset");
+        setSuccessMsg(data.message || "If an account matches that email address, a password reset email will be sent.");
       } else {
         setErrorMsg(data.message || "Failed to process request");
       }
     } catch {
       setSubmitting(false);
       setErrorMsg("Failed to process request");
-    }
-  };
-
-  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const identifier = activeTab === "platformId" ? platformIdInput : emailOrMobile;
-    if (!identifier.trim() || !otp.trim() || !newPassword) {
-      setErrorMsg("Identifier, verification code, and new password are required");
-      return;
-    }
-    if (newPassword.length < 6) {
-      setErrorMsg("Password must be at least 6 characters long");
-      return;
-    }
-
-    setSubmitting(true);
-    setErrorMsg(null);
-    try {
-      const res = await fetch("/api/auth/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ identifier, otp, newPassword }),
-      });
-      const data = await res.json();
-      setSubmitting(false);
-      if (res.ok && data.success) {
-        setSuccessMsg("Password updated successfully. You can now login with your new password.");
-        setAuthMode("login");
-      } else {
-        setErrorMsg(data.message || "Failed to reset password");
-      }
-    } catch {
-      setSubmitting(false);
-      setErrorMsg("Failed to reset password");
     }
   };
 
@@ -150,10 +111,6 @@ export function UserAuthModal() {
 
     if (authMode === "forgot") {
       return handleForgotPasswordRequest(e);
-    }
-
-    if (authMode === "reset") {
-      return handleResetPasswordSubmit(e);
     }
 
     // LOGIN FLOW
@@ -353,14 +310,12 @@ export function UserAuthModal() {
                 {authMode === "login" && "Welcome back to Discover Nashik"}
                 {authMode === "register" && "Create your Account"}
                 {authMode === "forgot" && "Forgot Password"}
-                {authMode === "reset" && "Reset Password"}
               </h2>
               <p className="mt-1 text-xs text-[#667883]">
                 {authMode === "login" && activeTab === "platformId" && "Enter your Discover Nashik ID for passwordless login"}
                 {authMode === "login" && activeTab === "emailMobile" && "Sign in using your Email or Mobile Number and password"}
                 {authMode === "register" && "Create your account to save personalized Kumbh journeys"}
-                {authMode === "forgot" && "Enter your Email or Mobile Number to reset password"}
-                {authMode === "reset" && "Enter code and set a new password"}
+                {authMode === "forgot" && "Enter your email address to receive a password reset link"}
               </p>
             </div>
 
@@ -456,14 +411,16 @@ export function UserAuthModal() {
               {/* EMAIL / MOBILE INPUT */}
               {(authMode === "register" || (authMode === "login" && activeTab === "emailMobile") || authMode === "forgot") && (
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-[#173247]">Email or Mobile Number</label>
+                  <label className="mb-1 block text-xs font-bold text-[#173247]">
+                    {authMode === "forgot" ? "Email Address" : "Email or Mobile Number"}
+                  </label>
                   <div className="relative">
                     <Mail className="absolute left-3.5 top-3 h-4 w-4 text-[#a45317]" />
                     <input
-                      type="text"
+                      type={authMode === "forgot" ? "email" : "text"}
                       value={emailOrMobile}
                       onChange={(e) => setEmailOrMobile(e.target.value)}
-                      placeholder="you@example.com or 9876543210"
+                      placeholder={authMode === "forgot" ? "you@example.com" : "you@example.com or 9876543210"}
                       required
                       className="w-full rounded-xl border border-[#d8c4a3] bg-white py-2.5 pl-10 pr-4 text-sm font-medium text-[#173247] placeholder:text-[#94a3b8] focus:border-[#e86f18] focus:outline-none focus:ring-2 focus:ring-[#e86f18]/20"
                     />
@@ -500,43 +457,6 @@ export function UserAuthModal() {
                 </div>
               )}
 
-              {/* NEW PASSWORD INPUT FOR RESET */}
-              {authMode === "reset" && (
-                <div>
-                  <label className="mb-1 block text-xs font-bold text-[#173247]">New Password</label>
-                  <div className="relative">
-                    <Lock className="absolute left-3.5 top-3 h-4 w-4 text-[#a45317]" />
-                    <input
-                      type="password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="••••••••"
-                      required
-                      className="w-full rounded-xl border border-[#d8c4a3] bg-white py-2.5 pl-10 pr-4 text-sm font-medium text-[#173247] placeholder:text-[#94a3b8] focus:border-[#e86f18] focus:outline-none focus:ring-2 focus:ring-[#e86f18]/20"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* OTP / VERIFICATION CODE INPUT */}
-              {authMode === "reset" && (
-                <div>
-                  <label className="mb-1 block text-xs font-bold text-[#173247]">Enter 6-Digit Verification Code</label>
-                  <div className="relative">
-                    <KeyRound className="absolute left-3.5 top-3 h-4 w-4 text-[#a45317]" />
-                    <input
-                      type="text"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
-                      placeholder="e.g. 123456"
-                      maxLength={6}
-                      required
-                      className="w-full rounded-xl border border-[#d8c4a3] bg-white py-2.5 pl-10 pr-4 text-sm font-bold text-[#173247] tracking-widest placeholder:normal-case placeholder:tracking-normal placeholder:font-normal placeholder:text-[#94a3b8] focus:border-[#e86f18] focus:outline-none focus:ring-2 focus:ring-[#e86f18]/20"
-                    />
-                  </div>
-                </div>
-              )}
-
               {/* Submit Action Button */}
               <button
                 type="submit"
@@ -553,8 +473,8 @@ export function UserAuthModal() {
                     : authMode === "register"
                     ? "Create Account"
                     : authMode === "forgot"
-                    ? "Send Reset Code"
-                    : "Update Password"}
+                    ? "Send Reset Email"
+                    : "Sign In"}
                 </span>
                 <ArrowRight className="h-4 w-4" />
               </button>
