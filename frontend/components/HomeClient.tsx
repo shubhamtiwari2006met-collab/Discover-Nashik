@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Navigation, MapPin, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { Navigation, MapPin, Sparkles, ArrowRight } from "lucide-react";
 import { Filters } from "@/components/Filters";
 import { PlaceCard, Place } from "@/components/PlaceCard";
 import { PlaceDetailModal } from "@/components/PlaceDetailModal";
@@ -17,7 +18,7 @@ export function HomeClient({ initialPlaces }: HomeClientProps) {
   const router = useRouter();
   const { t } = useTranslation();
   const [places, setPlaces] = useState<Place[]>(initialPlaces);
-  const [searchQuery, setSearchQuery] = useState("");
+
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [locationStatus, setLocationStatus] = useState<"idle" | "loading" | "error">("idle");
   const [selectedModalPlace, setSelectedModalPlace] = useState<Place | null>(null);
@@ -61,42 +62,27 @@ export function HomeClient({ initialPlaces }: HomeClientProps) {
             {/* Restricted to ~50-55% max width on left so temples and ghats on right side are prominently visible */}
             <div className="w-full max-w-[78%] sm:max-w-[58%] md:max-w-[52%] lg:max-w-[48%] text-left">
               <p className="mb-1 sm:mb-1.5 text-[9px] sm:text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#FFE082] drop-shadow-[0_2px_8px_rgba(0,0,0,1)]">
-                {t("Kumbh Mela 2027 · The river remembers")}
+                {t("Kumbh Mela 2027")}
               </p>
 
-              <h1 className="font-display mb-1.5 sm:mb-2.5 text-xl sm:text-3xl md:text-4xl font-extrabold leading-[1.12] text-white drop-shadow-[0_4px_16px_rgba(0,0,0,1)]">
-                {t("A sacred journey")}{" "}
+              <h1 className="font-display mb-1.5 sm:mb-2.5 text-4xl sm:text-6xl md:text-7xl font-extrabold leading-[1.12] text-white drop-shadow-[0_4px_16px_rgba(0,0,0,1)]">
+                {t("A sacred journey")}<br />
                 <span className="text-[#FFE082] drop-shadow-[0_3px_10px_rgba(0,0,0,1)]">{t("begins in Nashik")}</span>
               </h1>
 
               <p className="mb-3 sm:mb-4 text-[11px] sm:text-xs md:text-sm font-semibold leading-relaxed text-white drop-shadow-[0_2px_8px_rgba(0,0,0,1)]">
-                {t("Plan your Kumbh 2027 pilgrimage, then stay for the temples, vineyards, trails and stories that make Nashik timeless.")}
+                {t("Your digital companion for a safer,")}<br />
+                {t("smoother pilgrimage.")}
               </p>
 
-              {/* Compact Search Bar */}
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const q = searchQuery.trim();
-                  window.location.href = q ? `/search?query=${encodeURIComponent(q)}` : "/search";
-                }}
-                className="flex w-full items-center overflow-hidden rounded-full border border-white/40 bg-white/95 px-2.5 py-1 sm:px-3.5 sm:py-1.5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] backdrop-blur-md gap-1 sm:gap-2"
+              {/* Explore Kumbh 2027 CTA */}
+              <Link
+                href="/kumbh"
+                className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#e86f18] to-[#f5ad45] px-5 py-2.5 sm:px-7 sm:py-3 text-xs sm:text-sm font-bold text-white shadow-[0_8px_24px_rgba(232,111,24,0.4)] transition-all hover:scale-[1.03] active:scale-95 border border-white/20"
               >
-                <Search className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[#667883] ml-1 shrink-0" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={t("Search places, temples, events...")}
-                  className="flex-1 min-w-0 bg-transparent text-[#173247] placeholder-[#667883] py-0.5 sm:py-1 outline-none text-[11px] sm:text-xs"
-                />
-                <button
-                  type="submit"
-                  className="rounded-full bg-[#e86f18] px-2.5 py-1 sm:px-3.5 sm:py-1.5 text-[11px] sm:text-xs font-bold text-white transition-all hover:bg-[#c9580f] shrink-0 shadow-sm"
-                >
-                  <span>{t("Search")}</span>
-                </button>
-              </form>
+                <span>{t("Explore Kumbh 2027")}</span>
+                <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 transition-transform group-hover:translate-x-0.5" />
+              </Link>
 
               {/* Quick Actions */}
               <div className="flex flex-wrap items-center justify-start gap-1 sm:gap-2 mt-2.5 sm:mt-3.5">
