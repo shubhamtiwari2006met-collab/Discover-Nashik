@@ -19,6 +19,8 @@ function LoginContent() {
   const requestedRole = searchParams.get("role");
   const role: LoginRole = requestedRole === "business" ? "business" : "visitor";
   const requestedMode = searchParams.get("mode");
+  const isMongoPasswordReset = searchParams.get("source") === "mongodb";
+  const mongoResetToken = searchParams.get("token") || "";
   const [mode, setMode] = useState<AuthMode>(requestedMode === "reset" ? "reset" : "signIn");
 
   useEffect(() => {
@@ -28,6 +30,8 @@ function LoginContent() {
   }, [requestedRole]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [mongoResetCompleted, setMongoResetCompleted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -134,6 +138,7 @@ function LoginContent() {
   // Clear error/message on mode change but keep email for convenience
   useEffect(() => {
     setPassword("");
+    setConfirmPassword("");
     setError("");
     setMessage("");
   }, [mode]);
@@ -148,9 +153,32 @@ function LoginContent() {
 
     try {
       if (mode === "reset") {
-        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/login?mode=reset` });
-        if (resetError) throw resetError;
-        setMessage("Check your email for a password reset link.");
+        if (isMongoPasswordReset) {
+          if (!mongoResetToken) throw new Error("This password reset link is invalid or incomplete. Request a new link.");
+          if (password.length < 6) throw new Error("Password must be at least 6 characters long.");
+          if (password !== confirmPassword) throw new Error("The passwords do not match.");
+
+          const response = await fetch("/api/auth/reset-password", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ resetToken: mongoResetToken, newPassword: password }),
+          });
+          const result = await response.json();
+          if (!response.ok || !result.success) {
+            throw new Error(result.message || "Failed to reset password.");
+          }
+
+          window.history.replaceState({}, "", "/login?mode=reset&source=mongodb");
+          setMongoResetCompleted(true);
+          setPassword("");
+          setConfirmPassword("");
+          setMessage(result.message || "Password updated successfully. You can now sign in.");
+        } else {
+          const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/login?mode=reset` });
+          if (resetError) throw resetError;
+          setMessage("Check your email for a password reset link.");
+        }
       } else if (mode === "signUp") {
         const { error: signUpError } = await supabase.auth.signUp({ email: email.trim(), password, options: { emailRedirectTo: `${window.location.origin}/login` } });
         if (signUpError) throw signUpError;
@@ -395,36 +423,53 @@ function LoginContent() {
 
         {mode !== "reset" && <button type="button" onClick={handleGoogleLogin} disabled={loading} className="mb-5 w-full rounded-xl border border-[#d8c4a3] bg-white px-4 py-3 font-semibold text-[#173247] hover:bg-orange-50 disabled:opacity-60">{t("Continue with Google")}</button>}
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-4" autoComplete="on">
-          <label className="block text-sm font-semibold text-[#173247]">
-            {t("Email Address")}
-            <input
-              type="email"
-              required
-              name={emailFieldName}
-              autoComplete="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="mt-1.5 w-full rounded-xl border border-[#d8c4a3] bg-white px-4 py-3 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
-            />
-          </label>
-          {mode !== "reset" && (
+          {!(mode === "reset" && isMongoPasswordReset) && (
             <label className="block text-sm font-semibold text-[#173247]">
-              {t("Password")}
+              {t("Email Address")}
+              <input
+                type="email"
+                required
+                name={emailFieldName}
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                className="mt-1.5 w-full rounded-xl border border-[#d8c4a3] bg-white px-4 py-3 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
+              />
+            </label>
+          )}
+          {(mode !== "reset" || isMongoPasswordReset) && !mongoResetCompleted && (
+            <label className="block text-sm font-semibold text-[#173247]">
+              {mode === "reset" ? t("New Password") : t("Password")}
               <input
                 type="password"
                 required
                 minLength={6}
                 name={passwordFieldName}
-                autoComplete={mode === "signUp" ? "new-password" : "current-password"}
+                autoComplete={mode === "signUp" || (mode === "reset" && isMongoPasswordReset) ? "new-password" : "current-password"}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 className="mt-1.5 w-full rounded-xl border border-[#d8c4a3] bg-white px-4 py-3 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
               />
             </label>
           )}
+          {mode === "reset" && isMongoPasswordReset && !mongoResetCompleted && (
+            <label className="block text-sm font-semibold text-[#173247]">
+              {t("Confirm New Password")}
+              <input
+                type="password"
+                required
+                minLength={6}
+                name="confirm-new-password"
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                className="mt-1.5 w-full rounded-xl border border-[#d8c4a3] bg-white px-4 py-3 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
+              />
+            </label>
+          )}
           {error && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{t(error)}</p>}
           {message && <p role="status" className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{t(message)}</p>}
-          <button type="submit" disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#e86f18] px-4 py-3 font-bold text-white hover:bg-[#c9580f] disabled:opacity-60">{loading && <Loader2 className="h-4 w-4 animate-spin" />}{mode === "signUp" ? t("Create account") : mode === "reset" ? t("Send reset email") : t("Sign in")}</button>
+          {!mongoResetCompleted && <button type="submit" disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#e86f18] px-4 py-3 font-bold text-white hover:bg-[#c9580f] disabled:opacity-60">{loading && <Loader2 className="h-4 w-4 animate-spin" />}{mode === "signUp" ? t("Create account") : mode === "reset" ? isMongoPasswordReset ? t("Update Password") : t("Send reset email") : t("Sign in")}</button>}
         </form>
         <div className="mt-6 flex flex-wrap justify-center gap-4 text-sm text-[#c9580f]">
           {mode === "signIn" && <button type="button" onClick={() => setMode("reset")} className="font-semibold hover:underline">{t("Forgot password?")}</button>}

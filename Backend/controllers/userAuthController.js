@@ -1,5 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const { Resend } = require('resend');
 const AppUser = require('../models/AppUser');
 const BlockedIdentifier = require('../models/BlockedIdentifier');
 
@@ -38,6 +40,14 @@ function normalizePlatformId(value) {
     .replace(/[\u2010-\u2015\u2212]/g, '-')
     .replace(/\s+/g, '')
     .toUpperCase();
+}
+
+function safeErrorMessage(error, secrets = []) {
+  let message = String(error?.message || 'Unknown provider error');
+  for (const secret of secrets) {
+    if (secret) message = message.split(secret).join('[redacted]');
+  }
+  return message;
 }
 
 // Helper: Get Cookie Options
@@ -254,38 +264,145 @@ exports.login = async (req, res) => {
 
 // Forgot Password Controller
 exports.forgotPassword = async (req, res) => {
+  const genericResponse = {
+    success: true,
+    message: 'If an account matches that email address, a password reset email will be sent.'
+  };
+  let pendingReset = null;
+
   try {
-    const { identifier } = req.body;
-    if (!identifier || typeof identifier !== 'string') {
-      return res.status(400).json({ message: 'Email, mobile number, or Discover Nashik ID is required' });
+    const emailInput = typeof req.body?.email === 'string'
+      ? req.body.email
+      : req.body?.identifier;
+    const cleanEmail = normalizeEmail(emailInput);
+    if (!cleanEmail) {
+      return res.status(400).json({ message: 'A valid email address is required' });
     }
 
-    const inputId = identifier.trim();
-    const cleanEmail = normalizeEmail(inputId);
-    const cleanMobile = normalizeMobile(inputId);
-    const isPlatformId = /^DN-[2-9A-Z]{7}$/i.test(inputId);
+    const missingConfiguration = ['RESEND_API_KEY', 'EMAIL_FROM', 'FRONTEND_URL']
+      .filter((name) => !process.env[name]?.trim());
+    if (missingConfiguration.length > 0) {
+      console.error('Password reset email configuration is incomplete', {
+        missingVariables: missingConfiguration
+      });
+      return res.status(503).json({ message: 'Password reset email is temporarily unavailable. Please try again later.' });
+    }
 
-    const query = [];
-    if (cleanEmail) query.push({ email: cleanEmail });
-    if (cleanMobile) query.push({ mobile: cleanMobile });
-    if (isPlatformId) query.push({ platformId: inputId.toUpperCase() });
+    let frontendUrl;
+    try {
+      frontendUrl = new URL(process.env.FRONTEND_URL);
+      if (!['http:', 'https:'].includes(frontendUrl.protocol) ||
+          (process.env.NODE_ENV === 'production' && frontendUrl.protocol !== 'https:')) {
+        throw new Error('FRONTEND_URL must use HTTPS in production');
+      }
+    } catch (error) {
+      console.error('Password reset email configuration has an invalid FRONTEND_URL', {
+        errorType: error.name,
+        errorMessage: error.message
+      });
+      return res.status(503).json({ message: 'Password reset email is temporarily unavailable. Please try again later.' });
+    }
 
-    if (query.length > 0) {
-      const user = await AppUser.findOne({ $or: query });
-      if (user && user.isActive) {
-        const resetOtp = Math.floor(100000 + Math.random() * 900000).toString();
-        const key = user.email || user.mobile || user.platformId;
-        otpStore.set(`reset_${key}`, { otp: resetOtp, userId: user._id.toString(), expiresAt: Date.now() + 15 * 60 * 1000 });
+    const user = await AppUser.findOne({ email: cleanEmail, isActive: true });
+    if (!user) {
+      return res.status(200).json(genericResponse);
+    }
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    pendingReset = { userId: user._id, tokenHash: resetTokenHash };
+
+    user.resetPasswordToken = resetTokenHash;
+    user.resetPasswordExpires = expiresAt;
+    await user.save();
+
+    const resetUrl = new URL('/login', frontendUrl);
+    resetUrl.searchParams.set('mode', 'reset');
+    resetUrl.searchParams.set('source', 'mongodb');
+    resetUrl.searchParams.set('token', resetToken);
+
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    let sendResult;
+    try {
+      sendResult = await resend.emails.send({
+        from: process.env.EMAIL_FROM.trim(),
+        to: cleanEmail,
+        subject: 'Reset your Discover Nashik password',
+        text: [
+          'A password reset was requested for your Discover Nashik account.',
+          '',
+          `Reset your password: ${resetUrl.toString()}`,
+          '',
+          'This link expires in 15 minutes and can only be used once.',
+          'If you did not request this reset, you can ignore this email.'
+        ].join('\n'),
+        html: `<div style="margin:0;background:#f8f2e8;padding:32px 16px;font-family:Arial,sans-serif;color:#173247"><div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e7d7bd;border-radius:16px;padding:32px"><p style="margin:0 0 8px;color:#e86f18;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase">Discover Nashik</p><h1 style="margin:0 0 20px;font-size:24px">Reset your password</h1><p style="line-height:1.6">A password reset was requested for your Discover Nashik account. Use the button below to choose a new password.</p><p style="margin:28px 0"><a href="${resetUrl.toString()}" style="display:inline-block;border-radius:999px;background:#e86f18;padding:13px 22px;color:#ffffff;font-weight:700;text-decoration:none">Reset Password</a></p><p style="font-size:13px;line-height:1.6">This link expires in 15 minutes and can only be used once. If the button does not work, copy this URL into your browser:</p><p style="overflow-wrap:anywhere;font-size:12px"><a href="${resetUrl.toString()}" style="color:#c9580f">${resetUrl.toString()}</a></p><p style="margin-top:24px;color:#667883;font-size:13px;line-height:1.6">If you did not request a password reset, you can safely ignore this email. Your password will not change.</p></div></div>`
+      });
+    } catch (error) {
+      console.error('Resend password reset email request failed', {
+        provider: 'Resend',
+        errorType: error?.name || typeof error,
+        errorMessage: safeErrorMessage(error, [resetToken, process.env.RESEND_API_KEY])
+      });
+      try {
+        await AppUser.updateOne(
+          { _id: pendingReset.userId, resetPasswordToken: pendingReset.tokenHash },
+          { $set: { resetPasswordToken: null, resetPasswordExpires: null } }
+        );
+        pendingReset = null;
+      } catch (cleanupError) {
+        console.error('Failed to invalidate reset token after email delivery failure', {
+          errorType: cleanupError?.name || typeof cleanupError,
+          errorMessage: cleanupError?.message || 'Unknown cleanup error'
+        });
+      }
+      return res.status(502).json({ message: 'Unable to send password reset email. Please try again later.' });
+    }
+
+    if (sendResult?.error || !sendResult?.data?.id) {
+      const providerError = sendResult?.error || new Error('Resend did not confirm email acceptance');
+      console.error('Resend rejected password reset email request', {
+        provider: 'Resend',
+        errorType: providerError?.name || typeof providerError,
+        errorMessage: safeErrorMessage(providerError, [resetToken, process.env.RESEND_API_KEY]),
+        statusCode: providerError?.statusCode
+      });
+      try {
+        await AppUser.updateOne(
+          { _id: pendingReset.userId, resetPasswordToken: pendingReset.tokenHash },
+          { $set: { resetPasswordToken: null, resetPasswordExpires: null } }
+        );
+        pendingReset = null;
+      } catch (cleanupError) {
+        console.error('Failed to invalidate reset token after email delivery failure', {
+          errorType: cleanupError?.name || typeof cleanupError,
+          errorMessage: cleanupError?.message || 'Unknown cleanup error'
+        });
+      }
+      return res.status(502).json({ message: 'Unable to send password reset email. Please try again later.' });
+    }
+
+    pendingReset = null;
+    return res.status(200).json(genericResponse);
+  } catch (error) {
+    console.error('Forgot password error:', {
+      errorType: error?.name || typeof error,
+      errorMessage: error?.message || 'Unknown error'
+    });
+    if (pendingReset) {
+      try {
+        await AppUser.updateOne(
+          { _id: pendingReset.userId, resetPasswordToken: pendingReset.tokenHash },
+          { $set: { resetPasswordToken: null, resetPasswordExpires: null } }
+        );
+      } catch (cleanupError) {
+        console.error('Failed to invalidate reset token after request failure', {
+          errorType: cleanupError?.name || typeof cleanupError,
+          errorMessage: cleanupError?.message || 'Unknown cleanup error'
+        });
       }
     }
-
-    // Always return generic response to prevent account enumeration
-    return res.status(200).json({
-      success: true,
-      message: 'If an account matches the information provided, instructions to reset your password have been issued.'
-    });
-  } catch (error) {
-    console.error('Forgot password error:', error);
     return res.status(500).json({ message: 'Failed to process request' });
   }
 };
@@ -293,57 +410,47 @@ exports.forgotPassword = async (req, res) => {
 // Reset Password Controller
 exports.resetPassword = async (req, res) => {
   try {
-    const { identifier, resetToken, otp, newPassword } = req.body;
-    const tokenOrOtp = resetToken || otp;
+    const { resetToken, newPassword } = req.body;
 
-    if (!identifier || !tokenOrOtp || !newPassword) {
-      return res.status(400).json({ message: 'Identifier, verification code, and new password are required' });
+    if (typeof resetToken !== 'string' || !/^[a-f0-9]{64}$/i.test(resetToken) || !newPassword) {
+      return res.status(400).json({ message: 'Invalid or expired password reset link' });
     }
 
     if (typeof newPassword !== 'string' || newPassword.length < 6) {
       return res.status(400).json({ message: 'Password must be at least 6 characters long' });
     }
 
-    const inputId = identifier.trim();
-    const cleanEmail = normalizeEmail(inputId);
-    const cleanMobile = normalizeMobile(inputId);
-    const isPlatformId = /^DN-[2-9A-Z]{7}$/i.test(inputId);
+    const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    const user = await AppUser.findOneAndUpdate(
+      {
+        resetPasswordToken: resetTokenHash,
+        resetPasswordExpires: { $gt: new Date() },
+        isActive: true
+      },
+      {
+        $set: {
+          passwordHash,
+          resetPasswordToken: null,
+          resetPasswordExpires: null
+        }
+      },
+      { new: true, runValidators: true }
+    );
 
-    const query = [];
-    if (cleanEmail) query.push({ email: cleanEmail });
-    if (cleanMobile) query.push({ mobile: cleanMobile });
-    if (isPlatformId) query.push({ platformId: inputId.toUpperCase() });
-
-    if (query.length === 0) {
-      return res.status(400).json({ message: 'Invalid or expired verification code' });
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid or expired password reset link' });
     }
-
-    const user = await AppUser.findOne({ $or: query }).select('+passwordHash +resetPasswordToken +resetPasswordExpires');
-    if (!user || !user.isActive) {
-      return res.status(400).json({ message: 'Invalid or expired verification code' });
-    }
-
-    const key = user.email || user.mobile || user.platformId;
-    const storedReset = otpStore.get(`reset_${key}`);
-    const isTestOtp = process.env.NODE_ENV !== 'production' && tokenOrOtp === '123456';
-
-    if (!isTestOtp && (!storedReset || storedReset.otp !== tokenOrOtp || Date.now() > storedReset.expiresAt)) {
-      return res.status(400).json({ message: 'Invalid or expired verification code' });
-    }
-
-    otpStore.delete(`reset_${key}`);
-
-    user.passwordHash = await bcrypt.hash(newPassword, 10);
-    user.resetPasswordToken = null;
-    user.resetPasswordExpires = null;
-    await user.save();
 
     return res.status(200).json({
       success: true,
       message: 'Your password has been updated successfully. You can now login with your new password.'
     });
   } catch (error) {
-    console.error('Reset password error:', error);
+    console.error('Reset password error:', {
+      errorType: error?.name || typeof error,
+      errorMessage: error?.message || 'Unknown error'
+    });
     return res.status(500).json({ message: 'Failed to reset password' });
   }
 };
