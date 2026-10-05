@@ -310,7 +310,7 @@ export function NavBar() {
             </div>
 
             {/* Mobile User Auth Button */}
-            {isAuthenticated && user ? (
+            {isAuthenticated && user && (
               <div className="rounded-xl border border-[#e7b06d] bg-[#fff7ed] p-3">
                 <div className="flex items-center gap-3 pb-2 border-b border-[#f1d9b6] mb-2">
                   <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e86f18] text-white text-sm font-bold">
@@ -333,18 +333,6 @@ export function NavBar() {
                   <span>{t("Sign Out")}</span>
                 </button>
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setIsOpen(false);
-                  openAuthModal();
-                }}
-                className="relative flex items-center justify-center gap-2 rounded-xl border border-[#e86f18] bg-[#e86f18] px-4 py-3 text-base font-bold text-white shadow-sm hover:bg-[#c9580f]"
-              >
-                <UserIcon className="h-5 w-5" />
-                <span>{t("Login / Sign Up")}</span>
-              </button>
             )}
 
             <Link
