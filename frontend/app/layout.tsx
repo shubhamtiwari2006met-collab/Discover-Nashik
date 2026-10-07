@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { Inter, Cormorant_Garamond } from "next/font/google";
+import { isLanguage } from "@/lib/locale";
 import "./globals.css";
 
 const inter = Inter({
@@ -77,13 +79,17 @@ const websiteJsonLd = {
   ]
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const languageValue = cookieStore.get("discover-nashik-language")?.value;
+  const language = isLanguage(languageValue) ? languageValue : "en";
+
   return (
-    <html lang="en" className={`${inter.variable} ${cormorant.variable} h-full antialiased`}>
+    <html lang={language} className={`${inter.variable} ${cormorant.variable} h-full antialiased`}>
       <head>
         <script
           type="application/ld+json"
@@ -91,7 +97,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col bg-[#f8f2e8] text-[#192f42] selection:bg-orange-500/30">
-        <I18nProvider>
+        <I18nProvider initialLanguage={language}>
           <UserAuthProvider>
             <NavBar />
             <main className="flex-1 pt-16">{children}</main>

@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/utils/supabase/server";
 import { normalizeImageUrl, parsePhotoList, DEFAULT_FALLBACK_IMAGE } from "@/lib/imageUrl";
+import { isLanguage } from "@/lib/locale";
+import { isLocalizedContent, localizeFields, type LocalizedContent, type TranslationStatus } from "@/lib/localizedContent";
+import { generateVisitorContentTranslations } from "@/lib/serverContentTranslation";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -35,7 +37,37 @@ export type SavedPlace = {
   contact_name?: string;
   admin_remarks?: string;
   isBusinessApplication?: boolean;
+  localizedContent?: LocalizedContent;
+  translationStatus?: TranslationStatus;
 };
+
+type BusinessRegistrationRow = {
+  id: string;
+  business_name: string;
+  category: string;
+  subcategory: string | null;
+  contact_name: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string;
+  city_area: string | null;
+  description: string | null;
+  opening_time: string | null;
+  closing_time: string | null;
+  working_days: string | null;
+  website_url: string | null;
+  photos: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  verification_status: string;
+  admin_remarks: string | null;
+  localized_content?: LocalizedContent | null;
+  translation_status?: TranslationStatus | null;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
 
 import { places as staticPlaces } from "@/lib/places";
 
@@ -94,6 +126,25 @@ async function requireAdminAccess() {
   return { user: { role, id: session.user.id, email: session.user.email } };
 }
 
+async function generatePlaceTranslations(place: SavedPlace): Promise<void> {
+  const source: Record<string, string> = {};
+  for (const field of ["name", "category", "location", "description", "heritage", "tagline", "famousThing"] as const) {
+    const value = place[field];
+    if (typeof value === "string" && value.trim()) source[field] = value.trim().slice(0, 4000);
+  }
+  try {
+    place.localizedContent = await generateVisitorContentTranslations(source);
+    place.translationStatus = "needs_review";
+  } catch (error) {
+    console.error(`Could not generate place translations for ${place._id}.`, error);
+    place.translationStatus = "failed";
+  }
+}
+
+function translationColumnsAreMissing(message: string): boolean {
+  return message.includes("localized_content") || message.includes("translation_status");
+}
+
 function normalizePlace(payload: unknown): SavedPlace | null {
   if (!payload || typeof payload !== "object") return null;
   const data = payload as Record<string, unknown>;
@@ -140,10 +191,18 @@ function normalizePlace(payload: unknown): SavedPlace | null {
     closingTime: data.closingTime ? String(data.closingTime) : undefined,
     workingDays: data.workingDays ? String(data.workingDays) : undefined,
     subcategory: data.subcategory ? String(data.subcategory) : undefined,
+    localizedContent: data.localizedContent && typeof data.localizedContent === "object"
+      ? data.localizedContent as LocalizedContent
+      : undefined,
+    translationStatus: data.translationStatus === "complete" || data.translationStatus === "failed" || data.translationStatus === "needs_review"
+      ? data.translationStatus
+      : "pending",
   };
 }
 
 export async function GET() {
+  const localeValue = (await cookies()).get("discover-nashik-language")?.value;
+  const locale = isLanguage(localeValue) ? localeValue : "en";
   let registeredPlaces: SavedPlace[] = [];
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -154,17 +213,31 @@ export async function GET() {
       const supabase = createSupabaseClient(supabaseUrl, supabaseKey, {
         auth: { persistSession: false, autoRefreshToken: false },
       });
-      const { data: businesses, error: dbError } = await supabase
+      let businesses: BusinessRegistrationRow[] | null;
+      let dbError: { message: string } | null;
+      const localizedQuery = await supabase
         .from("business_registrations")
-        .select("id, business_name, category, subcategory, contact_name, phone, email, address, city_area, description, opening_time, closing_time, working_days, website_url, photos, latitude, longitude, verification_status, admin_remarks")
+        .select("id, business_name, category, subcategory, contact_name, phone, email, address, city_area, description, opening_time, closing_time, working_days, website_url, photos, latitude, longitude, verification_status, admin_remarks, localized_content, translation_status")
         .eq("verification_status", "approved");
+      businesses = localizedQuery.data as unknown as BusinessRegistrationRow[] | null;
+      dbError = localizedQuery.error;
+
+      if (dbError?.message.includes("localized_content") || dbError?.message.includes("translation_status")) {
+        console.warn("[GET /api/places] Localized columns are not installed; serving existing business data.");
+        const legacyQuery = await supabase
+          .from("business_registrations")
+          .select("id, business_name, category, subcategory, contact_name, phone, email, address, city_area, description, opening_time, closing_time, working_days, website_url, photos, latitude, longitude, verification_status, admin_remarks")
+          .eq("verification_status", "approved");
+        businesses = legacyQuery.data as unknown as BusinessRegistrationRow[] | null;
+        dbError = legacyQuery.error;
+      }
 
       if (dbError) {
         console.error("[GET /api/places] Supabase query error:", dbError.message);
       }
 
       if (businesses && businesses.length > 0) {
-        registeredPlaces = businesses.map((b: any) => {
+        registeredPlaces = businesses.map((b) => {
           const allPhotos = parsePhotoList(b.photos);
           const firstPhoto = allPhotos[0] || DEFAULT_FALLBACK_IMAGE;
           const isAdminPlace = b.contact_name === "Admin Added" || b.admin_remarks === "Added directly by Admin";
@@ -189,9 +262,11 @@ export async function GET() {
             closingTime: b.closing_time || undefined,
             workingDays: b.working_days || undefined,
             subcategory: b.subcategory || undefined,
-            contact_name: b.contact_name,
-            admin_remarks: b.admin_remarks,
+            contact_name: b.contact_name || undefined,
+            admin_remarks: b.admin_remarks || undefined,
             isBusinessApplication: !isAdminPlace,
+            localizedContent: b.localized_content || undefined,
+            translationStatus: b.translation_status || "pending",
           };
         });
       }
@@ -205,24 +280,40 @@ export async function GET() {
   try {
     const mongoRes = await fetch(`${BACKEND_URL}/api/places`, { cache: "no-store" });
     if (mongoRes.ok) {
-      const data = await mongoRes.json();
+      const data: unknown = await mongoRes.json();
       if (Array.isArray(data)) {
-        mongoPlaces = data.map((item: any) => {
-          const pid = String(item._id || item.id);
+        mongoPlaces = data.flatMap((candidate) => {
+          if (!isRecord(candidate)) return [];
+          const item = candidate;
+          const pid = String(item._id || item.id || "");
+          const name = typeof item.name === "string" ? item.name : "";
+          const category = typeof item.category === "string" ? item.category : "";
+          const location = typeof item.location === "string" ? item.location : "";
+          const description = typeof item.description === "string" ? item.description : "";
+          if (!pid || !name || !category || !location || !description) {
+            console.warn("[GET /api/places] Skipping malformed MongoDB place record.");
+            return [];
+          }
           return {
             _id: pid,
             id: pid,
-            name: item.name,
-            category: item.category,
-            location: item.location,
-            description: item.description,
-            tagline: item.tagline || item.subcategory,
-            famousThing: item.famousThing,
-            image: item.image,
-            images: item.images,
-            rating: item.rating || 4.8,
-            phone: item.phone,
-            email: item.email,
+            name,
+            category,
+            location,
+            description,
+            tagline: typeof item.tagline === "string" ? item.tagline : typeof item.subcategory === "string" ? item.subcategory : undefined,
+            famousThing: typeof item.famousThing === "string" ? item.famousThing : undefined,
+            image: typeof item.image === "string" ? item.image : undefined,
+            images: Array.isArray(item.images) && item.images.every((image) => typeof image === "string")
+              ? item.images
+              : undefined,
+            rating: typeof item.rating === "number" ? item.rating : 4.8,
+            phone: typeof item.phone === "string" ? item.phone : undefined,
+            email: typeof item.email === "string" ? item.email : undefined,
+            localizedContent: isLocalizedContent(item.localizedContent) ? item.localizedContent : undefined,
+            translationStatus: item.translationStatus === "complete" || item.translationStatus === "failed" || item.translationStatus === "needs_review"
+              ? item.translationStatus
+              : "pending",
           };
         });
       }
@@ -261,7 +352,7 @@ export async function GET() {
     return true;
   });
 
-  return NextResponse.json(finalPlaces, {
+  return NextResponse.json(finalPlaces.map((place) => localizeFields(place, place.localizedContent, locale)), {
     headers: {
       "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
     },
@@ -278,6 +369,18 @@ export async function PUT(request: Request) {
 
     if (!normalized || !id) {
       return NextResponse.json({ error: "Place id and required fields are required" }, { status: 400 });
+    }
+
+    const previous = editedPlacesMap.get(id) || inMemoryPlaces.find((place) => place._id === id);
+    if (normalized.localizedContent) {
+      normalized.translationStatus = "needs_review";
+    } else if (previous?.localizedContent) {
+      normalized.localizedContent = previous.localizedContent;
+      const sourceChanged = ["name", "category", "location", "description", "heritage", "tagline", "famousThing"]
+        .some((field) => previous[field as keyof SavedPlace] !== normalized[field as keyof SavedPlace]);
+      normalized.translationStatus = sourceChanged ? "needs_review" : previous.translationStatus;
+    } else {
+      await generatePlaceTranslations(normalized);
     }
 
     // Unmark from deleted set if re-edited
@@ -297,7 +400,7 @@ export async function PUT(request: Request) {
     try {
       const cookieStore = await cookies();
       const supabase = createClient(cookieStore);
-      await supabase.from("business_registrations").update({
+      const baseUpdate = {
         business_name: normalized.name,
         category: normalized.category,
         address: normalized.location,
@@ -305,7 +408,22 @@ export async function PUT(request: Request) {
         description: normalized.description,
         photos: (normalized.images || [normalized.image]).filter(Boolean).join("\n"),
         updated_at: new Date().toISOString(),
+      };
+      const translationUpdate = {
+        localized_content: normalized.localizedContent || {},
+        translation_status: normalized.translationStatus || "failed",
+      };
+      let { error } = await supabase.from("business_registrations").update({
+        ...baseUpdate,
+        ...translationUpdate,
       }).eq("id", id);
+      if (error && translationColumnsAreMissing(error.message)) {
+        console.warn("Localized content columns are missing; retrying place update with legacy columns.");
+        ({ error } = await supabase.from("business_registrations").update(baseUpdate).eq("id", id));
+        normalized.localizedContent = undefined;
+        normalized.translationStatus = "failed";
+      }
+      if (error) console.error("Supabase update error:", error.message);
     } catch (e) {
       console.error("Supabase update error:", e);
     }
@@ -376,6 +494,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing required place fields (Name, Category, Location, Description)" }, { status: 400 });
     }
 
+    if (!normalized.localizedContent) await generatePlaceTranslations(normalized);
+
     // Save to Supabase business_registrations as approved so it permanently shows for all users
     try {
       const cookieStore = await cookies();
@@ -384,7 +504,7 @@ export async function POST(request: Request) {
         ? normalized.images.join("\n")
         : (normalized.image || "");
 
-      const { data: newBus, error: dbError } = await supabase.from("business_registrations").insert([{
+      const baseInsert = {
         owner_id: access.user!.id,
         business_name: normalized.name,
         category: normalized.category,
@@ -398,7 +518,20 @@ export async function POST(request: Request) {
         photos: photoStr,
         verification_status: "approved",
         admin_remarks: "Added directly by Admin",
+      };
+      let { data: newBus, error: dbError } = await supabase.from("business_registrations").insert([{
+        ...baseInsert,
+        localized_content: normalized.localizedContent || {},
+        translation_status: normalized.translationStatus || "failed",
       }]).select().single();
+
+      if (dbError && translationColumnsAreMissing(dbError.message)) {
+        console.warn("Localized content columns are missing; retrying place creation with legacy columns.");
+        ({ data: newBus, error: dbError } = await supabase.from("business_registrations").insert([baseInsert]).select().single());
+        normalized.localizedContent = undefined;
+        normalized.translationStatus = "failed";
+      }
+      if (dbError) console.error("Failed to insert place to Supabase:", dbError.message);
 
       if (!dbError && newBus) {
         normalized._id = newBus.id;

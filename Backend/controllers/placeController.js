@@ -14,6 +14,8 @@ function getPermittedPlaceFields(body) {
     'location',
     'description',
     'heritage',
+    'localizedContent',
+    'translationStatus',
     'image',
     'images',
     'rating',

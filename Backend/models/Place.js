@@ -35,6 +35,15 @@ const placeSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  localizedContent: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
+  },
+  translationStatus: {
+    type: String,
+    enum: ['complete', 'pending', 'failed', 'needs_review'],
+    default: 'pending'
+  },
   image: {
     type: String,
     default: ''

@@ -141,6 +141,9 @@ CREATE TABLE IF NOT EXISTS public.business_registrations (
                         )),
   rejection_reason    TEXT,
   admin_remarks       TEXT,
+  localized_content   JSONB         NOT NULL DEFAULT '{}'::jsonb,
+  translation_status  TEXT          NOT NULL DEFAULT 'pending'
+                        CHECK (translation_status IN ('complete', 'pending', 'failed', 'needs_review')),
   created_at          TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
   updated_at          TIMESTAMPTZ   NOT NULL DEFAULT NOW()
 );
@@ -155,8 +158,16 @@ ALTER TABLE public.business_registrations
   ADD COLUMN IF NOT EXISTS working_days      TEXT,
   ADD COLUMN IF NOT EXISTS website_url       TEXT,
   ADD COLUMN IF NOT EXISTS admin_remarks     TEXT,
+  ADD COLUMN IF NOT EXISTS localized_content JSONB NOT NULL DEFAULT '{}'::jsonb,
+  ADD COLUMN IF NOT EXISTS translation_status TEXT NOT NULL DEFAULT 'pending',
   ADD COLUMN IF NOT EXISTS latitude          DOUBLE PRECISION,
   ADD COLUMN IF NOT EXISTS longitude         DOUBLE PRECISION;
+
+ALTER TABLE public.business_registrations
+  DROP CONSTRAINT IF EXISTS business_registrations_translation_status_check;
+ALTER TABLE public.business_registrations
+  ADD CONSTRAINT business_registrations_translation_status_check
+  CHECK (translation_status IN ('complete', 'pending', 'failed', 'needs_review'));
 
 -- Ensure the CHECK constraint matches all valid statuses
 ALTER TABLE public.business_registrations

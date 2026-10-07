@@ -1,8 +1,7 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, useCallback, useMemo, startTransition } from "react";
-
-export type Language = "en" | "hi" | "mr";
+import { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
+import type { Language } from "@/lib/locale";
 
 const translations: Record<Language, Record<string, string>> = {
   en: {},
@@ -530,6 +529,79 @@ const translations: Record<Language, Record<string, string>> = {
     "Photo uploaded successfully": "फोटो सफलतापूर्वक अपलोड हो गया",
     "Option 1: Upload from Device": "विकल्प 1: डिवाइस से अपलोड करें",
     "Option 2: Image URL": "विकल्प 2: इमेज URL",
+    "Heritage": "विरासत",
+    "Optional": "वैकल्पिक",
+    "Attach a photo via camera, device, or web URL": "कैमरा, डिवाइस या वेब URL से फ़ोटो जोड़ें",
+    "Registration Not Submitted": "पंजीकरण जमा नहीं किया गया",
+    "You have not submitted your business registration application yet.": "आपने अभी तक अपने व्यवसाय पंजीकरण के लिए आवेदन जमा नहीं किया है।",
+    "Your registration was reviewed and requires updates before approval.": "आपके पंजीकरण की समीक्षा की गई है; स्वीकृति से पहले इसमें बदलाव आवश्यक हैं।",
+    "Your business registration is approved!": "आपका व्यवसाय पंजीकरण स्वीकृत हो गया है!",
+    "Account Deactivated": "खाता निष्क्रिय",
+    "Your business application is currently deactivated. Please contact support.": "आपका व्यवसाय आवेदन अभी निष्क्रिय है। कृपया सहायता टीम से संपर्क करें।",
+    "Not specified": "निर्दिष्ट नहीं",
+    "Not selected": "चयनित नहीं",
+    "Submission Date": "जमा करने की तारीख",
+    "Not submitted yet": "अभी जमा नहीं किया गया",
+    "Not provided": "प्रदान नहीं किया गया",
+    "Admin Remarks": "एडमिन की टिप्पणी",
+    "You must be logged in to upload images.": "चित्र अपलोड करने के लिए आपको लॉग इन करना होगा।",
+    "Please upload a business photo or provide an image URL.": "कृपया व्यवसाय की फ़ोटो अपलोड करें या चित्र का URL दें।",
+    "Business Photo": "व्यवसाय की फ़ोटो",
+    "Provide a photo of your business using camera, device, or web URL.": "कैमरे, डिवाइस या वेब URL से अपने व्यवसाय की फ़ोटो दें।",
+    "Coordinator": "समन्वयक",
+    "Keep flexible travel time for crowds and use public transport where possible.": "भीड़ को ध्यान में रखकर यात्रा के समय में लचीलापन रखें और जहाँ संभव हो सार्वजनिक परिवहन का उपयोग करें।",
+    "Back to Kumbh Guide": "कुंभ गाइड पर वापस जाएँ",
+    "Explore key spiritual sites, Ram Kund ghats, main bathing zones, parking areas, and emergency help desks verified for Kumbh Mela 2027 in Nashik and Trimbakeshwar.": "नासिक और त्र्यंबकेश्वर में कुंभ मेला 2027 के लिए सत्यापित प्रमुख तीर्थस्थलों, रामकुंड घाटों, स्नान क्षेत्रों, पार्किंग और आपातकालीन सहायता केंद्रों को देखें।",
+    "Back to Kumbh Mela 2027": "कुंभ मेला 2027 पर वापस जाएँ",
+    "Plan your route around Ram Kund, Panchavati, and the main bathing ghats.": "रामकुंड, पंचवटी और मुख्य स्नान घाटों के आसपास अपने मार्ग की योजना बनाएँ।",
+    "Save your stay early and follow official updates as the 2027 event approaches.": "अपने ठहरने की जगह पहले से तय करें और 2027 का आयोजन नज़दीक आने पर आधिकारिक अपडेट देखते रहें।",
+    "Report a lost person or item, or help someone by reporting something you found.": "किसी खोए हुए व्यक्ति या वस्तु की रिपोर्ट करें, या मिली हुई वस्तु की सूचना देकर किसी की मदद करें।",
+    "Nashik & Kumbh Heritage": "नासिक और कुंभ की विरासत",
+    "Explore the history, spirituality and stories of Nashik and Kumbh Mela.": "नासिक और कुंभ मेले के इतिहास, आध्यात्मिकता और कहानियों को जानें।",
+    "New Password": "नया पासवर्ड",
+    "Confirm New Password": "नए पासवर्ड की पुष्टि करें",
+    "Discover places around Nashik visually. Click on markers for details.": "नासिक के आसपास के स्थानों को मानचित्र पर देखें। विवरण के लिए चिह्नों पर क्लिक करें।",
+    "Photo URLs": "फ़ोटो URL",
+    "Up to 6 photos": "अधिकतम 6 फ़ोटो",
+    "Photo": "फ़ोटो",
+    "Primary": "मुख्य",
+    "Optional - Historical background, spiritual significance, legends": "वैकल्पिक - ऐतिहासिक पृष्ठभूमि, आध्यात्मिक महत्व और किंवदंतियाँ",
+    "Enter historical background, spiritual significance, local legends, or cultural importance...": "ऐतिहासिक पृष्ठभूमि, आध्यात्मिक महत्व, स्थानीय किंवदंतियाँ या सांस्कृतिक महत्व लिखें...",
+    "Business Details": "व्यवसाय का विवरण",
+    "Open": "खुला",
+    "Places Management": "स्थान प्रबंधन",
+    "Menu": "मेनू",
+    "Dates & Planning": "तारीखें और योजना",
+    "Heritage & Culture": "विरासत और संस्कृति",
+    "Add a Place": "स्थान जोड़ें",
+    "Your digital companion for a safer,": "सुरक्षित यात्रा के लिए आपका डिजिटल साथी,",
+    "smoother pilgrimage.": "ताकि तीर्थयात्रा अधिक सुगम हो।",
+    "Explore Kumbh 2027": "कुंभ 2027 देखें",
+    "Finding nearby...": "आस-पास खोजा जा रहा है...",
+    "Near Me": "मेरे आस-पास",
+    "AI Assistant": "AI सहायक",
+    "Map": "मानचित्र",
+    "Explore Nashik by category — temples, heritage, nature, food and more.": "मंदिरों, विरासत, प्रकृति, भोजन और अन्य श्रेणियों के अनुसार नासिक देखें।",
+    "View All Places": "सभी स्थान देखें",
+    "Search places, temples...": "स्थान, मंदिर खोजें...",
+    "Go": "जाएँ",
+    "Kumbh Mela": "कुंभ मेला",
+    "Please upload a valid image file (JPG, PNG, or WebP).": "कृपया मान्य चित्र फ़ाइल (JPG, PNG या WebP) अपलोड करें।",
+    "Camera permission was denied. You can enable camera access in browser settings, or select 'From Device' / 'Image URL'.": "कैमरे की अनुमति नहीं मिली। आप ब्राउज़र सेटिंग में कैमरे की अनुमति दें या 'डिवाइस से' / 'इमेज URL' चुनें।",
+    "Verified Business": "सत्यापित व्यवसाय",
+    "About": "परिचय",
+    "Heritage & Significance": "विरासत और महत्व",
+    "Famous For": "के लिए प्रसिद्ध",
+    "Services Offered": "उपलब्ध सेवाएँ",
+    "Facilities & Amenities": "सुविधाएँ और सेवाएँ",
+    "Timing & Schedule": "समय और कार्यक्रम",
+    "Days": "दिन",
+    "Contact Details": "संपर्क विवरण",
+    "Contact Person": "संपर्क व्यक्ति",
+    "Details": "विवरण",
+    "Call Now": "अभी कॉल करें",
+    "Get Directions": "दिशा-निर्देश पाएँ",
+    "Website": "वेबसाइट",
 
     // User Authentication Modal & Account
     "Portal Login": "पोर्टल लॉगिन",
@@ -1111,6 +1183,84 @@ const translations: Record<Language, Record<string, string>> = {
     "List View": "सूची दृश्य",
 
     // Profile Page
+    // Authentication and Group Tracker
+    "Portal Login": "पोर्टल लॉगिन",
+    "Sign Out Admin/Business": "ॲडमिन/व्यवसाय खात्यातून बाहेर पडा",
+    "Login / Sign Up": "लॉगिन / नोंदणी",
+    "Account": "खाते",
+    "Discover Nashik User": "डिस्कव्हर नाशिक वापरकर्ता",
+    "Verification": "पडताळणी",
+    "Enter OTP code sent to your device": "तुमच्या डिव्हाइसवर पाठवलेला OTP कोड प्रविष्ट करा",
+    "Mobile Number": "मोबाइल क्रमांक",
+    "Full Name": "पूर्ण नाव",
+    "(Optional)": "(ऐच्छिक)",
+    "Use OTP Instead": "त्याऐवजी OTP वापरा",
+    "Sending OTP...": "OTP पाठवत आहे...",
+    "Get OTP Code": "OTP कोड मिळवा",
+    "Enter 6-Digit OTP": "६ अंकी OTP प्रविष्ट करा",
+    "Resend Code": "कोड पुन्हा पाठवा",
+    "Verify & Continue": "पडताळणी करून पुढे जा",
+    "Don't have an account?": "खाते नाही?",
+    "Back to": "मागे",
+    "Password Login": "पासवर्डद्वारे लॉगिन",
+    "Please enter your email address": "कृपया तुमचा ईमेल पत्ता प्रविष्ट करा",
+    "Please enter your mobile number": "कृपया तुमचा मोबाइल क्रमांक प्रविष्ट करा",
+    "OTP sent to": "या क्रमांकावर OTP पाठवला:",
+    "Failed to send OTP": "OTP पाठवण्यात अयशस्वी",
+    "Please enter the verification code": "कृपया पडताळणी कोड प्रविष्ट करा",
+    "Invalid OTP code": "अवैध OTP कोड",
+    "Please enter your password": "कृपया तुमचा पासवर्ड प्रविष्ट करा",
+    "Password must be at least 6 characters": "पासवर्डमध्ये किमान ६ अक्षरे असणे आवश्यक आहे",
+    "Failed to create user account": "वापरकर्ता खाते तयार करण्यात अयशस्वी",
+    "Real-Time Live Tracking": "थेट रिअल-टाइम ट्रॅकिंग",
+    "Discover Nashik Group Tracker": "डिस्कव्हर नाशिक गट ट्रॅकर",
+    "Stay synchronized with your family, trek buddies, and pilgrimage group across Nashik. Share live notes, meeting points, and GPS locations in real time.": "नाशिकमध्ये कुटुंबीय, ट्रेकमधील मित्र आणि यात्रेतील सहकाऱ्यांशी संपर्कात राहा. थेट नोंदी, भेटण्याची ठिकाणे आणि GPS लोकेशन रिअल-टाइममध्ये शेअर करा.",
+    "Your Display Name": "तुमचे दर्शवले जाणारे नाव",
+    "This name will be visible to members of your group as your broadcast sender ID.": "हे नाव तुमच्या गटातील सदस्यांना संदेश पाठवणाऱ्याचे नाव म्हणून दिसेल.",
+    "Group Creator": "गट निर्माता",
+    "Create New Group": "नवीन गट तयार करा",
+    "Start a fresh group as the Group Coordinator. Generate a 6-character code and invite your friends.": "गट समन्वयक म्हणून नवीन गट सुरू करा. ६ अक्षरी कोड तयार करून मित्रांना आमंत्रित करा.",
+    "Group Title (Optional)": "गटाचे नाव (ऐच्छिक)",
+    "Group Member": "गट सदस्य",
+    "Enter the 6-character unique code shared by your Group Coordinator to join instantly.": "गटात लगेच सामील होण्यासाठी समन्वयकाने दिलेला ६ अक्षरी कोड प्रविष्ट करा.",
+    "Enter Group Code": "गट कोड प्रविष्ट करा",
+    "Join Group Now": "आता गटात सामील व्हा",
+    "Live Syncing Active": "थेट सिंक सुरू आहे",
+    "Code:": "कोड:",
+    "Copy Code": "कोड कॉपी करा",
+    "Code Copied!": "कोड कॉपी झाला!",
+    "Share Group": "गट शेअर करा",
+    "Link Copied!": "लिंक कॉपी झाली!",
+    "Latest Group Update": "गटातील नवीनतम अपडेट",
+    "No updates posted yet. Be the first member to share a note below!": "अजून कोणतेही अपडेट पोस्ट केलेले नाही. खाली नोंद शेअर करणारे पहिले सदस्य व्हा!",
+    "Post a Note / Update for Group": "गटासाठी नोंद / अपडेट पोस्ट करा",
+    "Posting as:": "या नावाने पोस्ट करत आहात:",
+    "Quick Presets:": "झटपट संदेश:",
+    "Type a custom message (e.g. Waiting near Panchavati)...": "स्वतःचा संदेश लिहा (उदा. पंचवटीजवळ थांबलो आहे)...",
+    "Message & Update History": "संदेश आणि अपडेटचा इतिहास",
+    "Note": "नोंद",
+    "Notes": "नोंदी",
+    "I am near Ramkund 🌊": "मी रामकुंडजवळ आहे 🌊",
+    "Meet at Gate 2 📍": "गेट २ येथे भेटूया 📍",
+    "I reached the parking area 🅿️": "मी पार्किंग क्षेत्रात पोहोचलो आहे 🅿️",
+    "Taking a quick tea break ☕": "थोडा चहा घेण्यासाठी थांबलो आहे ☕",
+    "Near Trimbakeshwar Mandir 🛕": "त्र्यंबकेश्वर मंदिराजवळ 🛕",
+    "Need assistance / call me 📞": "मदतीची गरज आहे / मला फोन करा 📞",
+    "Live Group Location Map": "गटाचे थेट लोकेशन नकाशावर",
+    "Live GPS markers for authorized group members only.": "GPS वरील थेट खुणा फक्त अधिकृत गट सदस्यांसाठी.",
+    "Status: Active Leader": "स्थिती: सक्रिय गटप्रमुख",
+    "Scan or Share Group Code": "गट कोड स्कॅन करा किंवा शेअर करा",
+    "Leader": "गटप्रमुख",
+    "Member": "सदस्य",
+    "Group Leader": "गटप्रमुख",
+    "Welcome to": "स्वागत आहे:",
+    "You": "तुम्ही",
+    "Nashik guide": "नाशिक मार्गदर्शक",
+    "Where sacred Godavari, ancient traditions, and millions of divine journeys meet.": "जिथे पवित्र गोदावरी, प्राचीन परंपरा आणि लाखो भाविकांच्या यात्रा एकत्र येतात.",
+    "Explore Kumbh": "कुंभमेळा पहा",
+    "Sacred Pilgrimage": "पवित्र तीर्थयात्रा",
+    "Nashik 2027": "नाशिक २०२७",
+    "Ram Kund • Panchavati • Trimbakeshwar Bathing Ghats": "रामकुंड • पंचवटी • त्र्यंबकेश्वर स्नानघाट",
     "My Profile": "माझी प्रोफाइल",
     "Edit Profile": "प्रोफाइल संपादित करा",
     "Account Settings": "खाते सेटिंग्ज",
@@ -1138,6 +1288,79 @@ const translations: Record<Language, Record<string, string>> = {
     "Photo uploaded successfully": "फोटो यशस्वीरित्या अपलोड झाला",
     "Option 1: Upload from Device": "पर्याय १: डिव्हाइसवरून अपलोड करा",
     "Option 2: Image URL": "पर्याय २: इमेज URL",
+    "Heritage": "वारसा",
+    "Optional": "ऐच्छिक",
+    "Attach a photo via camera, device, or web URL": "कॅमेरा, डिव्हाइस किंवा वेब URL वापरून फोटो जोडा",
+    "Registration Not Submitted": "नोंदणी अर्ज सादर केलेला नाही",
+    "You have not submitted your business registration application yet.": "तुम्ही अद्याप व्यवसाय नोंदणीचा अर्ज सादर केलेला नाही.",
+    "Your registration was reviewed and requires updates before approval.": "तुमच्या नोंदणी अर्जाची तपासणी झाली आहे; मंजुरीपूर्वी बदल आवश्यक आहेत.",
+    "Your business registration is approved!": "तुमच्या व्यवसायाची नोंदणी मंजूर झाली आहे!",
+    "Account Deactivated": "खाते निष्क्रिय केले",
+    "Your business application is currently deactivated. Please contact support.": "तुमचा व्यवसाय अर्ज सध्या निष्क्रिय आहे. कृपया सहाय्य कक्षाशी संपर्क साधा.",
+    "Not specified": "नमूद केलेले नाही",
+    "Not selected": "निवडलेले नाही",
+    "Submission Date": "सादर केल्याची तारीख",
+    "Not submitted yet": "अद्याप सादर केलेले नाही",
+    "Not provided": "दिलेली नाही",
+    "Admin Remarks": "ॲडमिनची टिप्पणी",
+    "You must be logged in to upload images.": "प्रतिमा अपलोड करण्यासाठी लॉग इन करणे आवश्यक आहे.",
+    "Please upload a business photo or provide an image URL.": "कृपया व्यवसायाचा फोटो अपलोड करा किंवा प्रतिमेचा URL द्या.",
+    "Business Photo": "व्यवसायाचा फोटो",
+    "Provide a photo of your business using camera, device, or web URL.": "कॅमेरा, डिव्हाइस किंवा वेब URL वापरून व्यवसायाचा फोटो द्या.",
+    "Coordinator": "समन्वयक",
+    "Keep flexible travel time for crowds and use public transport where possible.": "गर्दी लक्षात घेऊन प्रवासाच्या वेळेत लवचिकता ठेवा आणि शक्य असल्यास सार्वजनिक वाहतुकीचा वापर करा.",
+    "Back to Kumbh Guide": "कुंभ मार्गदर्शकाकडे परत जा",
+    "Explore key spiritual sites, Ram Kund ghats, main bathing zones, parking areas, and emergency help desks verified for Kumbh Mela 2027 in Nashik and Trimbakeshwar.": "नाशिक आणि त्र्यंबकेश्वरमधील कुंभमेळा २०२७ साठी पडताळलेली प्रमुख तीर्थस्थळे, रामकुंड घाट, स्नान क्षेत्रे, पार्किंग आणि आपत्कालीन मदत केंद्रे पाहा.",
+    "Back to Kumbh Mela 2027": "कुंभमेळा २०२७ कडे परत जा",
+    "Plan your route around Ram Kund, Panchavati, and the main bathing ghats.": "रामकुंड, पंचवटी आणि मुख्य स्नानघाटांच्या आसपासच्या मार्गाचे नियोजन करा.",
+    "Save your stay early and follow official updates as the 2027 event approaches.": "राहण्याची व्यवस्था आधीच करा आणि २०२७ चा सोहळा जवळ येत असताना अधिकृत माहिती पाहत राहा.",
+    "Report a lost person or item, or help someone by reporting something you found.": "हरवलेल्या व्यक्तीची किंवा वस्तूची नोंद करा; किंवा सापडलेल्या वस्तूची माहिती देऊन मदत करा.",
+    "Nashik & Kumbh Heritage": "नाशिक आणि कुंभचा वारसा",
+    "Explore the history, spirituality and stories of Nashik and Kumbh Mela.": "नाशिक आणि कुंभमेळ्याचा इतिहास, अध्यात्म आणि कथा जाणून घ्या.",
+    "New Password": "नवीन पासवर्ड",
+    "Confirm New Password": "नवीन पासवर्डची पुष्टी करा",
+    "Discover places around Nashik visually. Click on markers for details.": "नाशिक परिसरातील ठिकाणे नकाशावर पाहा. तपशीलांसाठी चिन्हांवर क्लिक करा.",
+    "Photo URLs": "फोटो URL",
+    "Up to 6 photos": "६ पर्यंत फोटो",
+    "Photo": "फोटो",
+    "Primary": "मुख्य",
+    "Optional - Historical background, spiritual significance, legends": "ऐच्छिक - ऐतिहासिक पार्श्वभूमी, आध्यात्मिक महत्त्व आणि दंतकथा",
+    "Enter historical background, spiritual significance, local legends, or cultural importance...": "ऐतिहासिक पार्श्वभूमी, आध्यात्मिक महत्त्व, स्थानिक दंतकथा किंवा सांस्कृतिक महत्त्व लिहा...",
+    "Business Details": "व्यवसायाचा तपशील",
+    "Open": "उघडे",
+    "Places Management": "ठिकाणांचे व्यवस्थापन",
+    "Menu": "मेनू",
+    "Dates & Planning": "तारखा आणि नियोजन",
+    "Heritage & Culture": "वारसा आणि संस्कृती",
+    "Add a Place": "ठिकाण जोडा",
+    "Your digital companion for a safer,": "अधिक सुरक्षित प्रवासासाठी तुमचा डिजिटल सोबती,",
+    "smoother pilgrimage.": "आणि अधिक सुखकर तीर्थयात्रा.",
+    "Explore Kumbh 2027": "कुंभमेळा २०२७ पाहा",
+    "Finding nearby...": "जवळची ठिकाणे शोधत आहे...",
+    "Near Me": "माझ्या जवळ",
+    "AI Assistant": "AI सहाय्यक",
+    "Map": "नकाशा",
+    "Explore Nashik by category — temples, heritage, nature, food and more.": "मंदिरे, वारसा, निसर्ग, खाद्यपदार्थ आणि इतर श्रेणींनुसार नाशिक शोधा.",
+    "View All Places": "सर्व ठिकाणे पहा",
+    "Search places, temples...": "ठिकाणे, मंदिरे शोधा...",
+    "Go": "जा",
+    "Kumbh Mela": "कुंभमेळा",
+    "Please upload a valid image file (JPG, PNG, or WebP).": "कृपया वैध प्रतिमा फाइल (JPG, PNG किंवा WebP) अपलोड करा.",
+    "Camera permission was denied. You can enable camera access in browser settings, or select 'From Device' / 'Image URL'.": "कॅमेऱ्याची परवानगी नाकारली गेली. ब्राउझर सेटिंग्जमध्ये परवानगी द्या किंवा 'डिव्हाइसवरून' / 'इमेज URL' निवडा.",
+    "Verified Business": "पडताळलेला व्यवसाय",
+    "About": "माहिती",
+    "Heritage & Significance": "वारसा आणि महत्त्व",
+    "Famous For": "यासाठी प्रसिद्ध",
+    "Services Offered": "उपलब्ध सेवा",
+    "Facilities & Amenities": "सुविधा",
+    "Timing & Schedule": "वेळ आणि वेळापत्रक",
+    "Days": "दिवस",
+    "Contact Details": "संपर्क तपशील",
+    "Contact Person": "संपर्क व्यक्ती",
+    "Details": "तपशील",
+    "Call Now": "आत्ताच कॉल करा",
+    "Get Directions": "दिशा मिळवा",
+    "Website": "वेबसाइट",
   },
 };
 
@@ -1149,27 +1372,16 @@ type I18nContextValue = {
 
 const I18nContext = createContext<I18nContextValue | null>(null);
 
-function getSessionLanguage(): Language {
-  if (typeof window === "undefined") return "en";
-  try {
-    const saved = window.sessionStorage.getItem("discover-nashik-language") as Language | null;
-    return saved && (saved === "en" || saved === "hi" || saved === "mr") ? saved : "en";
-  } catch {
-    return "en";
-  }
-}
+const LANGUAGE_COOKIE = "discover-nashik-language";
 
-export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Language>("en");
-
-  useEffect(() => {
-    const initialLang = getSessionLanguage();
-    if (initialLang !== "en") {
-      startTransition(() => {
-        setLanguageState(initialLang);
-      });
-    }
-  }, []);
+export function I18nProvider({
+  children,
+  initialLanguage = "en",
+}: {
+  children: React.ReactNode;
+  initialLanguage?: Language;
+}) {
+  const [language, setLanguageState] = useState<Language>(initialLanguage);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1181,9 +1393,9 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     setLanguageState(next);
     if (typeof window !== "undefined") {
       try {
-        window.sessionStorage.setItem("discover-nashik-language", next);
-      } catch {
-        // ignore storage errors
+        document.cookie = `${LANGUAGE_COOKIE}=${next}; Path=/; Max-Age=31536000; SameSite=Lax${window.location.protocol === "https:" ? "; Secure" : ""}`;
+      } catch (error) {
+        console.error("Unable to persist selected language.", error);
       }
     }
   }, []);
