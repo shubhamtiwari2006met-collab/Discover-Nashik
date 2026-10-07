@@ -623,6 +623,7 @@ const translations: Record<Language, Record<string, string>> = {
     "Interactive Map": "इंटरॅक्टिव्ह नकाशा",
     "Add Place": "ठिकाण जोडा",
     "Login": "लॉगिन",
+    "User Login": "वापरकर्ता लॉगिन",
     "Logout": "लॉगआउट",
     "Admin Login": "ॲडमिन लॉगिन",
     "Business Login": "व्यवसाय लॉगिन",
