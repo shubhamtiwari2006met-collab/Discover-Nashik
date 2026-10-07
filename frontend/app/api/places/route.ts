@@ -262,6 +262,8 @@ export async function GET() {
             closingTime: b.closing_time || undefined,
             workingDays: b.working_days || undefined,
             subcategory: b.subcategory || undefined,
+            latitude: b.latitude != null ? Number(b.latitude) : undefined,
+            longitude: b.longitude != null ? Number(b.longitude) : undefined,
             contact_name: b.contact_name || undefined,
             admin_remarks: b.admin_remarks || undefined,
             isBusinessApplication: !isAdminPlace,
