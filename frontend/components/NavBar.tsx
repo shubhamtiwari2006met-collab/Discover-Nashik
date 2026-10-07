@@ -4,7 +4,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState, useRef, FormEvent } from "react";
 import { Menu, X, Users, Languages, ChevronDown, Check, LogIn, Sparkles, User as UserIcon, LogOut, Search } from "lucide-react";
-import { useTranslation, type Language } from "@/lib/i18n";
+import { useTranslation } from "@/lib/i18n";
+import type { Language } from "@/lib/locale";
 import { createClient } from "@/utils/supabase/client";
 import { useUserAuth } from "@/context/UserAuthContext";
 import NotificationBell from "@/components/NotificationBell";
@@ -52,6 +53,15 @@ export function NavBar() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    if (isOpen) document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isOpen]);
 
 
 

@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Send, MessageCircle, Sparkles, Mic, Volume2, VolumeX } from "lucide-react";
-import { useTranslation, type Language } from "@/lib/i18n";
+import { useTranslation } from "@/lib/i18n";
+import type { Language } from "@/lib/locale";
 
 type SpeechRecognitionEventLike = Event & {
   results: SpeechRecognitionResultList;

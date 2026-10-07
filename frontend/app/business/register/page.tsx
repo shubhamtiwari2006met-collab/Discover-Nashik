@@ -6,6 +6,7 @@ import { Loader2, ArrowLeft, Building2, UploadCloud, CheckCircle2, Clock, MapPin
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import { useTranslation } from "@/lib/i18n";
+import type { LocalizedContent, TranslationStatus } from "@/lib/localizedContent";
 import PhotoInput from "@/components/PhotoInput";
 
 const CATEGORIES = [
@@ -52,6 +53,8 @@ export default function BusinessRegisterPage() {
   const [existingId, setExistingId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [localizedContent, setLocalizedContent] = useState<LocalizedContent | null>(null);
+  const [translationStatus, setTranslationStatus] = useState<TranslationStatus>("pending");
   const [detectingCoords, setDetectingCoords] = useState(false);
 
   // Photo upload states
@@ -87,6 +90,12 @@ export default function BusinessRegisterPage() {
 
         if (existingReg && !regError) {
           setExistingId(existingReg.id);
+          if (existingReg.localized_content && typeof existingReg.localized_content === "object") {
+            setLocalizedContent(existingReg.localized_content as LocalizedContent);
+          }
+          if (["complete", "pending", "failed", "needs_review"].includes(existingReg.translation_status)) {
+            setTranslationStatus(existingReg.translation_status as TranslationStatus);
+          }
           setForm({
             businessName: existingReg.business_name || "",
             category: existingReg.category || CATEGORIES[0],
@@ -264,6 +273,37 @@ export default function BusinessRegisterPage() {
 
       const parsedLat = form.latitude ? parseFloat(form.latitude) : null;
       const parsedLng = form.longitude ? parseFloat(form.longitude) : null;
+      let translations = localizedContent;
+      let status: TranslationStatus = translationStatus;
+      const sourceContent = {
+        name: form.businessName.trim(),
+        category: form.category,
+        location: [form.cityArea.trim(), form.address.trim()].filter(Boolean).join(", "),
+        description: form.description.trim(),
+        tagline: form.subcategory.trim(),
+      };
+      const sourceChanged = translations && Object.entries(sourceContent).some(([field, value]) => {
+        const previous = translations?.[field]?.en;
+        return previous !== undefined && previous !== value;
+      });
+      if (translations && sourceChanged) {
+        status = "needs_review";
+      } else if (!translations) {
+        try {
+          const translationResponse = await fetch("/api/translations/content", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ content: sourceContent }),
+          });
+          const translationResult = await translationResponse.json();
+          if (!translationResponse.ok) throw new Error(translationResult.error || "Translation generation failed.");
+          translations = translationResult.localizedContent as LocalizedContent;
+          status = "needs_review";
+        } catch (translationError) {
+          console.error("Business content translations were not generated.", translationError);
+          status = "failed";
+        }
+      }
 
       const payload = {
         owner_id: session.user.id,
@@ -284,6 +324,8 @@ export default function BusinessRegisterPage() {
         latitude: parsedLat,
         longitude: parsedLng,
         verification_status: "pending",
+        localized_content: translations || {},
+        translation_status: status,
         updated_at: new Date().toISOString(),
       };
 
@@ -301,10 +343,25 @@ export default function BusinessRegisterPage() {
         dbError = error;
       }
 
+      if (dbError?.message.includes("localized_content") || dbError?.message.includes("translation_status")) {
+        const { localized_content: _localized, translation_status: _translationStatus, ...legacyPayload } = payload;
+        void _localized;
+        void _translationStatus;
+        const fallback = existingId
+          ? await supabase.from("business_registrations").update(legacyPayload).eq("id", existingId)
+          : await supabase.from("business_registrations").insert([legacyPayload]);
+        dbError = fallback.error;
+        translations = null;
+        status = "failed";
+        setLocalizedContent(null);
+        setTranslationStatus("failed");
+      }
       if (dbError) {
         if (dbError.message?.includes("schema cache") || dbError.message?.includes("business_registrations")) {
           throw new Error("Could not find the table 'public.business_registrations' in Supabase. Please run the SQL schema script (frontend/supabase_schema.sql) in your Supabase SQL Editor and execute: NOTIFY pgrst, 'reload schema';");
         }
+        setLocalizedContent(translations);
+        setTranslationStatus(status);
         throw new Error(dbError.message);
       }
 
@@ -314,7 +371,9 @@ export default function BusinessRegisterPage() {
         .update({ role: "BUSINESS" })
         .eq("id", session.user.id);
 
-      setMessage("Registration submitted successfully! Redirecting to pending page...");
+      setMessage(status === "failed"
+        ? "Registration submitted, but translations are unavailable. The original text was saved."
+        : "Registration submitted successfully! Redirecting to pending page...");
       setTimeout(() => {
         router.push("/business/pending");
       }, 1500);

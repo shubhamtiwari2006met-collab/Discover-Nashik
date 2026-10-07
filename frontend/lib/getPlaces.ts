@@ -1,9 +1,18 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { cookies } from "next/headers";
 import { normalizeImageUrl, parsePhotoList, DEFAULT_FALLBACK_IMAGE } from "@/lib/imageUrl";
 import { Place } from "@/components/PlaceCard";
 import { places as staticPlaces } from "@/lib/places";
+import { isLanguage } from "@/lib/locale";
+import { localizeFields } from "@/lib/localizedContent";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
 
 export async function getPlaces(): Promise<Place[]> {
+  const localeValue = (await cookies()).get("discover-nashik-language")?.value;
+  const locale = isLanguage(localeValue) ? localeValue : "en";
   let registeredPlaces: Place[] = [];
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -13,17 +22,29 @@ export async function getPlaces(): Promise<Place[]> {
       const supabase = createSupabaseClient(supabaseUrl, supabaseKey, {
         auth: { persistSession: false, autoRefreshToken: false },
       });
-      const { data: businesses, error: dbError } = await supabase
+      const localizedQuery = await supabase
         .from("business_registrations")
-        .select("id, business_name, category, subcategory, contact_name, phone, email, address, city_area, description, opening_time, closing_time, working_days, website_url, photos, latitude, longitude, verification_status, admin_remarks")
+        .select("id, business_name, category, subcategory, contact_name, phone, email, address, city_area, description, opening_time, closing_time, working_days, website_url, photos, latitude, longitude, verification_status, admin_remarks, localized_content")
         .eq("verification_status", "approved");
+      let businesses = localizedQuery.data;
+      let dbError = localizedQuery.error;
+
+      if (dbError?.message.includes("localized_content")) {
+        console.warn("[getPlaces] Localized content column is not installed; serving existing business data.");
+        const legacyQuery = await supabase
+          .from("business_registrations")
+          .select("id, business_name, category, subcategory, contact_name, phone, email, address, city_area, description, opening_time, closing_time, working_days, website_url, photos, latitude, longitude, verification_status, admin_remarks")
+          .eq("verification_status", "approved");
+        businesses = legacyQuery.data as unknown as typeof businesses;
+        dbError = legacyQuery.error;
+      }
 
       if (!dbError && businesses && businesses.length > 0) {
-        registeredPlaces = businesses.map((b: any) => {
+        registeredPlaces = businesses.map((b) => {
           const allPhotos = parsePhotoList(b.photos);
           const firstPhoto = allPhotos[0] || DEFAULT_FALLBACK_IMAGE;
           const isAdminPlace = b.contact_name === "Admin Added" || b.admin_remarks === "Added directly by Admin";
-          return {
+          const place = {
             _id: b.id,
             name: b.business_name,
             category: b.category,
@@ -45,7 +66,9 @@ export async function getPlaces(): Promise<Place[]> {
             contact_name: b.contact_name,
             admin_remarks: b.admin_remarks,
             isBusinessApplication: !isAdminPlace,
+            localizedContent: b.localized_content || undefined,
           };
+          return localizeFields(place, b.localized_content, locale);
         });
       }
     }
@@ -58,22 +81,37 @@ export async function getPlaces(): Promise<Place[]> {
     const backendUrl = process.env.BACKEND_URL || "http://localhost:5000";
     const mongoRes = await fetch(`${backendUrl}/api/places`, { next: { revalidate: 60 } });
     if (mongoRes.ok) {
-      const data = await mongoRes.json();
+      const data: unknown = await mongoRes.json();
       if (Array.isArray(data)) {
-        mongoPlaces = data.map((item: any) => ({
-          _id: String(item._id || item.id),
-          name: item.name,
-          category: item.category,
-          location: item.location,
-          description: item.description,
-          tagline: item.tagline || item.subcategory,
-          famousThing: item.famousThing,
-          image: item.image,
-          images: item.images,
-          rating: item.rating || 4.8,
-          phone: item.phone,
-          email: item.email,
-        }));
+        mongoPlaces = data.flatMap((candidate) => {
+          if (!isRecord(candidate)) return [];
+          const id = String(candidate._id || candidate.id || "");
+          const name = typeof candidate.name === "string" ? candidate.name : "";
+          const category = typeof candidate.category === "string" ? candidate.category : "";
+          const location = typeof candidate.location === "string" ? candidate.location : "";
+          const description = typeof candidate.description === "string" ? candidate.description : "";
+          if (!id || !name || !category || !location || !description) {
+            console.warn("[getPlaces] Skipping malformed MongoDB place record.");
+            return [];
+          }
+          return [localizeFields({
+            _id: id,
+            name,
+            category,
+            location,
+            description,
+            tagline: typeof candidate.tagline === "string" ? candidate.tagline : typeof candidate.subcategory === "string" ? candidate.subcategory : undefined,
+            famousThing: typeof candidate.famousThing === "string" ? candidate.famousThing : undefined,
+            image: typeof candidate.image === "string" ? candidate.image : undefined,
+            images: Array.isArray(candidate.images) && candidate.images.every((image) => typeof image === "string")
+              ? candidate.images
+              : undefined,
+            rating: typeof candidate.rating === "number" ? candidate.rating : 4.8,
+            phone: typeof candidate.phone === "string" ? candidate.phone : undefined,
+            email: typeof candidate.email === "string" ? candidate.email : undefined,
+            localizedContent: candidate.localizedContent,
+          }, candidate.localizedContent, locale)];
+        });
       }
     }
   } catch {
