@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, useRef } from "react";
 import "leaflet/dist/leaflet.css";
-import Link from "next/link";
+import { useMap } from "react-leaflet";
 import {
   MapPin,
   Search,
@@ -10,10 +10,7 @@ import {
   Sparkles,
   X,
   Star,
-  Phone,
   CheckCircle,
-  ExternalLink,
-  Clock,
   List,
   Layers,
   HeartPulse,
@@ -23,9 +20,16 @@ import {
   Bus,
   Compass,
   AlertCircle,
-  Maximize2,
   ChevronRight,
-  Info
+  Heart,
+  Share2,
+  Mic,
+  MicOff,
+  Volume2,
+  Car,
+  Footprints,
+  RotateCcw,
+  Flag
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { Place, PlaceCard } from "@/components/PlaceCard";
@@ -34,9 +38,19 @@ import { calculateHaversineDistance, formatDistance } from "@/lib/distance";
 import { getPlaceCoordinates, LatLng } from "@/lib/nashikCoordinates";
 import { resolveCategory } from "@/lib/categories";
 
+export interface GroupMemberPin {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  role?: string;
+  lastUpdated?: string;
+}
+
 interface MapComponentProps {
   places: Place[];
   initialCategory?: string;
+  groupMembers?: GroupMemberPin[]; // Future-compatibility hook for Group Tracker
 }
 
 interface MapPlaceItem extends Place {
@@ -47,12 +61,40 @@ interface MapPlaceItem extends Place {
 }
 
 type LeafletMapLib = {
-  MapContainer: any;
-  TileLayer: any;
-  Marker: any;
-  Popup: any;
-  useMap: any;
-  L: any;
+  MapContainer: typeof import("react-leaflet").MapContainer;
+  TileLayer: typeof import("react-leaflet").TileLayer;
+  Marker: typeof import("react-leaflet").Marker;
+  Popup: typeof import("react-leaflet").Popup;
+  Polyline: typeof import("react-leaflet").Polyline;
+  L: typeof import("leaflet");
+};
+
+// Speech Recognition Type Definitions
+type SpeechRecognitionEventLike = Event & {
+  results: SpeechRecognitionResultList;
+};
+type SpeechRecognitionErrorEventLike = Event & { error: string };
+type SpeechRecognitionInstance = {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+  onstart: (() => void) | null;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onend: (() => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null;
+};
+type SpeechRecognitionConstructor = new () => SpeechRecognitionInstance;
+
+const getSpeechRecognition = (): SpeechRecognitionConstructor | null => {
+  if (typeof window === "undefined") return null;
+  const win = window as unknown as {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  };
+  return win.SpeechRecognition || win.webkitSpeechRecognition || null;
 };
 
 // Map Categories for filter bar
@@ -65,12 +107,51 @@ const MAP_CATEGORIES = [
   { id: "Food", labelKey: "Food & Dining", icon: Utensils, color: "#e11d48" },
   { id: "Transport", labelKey: "Transport & Parking", icon: Bus, color: "#0d9488" },
   { id: "Tourist", labelKey: "Tourist Spots", icon: MapPin, color: "#059669" },
+  { id: "Saved", labelKey: "Saved Places", icon: Heart, color: "#e11d48" },
 ];
 
 const NASHIK_CENTER: [number, number] = [20.005, 73.785];
+const LOCAL_STORAGE_SAVED_KEY = "discover_nashik_saved_places";
 
-export default function MapComponent({ places: initialPlaces, initialCategory = "All" }: MapComponentProps) {
-  const { t } = useTranslation();
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readSavedPlaceIds(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const stored = localStorage.getItem(LOCAL_STORAGE_SAVED_KEY);
+    if (!stored) return [];
+    const parsed: unknown = JSON.parse(stored);
+    return Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === "string") : [];
+  } catch (error) {
+    console.warn("Could not load saved places from local storage:", error);
+    return [];
+  }
+}
+
+function getVoiceFallbackReply(destination: string, language: string): string {
+  if (language === "hi") return `${destination} का मार्ग मानचित्र पर दिखाया जा रहा है।`;
+  if (language === "mr") return `${destination} चा मार्ग नकाशावर दाखवत आहे.`;
+  return `Showing the route to ${destination} on your map.`;
+}
+
+function MapController({ center, zoom, bounds }: { center: [number, number]; zoom: number; bounds?: [number, number][] | null }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (bounds && bounds.length >= 2) {
+      map.fitBounds(bounds, { padding: [50, 50] });
+    } else {
+      map.flyTo(center, zoom, { duration: 1.2 });
+    }
+  }, [center, zoom, bounds, map]);
+
+  return null;
+}
+
+export default function MapComponent({ places: initialPlaces, initialCategory = "All", groupMembers = [] }: MapComponentProps) {
+  const { t, language } = useTranslation();
   const [mapLib, setMapLib] = useState<LeafletMapLib | null>(null);
   const [kumbhLocations, setKumbhLocations] = useState<Place[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
@@ -79,14 +160,98 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
   const [detailModalPlace, setDetailModalPlace] = useState<Place | null>(null);
   const [viewMode, setViewMode] = useState<"map" | "list">("map");
 
+  // Destination & Route Planner State
+  const [selectedDestination, setSelectedDestination] = useState<MapPlaceItem | null>(null);
+  const [routeTravelMode, setRouteTravelMode] = useState<"driving" | "walking">("driving");
+  const [activeRoutePolyline, setActiveRoutePolyline] = useState<[number, number][] | null>(null);
+  const [routeBounds, setRouteBounds] = useState<[number, number][] | null>(null);
+  const [routeSteps, setRouteSteps] = useState<{ instruction: string; distance: number; duration: number }[]>([]);
+  const [routeLoading, setRouteLoading] = useState(false);
+  const [osrmDistance, setOsrmDistance] = useState<number | null>(null);
+  const [osrmDuration, setOsrmDuration] = useState<number | null>(null);
+
   // Geolocation state
   const [userLocation, setUserLocation] = useState<LatLng | null>(null);
   const [locating, setLocating] = useState<boolean>(false);
   const [locationError, setLocationError] = useState<string | null>(null);
 
+  // Saved / Favorite Places state
+  const [savedPlaceIds, setSavedPlaceIds] = useState<string[]>(readSavedPlaceIds);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Map Voice Guide State
+  const [voiceStatus, setVoiceStatus] = useState<"idle" | "listening" | "processing" | "speaking">("idle");
+  const [spokenMessage, setSpokenMessage] = useState<string | null>(null);
+  const [voiceTranscript, setVoiceTranscript] = useState<string>("");
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const recognitionRetryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const voiceRequestRef = useRef<AbortController | null>(null);
+  const voiceRequestIdRef = useRef(0);
+  const speechIdRef = useRef(0);
+
+  useEffect(() => () => {
+    if (recognitionRetryTimeoutRef.current) clearTimeout(recognitionRetryTimeoutRef.current);
+    recognitionRef.current?.abort();
+    voiceRequestRef.current?.abort();
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+  }, []);
+
   // Map center control state
   const [mapCenter, setMapCenter] = useState<[number, number]>(NASHIK_CENTER);
   const [mapZoom, setMapZoom] = useState<number>(12);
+
+  // Sync Saved Places to localStorage
+  const toggleSavePlace = (placeId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+
+    setSavedPlaceIds((prev) => {
+      const isSaved = prev.includes(placeId);
+      const updated = isSaved ? prev.filter((id) => id !== placeId) : [...prev, placeId];
+      try {
+        localStorage.setItem(LOCAL_STORAGE_SAVED_KEY, JSON.stringify(updated));
+      } catch {
+        // Fallback silently
+      }
+
+      showToast(isSaved ? t("Removed from Saved Places") : t("Saved to your Favorites! ♥"));
+      return updated;
+    });
+  };
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  // Share Place Handler
+  const handleSharePlace = async (place: Place, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+
+    const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/place/${place._id}` : "";
+    const shareData = {
+      title: place.name,
+      text: `${place.name} - ${place.location}. Discover Nashik!`,
+      url: shareUrl,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch {
+        // Fallback to clipboard
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      showToast(t("Place link copied to clipboard!"));
+    } catch {
+      showToast(t("Share URL: ") + shareUrl);
+    }
+  };
 
   // Dynamically load Leaflet client-side
   useEffect(() => {
@@ -104,8 +269,8 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
           TileLayer: ReactLeaflet.TileLayer,
           Marker: ReactLeaflet.Marker,
           Popup: ReactLeaflet.Popup,
-          useMap: ReactLeaflet.useMap,
-          L: L.default || L,
+          Polyline: ReactLeaflet.Polyline,
+          L,
         });
       } catch (err) {
         console.error("Failed to initialize Leaflet map:", err);
@@ -125,27 +290,44 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
       try {
         const res = await fetch("/api/kumbh/locations");
         if (!res.ok) return;
-        const data = await res.json();
+        const data: unknown = await res.json();
         if (!active || !Array.isArray(data)) return;
 
-        const mappedKumbhPlaces: Place[] = data.map((loc: any) => ({
-          _id: `kumbh-${loc._id || loc.id}`,
-          name: loc.name,
-          category: "Kumbh 2027",
-          subcategory: loc.category || "Kumbh Location",
-          location: loc.address || "Nashik Kumbh Area",
-          description: loc.kumbhImportance
-            ? `${loc.kumbhImportance} ${loc.description || ""}`
-            : loc.description || "Verified Kumbh Mela 2027 location.",
-          image: loc.image || "https://images.unsplash.com/photo-1596700508005-4f05ab04c997?auto=format&fit=crop&w=800&q=80",
-          rating: 4.9,
-          verified: true,
-          latitude: typeof loc.latitude === "number" ? loc.latitude : undefined,
-          longitude: typeof loc.longitude === "number" ? loc.longitude : undefined,
-          tagline: loc.category ? `Kumbh Category: ${loc.category}` : undefined,
-          famousThing: loc.instructions ? `Instructions: ${loc.instructions}` : undefined,
-          facilities: loc.nearbyFacilities,
-        }));
+        const mappedKumbhPlaces: Place[] = data.flatMap((value): Place[] => {
+          if (!isRecord(value)) return [];
+          const id = typeof value._id === "string" || typeof value._id === "number"
+            ? value._id
+            : typeof value.id === "string" || typeof value.id === "number"
+              ? value.id
+              : null;
+          if (id === null || typeof value.name !== "string" || !value.name.trim()) return [];
+
+          const category = typeof value.category === "string" ? value.category : "Kumbh Location";
+          const importance = typeof value.kumbhImportance === "string" ? value.kumbhImportance : "";
+          const description = typeof value.description === "string" ? value.description : "";
+          const facilities = typeof value.nearbyFacilities === "string"
+            ? value.nearbyFacilities
+            : Array.isArray(value.nearbyFacilities)
+              ? value.nearbyFacilities.filter((facility): facility is string => typeof facility === "string")
+              : undefined;
+
+          return [{
+            _id: `kumbh-${id}`,
+            name: value.name,
+            category: "Kumbh 2027",
+            subcategory: category,
+            location: typeof value.address === "string" ? value.address : "Nashik Kumbh Area",
+            description: importance ? `${importance} ${description}` : description || "Verified Kumbh Mela 2027 location.",
+            image: typeof value.image === "string" ? value.image : "https://images.unsplash.com/photo-1596700508005-4f05ab04c997?auto=format&fit=crop&w=800&q=80",
+            rating: 4.9,
+            verified: true,
+            latitude: typeof value.latitude === "number" ? value.latitude : undefined,
+            longitude: typeof value.longitude === "number" ? value.longitude : undefined,
+            tagline: `Kumbh Category: ${category}`,
+            famousThing: typeof value.instructions === "string" ? `Instructions: ${value.instructions}` : undefined,
+            facilities,
+          }];
+        });
 
         setKumbhLocations(mappedKumbhPlaces);
       } catch {
@@ -168,7 +350,7 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
       if (!item || !item._id || uniqueMap.has(item._id)) return;
 
       const coords = getPlaceCoordinates(item);
-      if (!coords) return; // Exclude locations without valid coordinates per guidelines
+      if (!coords) return; // Exclude locations without valid coordinates
 
       let distKm: number | undefined = undefined;
       if (userLocation) {
@@ -187,9 +369,9 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
     return Array.from(uniqueMap.values());
   }, [initialPlaces, kumbhLocations, userLocation]);
 
-  // Filter places based on search query & category selection
+  // Filter and sort places based on Category, Search & Distance
   const filteredMapPlaces = useMemo(() => {
-    return allMapPlaces.filter((item) => {
+    let result = allMapPlaces.filter((item) => {
       // Search text filter
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
@@ -204,6 +386,10 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
       }
 
       // Category filter
+      if (selectedCategory === "Saved") {
+        return savedPlaceIds.includes(item._id);
+      }
+
       if (selectedCategory === "All") return true;
       if (selectedCategory === "Kumbh 2027") {
         return item.isKumbhLocation || (item.category || "").toLowerCase().includes("kumbh");
@@ -260,7 +446,477 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
 
       return (item.category || "").toLowerCase() === selectedCategory.toLowerCase();
     });
-  }, [allMapPlaces, searchQuery, selectedCategory]);
+
+    // Nearest Result Prioritization: If user location is active, sort by distance ascending!
+    if (userLocation) {
+      result = [...result].sort((a, b) => {
+        const distA = a.distanceKm ?? Infinity;
+        const distB = b.distanceKm ?? Infinity;
+        return distA - distB;
+      });
+    }
+
+    return result;
+  }, [allMapPlaces, searchQuery, selectedCategory, savedPlaceIds, userLocation]);
+
+  // Handle Destination Route Calculation via OSRM (real road routing)
+  const handleSelectRouteDestination = async (dest: MapPlaceItem, travelMode = routeTravelMode) => {
+    setSelectedDestination(dest);
+    setSelectedPlace(dest);
+    setRouteLoading(true);
+    setRouteSteps([]);
+    setOsrmDistance(null);
+    setOsrmDuration(null);
+
+    const startLat = userLocation ? userLocation.lat : NASHIK_CENTER[0];
+    const startLng = userLocation ? userLocation.lng : NASHIK_CENTER[1];
+    const endLat = dest.lat;
+    const endLng = dest.lng;
+
+    try {
+      // OSRM free routing API — no API key needed
+      const profile = travelMode === "walking" ? "foot" : "car";
+      const osrmUrl = `https://router.project-osrm.org/route/v1/${profile}/${startLng},${startLat};${endLng},${endLat}?overview=full&geometries=geojson&steps=true`;
+      const res = await fetch(osrmUrl, { signal: AbortSignal.timeout(8000) });
+
+      if (res.ok) {
+        const data = await res.json();
+        const route = data?.routes?.[0];
+
+        if (route?.geometry?.coordinates) {
+          // OSRM returns [lng, lat] — convert to [lat, lng] for Leaflet
+          const coords: [number, number][] = route.geometry.coordinates.map(
+            (c: [number, number]) => [c[1], c[0]] as [number, number]
+          );
+          setActiveRoutePolyline(coords);
+
+          // Extract route distance (meters) and duration (seconds)
+          setOsrmDistance(route.distance / 1000); // km
+          setOsrmDuration(route.duration / 60); // minutes
+
+          // Extract turn-by-turn steps
+          const legs = route.legs || [];
+          const steps: { instruction: string; distance: number; duration: number }[] = [];
+          for (const leg of legs) {
+            for (const step of (leg.steps || [])) {
+              if (step.maneuver?.type && step.maneuver.type !== "depart" && step.maneuver.type !== "arrive") {
+                const dir = step.maneuver.modifier ? ` ${step.maneuver.modifier}` : "";
+                const road = step.name ? ` onto ${step.name}` : "";
+                steps.push({
+                  instruction: `${step.maneuver.type}${dir}${road}`.replace(/^./, (c: string) => c.toUpperCase()),
+                  distance: step.distance,
+                  duration: step.duration,
+                });
+              }
+            }
+          }
+          setRouteSteps(steps.slice(0, 8)); // Limit to 8 steps for UI
+
+          // Calculate bounds from coords
+          let minLat = coords[0][0], maxLat = coords[0][0];
+          let minLng = coords[0][1], maxLng = coords[0][1];
+          for (const [lt, lg] of coords) {
+            if (lt < minLat) minLat = lt;
+            if (lt > maxLat) maxLat = lt;
+            if (lg < minLng) minLng = lg;
+            if (lg > maxLng) maxLng = lg;
+          }
+          setRouteBounds([[minLat, minLng], [maxLat, maxLng]]);
+          setRouteLoading(false);
+          showToast(`${t("Route calculated to")} ${dest.name}`);
+          return;
+        }
+      }
+    } catch {
+      // Fallback silently to interpolated route
+    }
+
+    // Fallback: Generate smooth interpolated route polyline
+    const pointsCount = 12;
+    const polyline: [number, number][] = [];
+    for (let i = 0; i <= pointsCount; i++) {
+      const t = i / pointsCount;
+      const bend = Math.sin(t * Math.PI) * 0.003;
+      const lat = startLat + (endLat - startLat) * t + bend;
+      const lng = startLng + (endLng - startLng) * t - bend;
+      polyline.push([lat, lng]);
+    }
+
+    setActiveRoutePolyline(polyline);
+    setRouteBounds([[startLat, startLng], [endLat, endLng]]);
+    setRouteLoading(false);
+    showToast(`${t("Route calculated to")} ${dest.name}`);
+  };
+
+  const handleClearRoute = () => {
+    setSelectedDestination(null);
+    setActiveRoutePolyline(null);
+    setRouteBounds(null);
+    setRouteSteps([]);
+    setOsrmDistance(null);
+    setOsrmDuration(null);
+  };
+
+  // Dedicated Map Voice Guide Speech Recognition & Synthesis Engine
+  const handleStartVoiceGuide = () => {
+    // If already active, stop and reset
+    if (voiceStatus !== "idle") {
+      voiceRequestIdRef.current += 1;
+      voiceRequestRef.current?.abort();
+      voiceRequestRef.current = null;
+      if (recognitionRetryTimeoutRef.current) {
+        clearTimeout(recognitionRetryTimeoutRef.current);
+        recognitionRetryTimeoutRef.current = null;
+      }
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch {}
+      }
+      recognitionRef.current = null;
+      speechIdRef.current += 1;
+      setVoiceStatus("idle");
+      setVoiceTranscript("");
+      // Cancel any ongoing speech synthesis
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+      return;
+    }
+
+    const SpeechConstructor = getSpeechRecognition();
+    if (!SpeechConstructor) {
+      showToast(t("Voice recognition is not supported in your browser."));
+      return;
+    }
+
+    // Start speech recognition directly (browser native prompt will trigger if not yet set)
+    startVoiceRecognition(SpeechConstructor, false);
+  };
+
+  const startVoiceRecognition = (SpeechConstructor: SpeechRecognitionConstructor, isRetry: boolean) => {
+    if (recognitionRetryTimeoutRef.current) {
+      clearTimeout(recognitionRetryTimeoutRef.current);
+      recognitionRetryTimeoutRef.current = null;
+    }
+
+    // Cleanup any previous instance
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch {}
+      recognitionRef.current = null;
+    }
+
+    try {
+      const recognition = new SpeechConstructor();
+      recognitionRef.current = recognition;
+      recognition.continuous = false;
+      recognition.interimResults = true; // Allow interim results for better responsiveness
+      recognition.lang = language === "hi" ? "hi-IN" : language === "mr" ? "mr-IN" : "en-IN";
+
+      recognition.onstart = () => {
+        if (recognitionRef.current !== recognition) return;
+        setVoiceStatus("listening");
+        setVoiceTranscript("");
+        setSpokenMessage(null);
+      };
+
+      recognition.onresult = (event) => {
+        if (recognitionRef.current !== recognition) return;
+
+        // Collect all results, prefer final ones
+        let finalTranscript = "";
+        let interimTranscript = "";
+
+        for (let i = 0; i < event.results.length; i++) {
+          const result = event.results[i];
+          if (result?.[0]?.transcript) {
+            if (result.isFinal) {
+              finalTranscript += result[0].transcript;
+            } else {
+              interimTranscript += result[0].transcript;
+            }
+          }
+        }
+
+        // Show interim transcript while user is speaking
+        const displayTranscript = finalTranscript || interimTranscript;
+        if (displayTranscript.trim()) {
+          setVoiceTranscript(displayTranscript.trim());
+        }
+
+        // Process only when we have a final result
+        if (finalTranscript.trim()) {
+          setVoiceTranscript(finalTranscript.trim());
+          setVoiceStatus("processing");
+          // Stop recognition before processing
+          try { recognition.stop(); } catch {}
+          recognitionRef.current = null;
+          processVoiceQuery(finalTranscript.trim());
+        }
+      };
+
+      recognition.onerror = (event) => {
+        if (recognitionRef.current !== recognition) return;
+
+        const errorType = event.error;
+
+        // Skip aborted errors (user deliberately stopped)
+        if (errorType === "aborted") {
+          recognitionRef.current = null;
+          return;
+        }
+
+        // Handle no-speech: auto-retry once, then give gentle feedback
+        if (errorType === "no-speech") {
+          recognitionRef.current = null;
+          if (!isRetry) {
+            // Auto-retry once silently
+            setVoiceStatus("idle");
+            recognitionRetryTimeoutRef.current = setTimeout(() => {
+              recognitionRetryTimeoutRef.current = null;
+              startVoiceRecognition(SpeechConstructor, true);
+            }, 300);
+            return;
+          }
+          setVoiceStatus("idle");
+          showToast(t("No speech detected. Tap the mic and speak clearly."));
+          return;
+        }
+
+        // Handle permission errors
+        if (errorType === "not-allowed" || errorType === "permission-denied" || errorType === "service-not-allowed") {
+          recognitionRef.current = null;
+          setVoiceStatus("idle");
+          showToast(t("Microphone permission denied. Please allow microphone access in your browser settings."));
+          return;
+        }
+
+        // Handle audio capture errors
+        if (errorType === "audio-capture") {
+          recognitionRef.current = null;
+          setVoiceStatus("idle");
+          showToast(t("Microphone is unavailable. Check your device and try again."));
+          return;
+        }
+
+        // Handle network errors
+        if (errorType === "network") {
+          recognitionRef.current = null;
+          setVoiceStatus("idle");
+          showToast(t("Voice recognition unavailable due to network issue. Try again."));
+          return;
+        }
+
+        // Generic fallback for unknown errors
+        recognitionRef.current = null;
+        setVoiceStatus("idle");
+        showToast(t("Voice recognition encountered an issue. Please try again."));
+      };
+
+      recognition.onend = () => {
+        if (recognitionRef.current !== recognition) return;
+        recognitionRef.current = null;
+        // Only reset to idle if we're still in listening state (not processing/speaking)
+        setVoiceStatus((prev) => (prev === "listening" ? "idle" : prev));
+      };
+
+      recognition.start();
+    } catch (err) {
+      recognitionRef.current = null;
+      setVoiceStatus("idle");
+      showToast(t("Microphone access is required for the Map Voice Guide."));
+      console.warn("Voice recognition could not start:", err);
+    }
+  };
+
+  // Match voice query against places with NLP-aware category matching & generate audio response
+  const processVoiceQuery = async (queryText: string) => {
+    if (!queryText.trim()) {
+      setVoiceStatus("idle");
+      return;
+    }
+
+    const q = queryText.toLowerCase().trim();
+    const requestId = ++voiceRequestIdRef.current;
+    voiceRequestRef.current?.abort();
+    const controller = new AbortController();
+    voiceRequestRef.current = controller;
+
+    // Category-aware keyword mapping for voice commands (EN, HI, MR)
+    const categoryKeywords: Record<string, string[]> = {
+      emergency: ["hospital", "doctor", "medical", "emergency", "ambulance", "clinic", "health", "अस्पताल", "दवाखाना", "रुग्णालय", "हॉस्पिटल"],
+      hotel: ["hotel", "stay", "lodge", "room", "accommodation", "resort", "dharamshala", "होटल", "हॉटेल", "धर्मशाळा"],
+      food: ["food", "restaurant", "eat", "dining", "cafe", "misal", "thali", "breakfast", "lunch", "dinner", "खाना", "भोजन", "रेस्टोरेंट", "मिसळ"],
+      temple: ["temple", "mandir", "spiritual", "worship", "darshan", "puja", "मंदिर", "दर्शन", "घाट"],
+      transport: ["bus", "station", "railway", "train", "parking", "transport", "auto", "taxi", "cab", "बस", "स्टेशन", "पार्किंग"],
+      kumbh: ["kumbh", "kumbha", "mela", "ghat", "snaan", "bathing", "कुंभ", "मेळा", "स्नान"],
+      tourist: ["tourist", "fort", "trek", "nature", "cave", "scenic", "viewpoint", "waterfall", "पर्यटन", "किल्ला"],
+    };
+
+    // 1. Direct name match from allMapPlaces
+    let matchedPlace = allMapPlaces.find((p) => {
+      const pName = p.name.toLowerCase();
+      return pName.includes(q) || q.includes(pName);
+    });
+
+    // 2. Keyword-to-place matching with Hindi & Marathi support
+    if (!matchedPlace) {
+      const knownPlaces: [string[], string][] = [
+        [["ram kund", "ramkund", "रामकुंड", "राम कुंड"], "ram kund"],
+        [["trimbak", "trimbakeshwar", "त्र्यंबकेश्वर", "त्र्यंबक"], "trimbak"],
+        [["kalaram", "kala ram", "काळाराम", "कालाराम"], "kalaram"],
+        [["panchavati", "panchwati", "पंचवटी"], "panchavati"],
+        [["muktidham", "मुक्तिधाम"], "muktidham"],
+        [["pandavleni", "pandav leni", "caves", "पांडवलेणी"], "pandavleni"],
+        [["sula", "vineyard", "winery", "सुला"], "sula"],
+        [["tapovan", "तपोवन"], "tapovan"],
+        [["someshwar", "सोमेश्वर"], "someshwar"],
+        [["gangapur", "गंगापूर"], "gangapur"],
+        [["anjaneri", "अंजनेरी"], "anjaneri"],
+      ];
+
+      for (const [keywords, searchTerm] of knownPlaces) {
+        if (keywords.some((kw) => q.includes(kw))) {
+          matchedPlace = allMapPlaces.find((p) => p.name.toLowerCase().includes(searchTerm));
+          if (matchedPlace) break;
+        }
+      }
+    }
+
+    // 3. Category-based nearest match — "find nearest hospital", "take me to a hotel"
+    if (!matchedPlace) {
+      for (const [catKey, keywords] of Object.entries(categoryKeywords)) {
+        if (keywords.some((kw) => q.includes(kw))) {
+          const catPlaces = allMapPlaces.filter((p) => {
+            const cat = (p.category || "").toLowerCase();
+            const sub = (p.subcategory || "").toLowerCase();
+            return (
+              cat.includes(catKey) ||
+              sub.includes(catKey) ||
+              keywords.some((kw) => cat.includes(kw) || sub.includes(kw))
+            );
+          });
+
+          if (catPlaces.length > 0) {
+            if (userLocation) {
+              catPlaces.sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
+            }
+            matchedPlace = catPlaces[0];
+          }
+          break;
+        }
+      }
+    }
+
+    // 4. Fuzzy partial word match
+    if (!matchedPlace) {
+      const qWords = q.split(/\s+/).filter((w) => w.length > 2);
+      matchedPlace = allMapPlaces.find((p) => {
+        const pName = p.name.toLowerCase();
+        return qWords.some((w) => pName.includes(w));
+      });
+    }
+
+    // Ask the server to normalize the request and provide a concise spoken reply.
+    try {
+      const res = await fetch("/api/map-voice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: queryText, language, userLocation }),
+        signal: controller.signal,
+      });
+
+      if (requestId !== voiceRequestIdRef.current) return;
+
+      let data: unknown = null;
+      try {
+        data = await res.json();
+      } catch {
+        data = null;
+      }
+
+      if (!res.ok) {
+        showToast(t("Map Voice Guide response was unavailable. Using local directions."));
+      } else if (
+        typeof data === "object" &&
+        data !== null &&
+        "destinationName" in data &&
+        typeof data.destinationName === "string"
+      ) {
+        const destinationName = data.destinationName.trim().toLowerCase();
+        if (!matchedPlace && destinationName) {
+          matchedPlace = allMapPlaces.find((place) => {
+            const name = place.name.toLowerCase();
+            return name.includes(destinationName) || destinationName.includes(name);
+          });
+        }
+      }
+
+      // Fallback: If still no matched place, take the first place from allMapPlaces
+      if (!matchedPlace && allMapPlaces.length > 0) {
+        matchedPlace = allMapPlaces[0];
+      }
+
+      if (matchedPlace) {
+        setViewMode("map");
+        setSelectedPlace(matchedPlace);
+        setMapCenter([matchedPlace.lat, matchedPlace.lng]);
+        setMapZoom(14);
+        void handleSelectRouteDestination(matchedPlace);
+      }
+
+      const spokenResponse =
+        typeof data === "object" &&
+        data !== null &&
+        "spokenResponse" in data &&
+        typeof data.spokenResponse === "string" &&
+        data.spokenResponse.trim()
+          ? data.spokenResponse.trim()
+          : getVoiceFallbackReply(matchedPlace?.name || queryText.trim(), language);
+      speakVoiceResponse(spokenResponse);
+    } catch (error: unknown) {
+      if (controller.signal.aborted || requestId !== voiceRequestIdRef.current) return;
+      console.error("Map Voice Guide request failed:", error);
+      showToast(t("Map Voice Guide response was unavailable. Using local directions."));
+
+      if (!matchedPlace && allMapPlaces.length > 0) {
+        matchedPlace = allMapPlaces[0];
+      }
+
+      if (matchedPlace) {
+        setViewMode("map");
+        setSelectedPlace(matchedPlace);
+        setMapCenter([matchedPlace.lat, matchedPlace.lng]);
+        setMapZoom(14);
+        void handleSelectRouteDestination(matchedPlace);
+      }
+      speakVoiceResponse(getVoiceFallbackReply(matchedPlace?.name || queryText.trim(), language));
+    } finally {
+      if (voiceRequestRef.current === controller) {
+        voiceRequestRef.current = null;
+      }
+    }
+  };
+
+  const speakVoiceResponse = (text: string) => {
+    speechIdRef.current += 1;
+    const speechId = speechIdRef.current;
+    setSpokenMessage(text);
+    setVoiceStatus("speaking");
+
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = language === "hi" ? "hi-IN" : language === "mr" ? "mr-IN" : "en-IN";
+      utterance.onend = () => {
+        if (speechIdRef.current === speechId) setVoiceStatus("idle");
+      };
+      utterance.onerror = () => {
+        if (speechIdRef.current === speechId) setVoiceStatus("idle");
+      };
+      window.speechSynthesis.speak(utterance);
+    } else {
+      setVoiceStatus("idle");
+    }
+  };
 
   // Request browser current location (user-initiated ONLY)
   const handleRequestLocation = () => {
@@ -363,15 +1019,26 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
     });
   };
 
-  // Map Controller sub-component to programmatically view coordinates
-  function MapController({ center, zoom }: { center: [number, number]; zoom: number }) {
-    if (!mapLib) return null;
-    const map = mapLib.useMap();
-    useEffect(() => {
-      map.flyTo(center, zoom, { duration: 1.2 });
-    }, [center, zoom, map]);
-    return null;
-  }
+  // Helper to create Group Member Pin Icon for future Group Tracker compatibility
+  const createGroupMemberIcon = (member: GroupMemberPin) => {
+    if (!mapLib?.L) return undefined;
+    const html = `
+      <div className="relative flex items-center justify-center group cursor-pointer">
+        <div className="h-9 w-9 rounded-full border-2 border-emerald-500 bg-[#173247] text-white shadow-xl flex items-center justify-center font-bold text-xs">
+          ${member.name.charAt(0).toUpperCase()}
+        </div>
+        <div className="absolute -bottom-5 bg-black/75 text-white text-[9px] px-1.5 py-0.5 rounded shadow whitespace-nowrap">
+          ${member.name}
+        </div>
+      </div>
+    `;
+    return mapLib.L.divIcon({
+      html,
+      className: "group-member-marker",
+      iconSize: [36, 36],
+      iconAnchor: [18, 18],
+    });
+  };
 
   const handleMarkerClick = (place: MapPlaceItem) => {
     setSelectedPlace(place);
@@ -379,8 +1046,43 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
     setMapZoom(15);
   };
 
+  // Route travel calculations — prefer OSRM real data, fallback to Haversine estimate
+  const routeDistKm = osrmDistance ?? (selectedDestination
+    ? (selectedDestination.distanceKm ?? calculateHaversineDistance(userLocation ? userLocation.lat : NASHIK_CENTER[0], userLocation ? userLocation.lng : NASHIK_CENTER[1], selectedDestination.lat, selectedDestination.lng))
+    : 0);
+
+  const drivingMinutes = osrmDuration && routeTravelMode === "driving"
+    ? Math.max(1, Math.round(osrmDuration))
+    : Math.max(1, Math.round((routeDistKm / 28) * 60));
+  const walkingMinutes = osrmDuration && routeTravelMode === "walking"
+    ? Math.max(1, Math.round(osrmDuration))
+    : Math.max(1, Math.round((routeDistKm / 4.5) * 60));
+
   return (
     <div className="relative flex flex-col h-full w-full bg-[#f8f2e8] overflow-hidden">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 rounded-full bg-[#173247] text-white px-4 py-2 text-xs font-bold shadow-2xl animate-in fade-in zoom-in-95 flex items-center gap-2">
+          <CheckCircle className="h-4 w-4 text-emerald-400 shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Spoken Response Banner from Map Voice Guide */}
+      {spokenMessage && (
+        <div className="absolute top-20 left-4 right-4 sm:left-auto sm:right-6 sm:w-96 z-40 rounded-2xl bg-[#173247] text-white p-3.5 shadow-2xl border border-orange-500/40 animate-in slide-in-from-top-4 duration-300">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Volume2 className="h-4 w-4 text-orange-400 animate-pulse shrink-0" />
+              <p className="text-xs font-semibold leading-relaxed text-orange-100">{spokenMessage}</p>
+            </div>
+            <button type="button" onClick={() => setSpokenMessage(null)} className="p-1 text-slate-400 hover:text-white shrink-0">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Top Search & Filter Bar Overlay */}
       <div className="relative z-20 p-3 sm:p-4 bg-gradient-to-b from-[#fffdf8] via-[#fffdf8]/95 to-transparent border-b border-[#e1cfb0]/60 shadow-sm backdrop-blur-sm">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center gap-3">
@@ -391,7 +1093,7 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t("Search places, temples, hospitals, Kumbh locations...")}
+              placeholder={t("Search destination, places, temples, hospitals, Kumbh locations...")}
               className="w-full pl-10 pr-9 py-2 sm:py-2.5 rounded-full border border-[#e1cfb0] bg-white text-xs sm:text-sm text-[#173247] placeholder-[#667883] shadow-sm outline-none transition-all focus:border-[#e86f18] focus:ring-2 focus:ring-[#e86f18]/20"
             />
             {searchQuery && (
@@ -405,7 +1107,7 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
             )}
           </div>
 
-          {/* Action Buttons: Near Me & View Toggle */}
+          {/* Action Buttons: Near Me & Map/List View Toggle */}
           <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
@@ -414,9 +1116,10 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
               className="flex items-center gap-1.5 rounded-full border border-[#e7b06d] bg-[#fff7ed] px-3.5 py-2 text-xs font-bold text-[#c9580f] shadow-sm transition-all hover:bg-[#ffedd5] active:scale-95 disabled:opacity-60"
             >
               <Navigation className={`h-3.5 w-3.5 text-[#e86f18] ${locating ? "animate-spin" : ""}`} />
-              <span>{locating ? t("Locating...") : t("Near Me")}</span>
+              <span>{locating ? t("Locating...") : userLocation ? t("Near Me (Active)") : t("Near Me")}</span>
             </button>
 
+            {/* Map / List View Toggle */}
             <div className="flex items-center rounded-full border border-[#e1cfb0] bg-white p-1 shadow-sm">
               <button
                 type="button"
@@ -455,7 +1158,6 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
                 onClick={() => {
                   setSelectedCategory(cat.id);
                   if (cat.id === "Kumbh 2027") {
-                    // Smooth pan to Ram Kund / Kumbh hub
                     setMapCenter([20.0063, 73.7915]);
                     setMapZoom(13);
                   }
@@ -467,7 +1169,10 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
                 }`}
               >
                 <Icon className={`h-3.5 w-3.5 ${isSelected ? "text-white" : ""}`} style={{ color: isSelected ? "#fff" : cat.color }} />
-                <span>{t(cat.labelKey)}</span>
+                <span>
+                  {t(cat.labelKey)}
+                  {cat.id === "Saved" && savedPlaceIds.length > 0 ? ` (${savedPlaceIds.length})` : ""}
+                </span>
               </button>
             );
           })}
@@ -495,15 +1200,24 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
             <div className="max-w-6xl mx-auto">
               <div className="mb-4 flex items-center justify-between">
                 <p className="text-xs sm:text-sm font-bold text-[#667883]">
-                  {t("Showing")} <span className="text-[#c9580f]">{filteredMapPlaces.length}</span> {t("places on map")}
+                  {t("Showing")} <span className="text-[#c9580f]">{filteredMapPlaces.length}</span> {t("places")}
+                  {userLocation ? ` (${t("Sorted by distance from you")})` : ""}
                 </p>
               </div>
 
               {filteredMapPlaces.length === 0 ? (
                 <div className="py-16 text-center rounded-2xl bg-white/70 border border-[#e1cfb0] p-8">
                   <MapPin className="h-10 w-10 text-orange-400 mx-auto mb-3 opacity-60" />
-                  <h3 className="text-base font-bold text-[#173247]">{t("No places found in this category")}</h3>
-                  <p className="mt-1 text-xs text-[#667883]">{t("Try clearing your search or picking another category.")}</p>
+                  <h3 className="text-base font-bold text-[#173247]">
+                    {selectedCategory === "Saved"
+                      ? t("No saved places yet")
+                      : t("No places found matching your filter")}
+                  </h3>
+                  <p className="mt-1 text-xs text-[#667883]">
+                    {selectedCategory === "Saved"
+                      ? t("Click the heart icon on any place card to bookmark your favorites.")
+                      : t("Try clearing your search or picking another category.")}
+                  </p>
                   <button
                     type="button"
                     onClick={() => {
@@ -518,7 +1232,20 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   {filteredMapPlaces.map((place) => (
-                    <PlaceCard key={place._id} place={place} onExplore={setDetailModalPlace} />
+                    <div key={place._id} className="flex flex-col justify-between">
+                      <PlaceCard place={place} onExplore={setDetailModalPlace} />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setViewMode("map");
+                          handleSelectRouteDestination(place);
+                        }}
+                        className="mt-2 w-full flex items-center justify-center gap-1.5 rounded-full border border-[#e7b06d] bg-[#fff7ed] py-2 text-xs font-bold text-[#c9580f] hover:bg-[#ffedd5] transition-colors"
+                      >
+                        <Navigation className="h-3.5 w-3.5 text-[#e86f18]" />
+                        <span>{t("Route Here")}</span>
+                      </button>
+                    </div>
                   ))}
                 </div>
               )}
@@ -541,12 +1268,28 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
                 scrollWheelZoom={true}
                 className="h-full w-full z-0"
               >
-                <MapController center={mapCenter} zoom={mapZoom} />
+                <MapController center={mapCenter} zoom={mapZoom} bounds={routeBounds} />
 
                 <mapLib.TileLayer
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
+
+                {/* Render Polyline Route inside Map */}
+                {activeRoutePolyline && (
+                  <>
+                    {/* Route shadow for depth */}
+                    <mapLib.Polyline
+                      positions={activeRoutePolyline}
+                      pathOptions={{ color: "#173247", weight: 9, opacity: 0.25 }}
+                    />
+                    {/* Main route line */}
+                    <mapLib.Polyline
+                      positions={activeRoutePolyline}
+                      pathOptions={{ color: "#e86f18", weight: 5, opacity: 0.9 }}
+                    />
+                  </>
+                )}
 
                 {/* User Current Location Marker */}
                 {userLocation && (
@@ -556,15 +1299,31 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
                   >
                     <mapLib.Popup>
                       <div className="p-1 text-center font-bold text-xs text-[#173247]">
-                        📍 {t("Your Current Location")}
+                        📍 {t("Your Location")}
                       </div>
                     </mapLib.Popup>
                   </mapLib.Marker>
                 )}
 
+                {/* Optional Group Member Markers (Future Group Tracker Integration) */}
+                {groupMembers.map((member) => (
+                  <mapLib.Marker
+                    key={`group-${member.id}`}
+                    position={[member.lat, member.lng]}
+                    icon={createGroupMemberIcon(member)}
+                  >
+                    <mapLib.Popup>
+                      <div className="p-1 text-center">
+                        <p className="font-bold text-xs text-[#173247]">{member.name}</p>
+                        <p className="text-[10px] text-[#667883]">{member.role || "Group Member"} • {member.lastUpdated || "Just now"}</p>
+                      </div>
+                    </mapLib.Popup>
+                  </mapLib.Marker>
+                ))}
+
                 {/* Render Filtered Location Markers */}
                 {filteredMapPlaces.map((place) => {
-                  const isSelected = selectedPlace?._id === place._id;
+                  const isSelected = selectedPlace?._id === place._id || selectedDestination?._id === place._id;
                   const icon = createCategoryIcon(place.category, isSelected, place.isKumbhLocation);
 
                   return (
@@ -577,7 +1336,7 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
                       }}
                     >
                       <mapLib.Popup className="custom-map-popup">
-                        <div className="w-56 p-1">
+                        <div className="w-60 p-1">
                           <div className="relative mb-2 h-28 w-full overflow-hidden rounded-xl bg-slate-100">
                             <img
                               src={place.image || "https://images.unsplash.com/photo-1596700508005-4f05ab04c997?auto=format&fit=crop&w=800&q=80"}
@@ -589,6 +1348,14 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
                                 ✨ {t("Kumbh 2027")}
                               </span>
                             )}
+                            {/* Save Heart Button inside Popup */}
+                            <button
+                              type="button"
+                              onClick={(e) => toggleSavePlace(place._id, e)}
+                              className="absolute top-2 right-2 p-1.5 rounded-full bg-white/90 shadow text-[#c9580f] hover:scale-110 transition-transform"
+                            >
+                              <Heart className={`h-4 w-4 ${savedPlaceIds.includes(place._id) ? "fill-red-500 text-red-500" : ""}`} />
+                            </button>
                           </div>
                           <h4 className="font-bold text-sm text-[#173247] line-clamp-1">{place.name}</h4>
                           <p className="text-[11px] text-[#667883] line-clamp-1 mt-0.5">{place.location}</p>
@@ -606,23 +1373,17 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
                           </div>
 
                           <div className="mt-3 flex items-center gap-1.5">
-                            <a
-                              href={
-                                place.mapLink ||
-                                `https://www.google.com/maps/dir/?api=1${
-                                  userLocation ? `&origin=${userLocation.lat},${userLocation.lng}` : ""
-                                }&destination=${place.lat},${place.lng}`
-                              }
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex-1 rounded-lg bg-[#fff7ed] border border-[#e7b06d] px-2 py-1.5 text-center text-xs font-bold text-[#c9580f] hover:bg-[#ffedd5]"
+                            <button
+                              type="button"
+                              onClick={() => handleSelectRouteDestination(place)}
+                              className="flex-1 rounded-lg bg-[#c9580f] px-2 py-1.5 text-center text-xs font-bold text-white hover:bg-[#173247] transition-colors"
                             >
-                              {t("Directions")}
-                            </a>
+                              {t("Route Here")}
+                            </button>
                             <button
                               type="button"
                               onClick={() => setDetailModalPlace(place)}
-                              className="flex-1 rounded-lg bg-[#c9580f] px-2 py-1.5 text-center text-xs font-bold text-white hover:bg-[#173247]"
+                              className="flex-1 rounded-lg bg-[#fff7ed] border border-[#e7b06d] px-2 py-1.5 text-center text-xs font-bold text-[#c9580f] hover:bg-[#ffedd5]"
                             >
                               {t("View Details")}
                             </button>
@@ -635,8 +1396,152 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
               </mapLib.MapContainer>
             )}
 
-            {/* Bottom Floating Place Info Drawer (Mobile & Desktop Overlay on Marker Click) */}
-            {selectedPlace && (
+            {/* Active Route Information Card Overlay */}
+            {selectedDestination && (activeRoutePolyline || routeLoading) && (
+              <div className="absolute top-4 left-4 right-4 sm:left-6 sm:right-auto sm:w-96 z-40 rounded-2xl border border-orange-400 bg-[#fffdf8] p-4 shadow-[0_16px_48px_rgba(77,58,30,0.25)] animate-in slide-in-from-top-4 duration-300 max-h-[60vh] overflow-y-auto">
+                <div className="flex items-start justify-between gap-2 pb-2 border-b border-[#f1d9b6]">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#c9580f] text-white">
+                      <Flag className="h-4 w-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#c9580f] block truncate">
+                        {t("Destination Route")}
+                      </span>
+                      <h3 className="text-sm font-black text-[#173247] truncate">{selectedDestination.name}</h3>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleClearRoute}
+                    className="p-1 rounded-full text-[#667883] hover:bg-[#fff7ed] hover:text-[#173247]"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {/* Route Loading State */}
+                {routeLoading && (
+                  <div className="py-4 flex items-center justify-center gap-2 text-xs text-[#667883]">
+                    <div className="h-4 w-4 border-2 border-[#e86f18] border-t-transparent rounded-full animate-spin" />
+                    <span>{t("Calculating route...")}</span>
+                  </div>
+                )}
+
+                {/* Distance & Travel Time Stats */}
+                {!routeLoading && (
+                  <>
+                    <div className="py-2.5 flex items-center justify-between text-xs border-b border-[#f1d9b6]/60">
+                      <span className="font-bold text-[#173247]">
+                        📍 {routeDistKm.toFixed(1)} {t("km")}
+                        {osrmDistance !== null && <span className="ml-1 text-[10px] font-normal text-emerald-600">{t("(road)")}</span>}
+                      </span>
+                      <div className="flex items-center gap-2 font-bold text-[#c9580f]">
+                        {routeTravelMode === "driving" ? (
+                          <span className="flex items-center gap-1">
+                            <Car className="h-3.5 w-3.5 text-[#e86f18]" />
+                            <span>~{drivingMinutes} {t("min")}</span>
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1">
+                            <Footprints className="h-3.5 w-3.5 text-[#e86f18]" />
+                            <span>~{walkingMinutes} {t("min")}</span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Travel Mode Selector */}
+                    <div className="mt-2.5 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRouteTravelMode("driving");
+                          if (selectedDestination) void handleSelectRouteDestination(selectedDestination, "driving");
+                        }}
+                        className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                          routeTravelMode === "driving"
+                            ? "bg-[#c9580f] text-white"
+                            : "bg-[#fff7ed] border border-[#e7b06d] text-[#c9580f]"
+                        }`}
+                      >
+                        <Car className="h-3.5 w-3.5" />
+                        <span>{t("Driving")}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRouteTravelMode("walking");
+                          if (selectedDestination) void handleSelectRouteDestination(selectedDestination, "walking");
+                        }}
+                        className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                          routeTravelMode === "walking"
+                            ? "bg-[#c9580f] text-white"
+                            : "bg-[#fff7ed] border border-[#e7b06d] text-[#c9580f]"
+                        }`}
+                      >
+                        <Footprints className="h-3.5 w-3.5" />
+                        <span>{t("Walking")}</span>
+                      </button>
+                    </div>
+
+                    {/* Turn-by-Turn Route Steps */}
+                    {routeSteps.length > 0 && (
+                      <div className="mt-3 rounded-xl bg-[#f8f2e8]/80 border border-[#e1cfb0] p-2.5">
+                        <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#c9580f] mb-2 flex items-center gap-1">
+                          <Compass className="h-3 w-3" />
+                          {t("Route Steps")}
+                        </h4>
+                        <div className="space-y-1.5">
+                          {routeSteps.map((step, idx) => (
+                            <div key={idx} className="flex items-start gap-2 text-[11px] text-[#173247]">
+                              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#c9580f] text-[8px] font-bold text-white mt-0.5">
+                                {idx + 1}
+                              </span>
+                              <div className="min-w-0">
+                                <span className="font-medium">{step.instruction}</span>
+                                <span className="ml-1 text-[10px] text-[#667883]">
+                                  ({step.distance < 1000 ? `${Math.round(step.distance)}m` : `${(step.distance / 1000).toFixed(1)}km`})
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Route Actions */}
+                    <div className="mt-3 flex items-center gap-2">
+                      <a
+                        href={
+                          selectedDestination.mapLink ||
+                          `https://www.google.com/maps/dir/?api=1${
+                            userLocation ? `&origin=${userLocation.lat},${userLocation.lng}` : ""
+                          }&destination=${selectedDestination.lat},${selectedDestination.lng}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#e86f18] to-[#c9580f] px-3 py-2 text-xs font-bold text-white shadow hover:opacity-95"
+                      >
+                        <Navigation className="h-3.5 w-3.5" />
+                        <span>{t("Start Navigation")}</span>
+                      </a>
+                      <button
+                        type="button"
+                        onClick={handleClearRoute}
+                        className="flex items-center gap-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        <span>{t("Clear")}</span>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Bottom Floating Place Info Drawer */}
+            {selectedPlace && !activeRoutePolyline && (
               <div className="absolute bottom-4 left-4 right-4 sm:left-6 sm:right-auto sm:w-96 z-40 rounded-2xl border border-[#e1cfb0] bg-[#fffdf8] p-4 shadow-[0_16px_48px_rgba(77,58,30,0.22)] animate-in slide-in-from-bottom-4 duration-300">
                 <div className="flex items-start justify-between gap-2 pb-2 border-b border-[#f1d9b6]">
                   <div className="flex items-center gap-2 min-w-0">
@@ -650,13 +1555,31 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
                       <h3 className="text-sm font-black text-[#173247] truncate">{selectedPlace.name}</h3>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedPlace(null)}
-                    className="p-1 rounded-full text-[#667883] hover:bg-[#fff7ed] hover:text-[#173247]"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={(e) => handleSharePlace(selectedPlace, e)}
+                      aria-label={t("Share Place")}
+                      className="p-1 rounded-full text-[#667883] hover:bg-[#fff7ed] hover:text-[#173247]"
+                    >
+                      <Share2 className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => toggleSavePlace(selectedPlace._id, e)}
+                      aria-label={t("Save Place")}
+                      className="p-1 rounded-full text-[#667883] hover:bg-[#fff7ed] hover:text-[#c9580f]"
+                    >
+                      <Heart className={`h-4 w-4 ${savedPlaceIds.includes(selectedPlace._id) ? "fill-red-500 text-red-500" : ""}`} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPlace(null)}
+                      className="p-1 rounded-full text-[#667883] hover:bg-[#fff7ed] hover:text-[#173247]"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="py-2.5 flex items-center justify-between text-xs border-b border-[#f1d9b6]/60">
@@ -671,31 +1594,19 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
                   )}
                 </div>
 
-                {selectedPlace.famousThing && (
-                  <p className="mt-2 text-[11px] font-semibold text-[#a45317] bg-[#fff7ed] px-2.5 py-1 rounded-lg border border-[#e7b06d]/60">
-                    ℹ️ {selectedPlace.famousThing}
-                  </p>
-                )}
-
                 <div className="mt-3 flex items-center gap-2">
-                  <a
-                    href={
-                      selectedPlace.mapLink ||
-                      `https://www.google.com/maps/dir/?api=1${
-                        userLocation ? `&origin=${userLocation.lat},${userLocation.lng}` : ""
-                      }&destination=${selectedPlace.lat},${selectedPlace.lng}`
-                    }
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-[#e7b06d] bg-[#fff7ed] px-3 py-2 text-xs font-bold text-[#c9580f] hover:bg-[#ffedd5] transition-colors"
+                  <button
+                    type="button"
+                    onClick={() => handleSelectRouteDestination(selectedPlace)}
+                    className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#e86f18] to-[#c9580f] px-3 py-2 text-xs font-bold text-white shadow hover:opacity-95"
                   >
                     <Navigation className="h-3.5 w-3.5" />
-                    <span>{t("Directions")}</span>
-                  </a>
+                    <span>{t("Route Here")}</span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => setDetailModalPlace(selectedPlace)}
-                    className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#e86f18] to-[#c9580f] px-3 py-2 text-xs font-bold text-white shadow hover:opacity-95 transition-opacity"
+                    className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-[#e7b06d] bg-[#fff7ed] px-3 py-2 text-xs font-bold text-[#c9580f] hover:bg-[#ffedd5] transition-colors"
                   >
                     <span>{t("View Details")}</span>
                     <ChevronRight className="h-3.5 w-3.5" />
@@ -703,6 +1614,62 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
                 </div>
               </div>
             )}
+
+            {/* DEDICATED MAP VOICE GUIDE FLOATING BUTTON (Replaces default Chatbot on /map) */}
+            <div className="fixed bottom-4 right-3 sm:bottom-6 sm:right-6 md:right-8 z-50 flex flex-col items-end gap-2">
+              {/* Voice transcript bubble — shows what user said */}
+              {voiceTranscript && voiceStatus !== "idle" && (
+                <div className="max-w-[240px] sm:max-w-xs rounded-2xl rounded-br-md bg-[#173247] text-white px-3.5 py-2.5 text-xs font-medium shadow-2xl border border-orange-500/40 animate-in slide-in-from-bottom-2 duration-200">
+                  <p className="text-[10px] uppercase tracking-wider text-orange-400 font-bold mb-1">🎤 {t("You said")}</p>
+                  <p className="text-orange-100 leading-relaxed">&ldquo;{voiceTranscript}&rdquo;</p>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2">
+                {/* Voice state indicator bubble */}
+                {voiceStatus !== "idle" && (
+                  <div className="hidden sm:flex items-center gap-2 rounded-full bg-[#173247] text-white px-3.5 py-2 text-xs font-bold shadow-xl border border-orange-500/50 animate-in fade-in">
+                    <div className={`h-2.5 w-2.5 rounded-full ${voiceStatus === "listening" ? "bg-red-500 animate-ping" : voiceStatus === "processing" ? "bg-amber-400 animate-pulse" : "bg-emerald-400 animate-bounce"}`} />
+                    <span>
+                      {voiceStatus === "listening"
+                        ? t("Listening...")
+                        : voiceStatus === "processing"
+                        ? t("Finding destination & route...")
+                        : t("Speaking...")}
+                    </span>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleStartVoiceGuide}
+                  aria-label={t("Map Voice Guide")}
+                  className={`group relative flex h-[54px] w-[54px] sm:h-[62px] sm:w-[62px] items-center justify-center rounded-full border-4 border-[#fff7ed] text-white shadow-[0_10px_30px_rgba(234,88,12,0.4)] transition-all hover:scale-105 active:scale-95 ${
+                    voiceStatus === "listening"
+                      ? "bg-red-600 ring-4 ring-red-400/60"
+                      : voiceStatus === "processing"
+                      ? "bg-amber-600"
+                      : voiceStatus === "speaking"
+                      ? "bg-emerald-600 ring-4 ring-emerald-400/60"
+                      : "bg-gradient-to-r from-[#ea580c] to-[#c2410c] hover:bg-[#c2410c]"
+                  }`}
+                >
+                  {/* Pulse ring animation for listening state */}
+                  {voiceStatus === "listening" && (
+                    <span className="absolute inset-0 rounded-full bg-red-500/30 animate-ping" />
+                  )}
+                  {voiceStatus === "listening" ? (
+                    <MicOff className="relative h-6 w-6 text-white" />
+                  ) : voiceStatus === "processing" ? (
+                    <div className="relative h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : voiceStatus === "speaking" ? (
+                    <Volume2 className="relative h-6 w-6 text-white animate-pulse" />
+                  ) : (
+                    <Mic className="relative h-6 w-6 text-white transition-transform group-hover:scale-110" />
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Send, MessageCircle, Sparkles, Mic, Volume2, VolumeX } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import type { Language } from "@/lib/locale";
+import { usePathname } from "next/navigation";
 
 type SpeechRecognitionEventLike = Event & {
   results: SpeechRecognitionResultList;
@@ -166,14 +167,16 @@ const getGeminiReply = async (
 };
 
 export function ChatbotWidget() {
-  const { language, t } = useTranslation();
-  const [chatLanguage, setChatLanguage] = useState<Language>(language);
-  const [isOpen, setIsOpen] = useState(false);
+  const pathname = usePathname();
+  if (pathname === "/map") return null;
+  return <ChatbotAssistant />;
+}
 
-  // Sync chat language when global language changes
-  useEffect(() => {
-    setChatLanguage(language);
-  }, [language]);
+function ChatbotAssistant() {
+  const { language, t } = useTranslation();
+  const [chatLanguageOverride, setChatLanguageOverride] = useState<Language | null>(null);
+  const chatLanguage = chatLanguageOverride ?? language;
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     const handleOpen = () => setIsOpen(true);
@@ -188,7 +191,6 @@ export function ChatbotWidget() {
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [voiceError, setVoiceError] = useState("");
-  const [isSpeaking, setIsSpeaking] = useState(false);
   const [speakingIndex, setSpeakingIndex] = useState<number | null>(null);
 
   const voiceAvailable = typeof window !== "undefined" && Boolean(window.speechSynthesis || getSpeechRecognition());
@@ -197,6 +199,22 @@ export function ChatbotWidget() {
   const activeRequestIdRef = useRef<number>(0);
   const chatbotPanelRef = useRef<HTMLDivElement | null>(null);
   const toggleButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  const stopSpeaking = useCallback(() => {
+    activeSpeechIdRef.current += 1;
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    setSpeakingIndex(null);
+  }, []);
+
+  const closeChatbot = useCallback(() => {
+    recognitionRef.current?.abort();
+    recognitionRef.current = null;
+    setIsListening(false);
+    stopSpeaking();
+    setIsOpen(false);
+  }, [stopSpeaking]);
 
   // Close chatbot when clicking outside the panel and toggle button
   useEffect(() => {
@@ -221,7 +239,7 @@ export function ChatbotWidget() {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("touchstart", handleClickOutside);
     };
-  }, [isOpen]);
+  }, [isOpen, closeChatbot]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -257,15 +275,6 @@ export function ChatbotWidget() {
     };
   }, [isOpen]);
 
-  const stopSpeaking = () => {
-    activeSpeechIdRef.current += 1;
-    if (typeof window !== "undefined" && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
-    setIsSpeaking(false);
-    setSpeakingIndex(null);
-  };
-
   // Component unmount cleanup
   useEffect(() => {
     return () => {
@@ -277,15 +286,12 @@ export function ChatbotWidget() {
     };
   }, []);
 
-  // Cancel speech whenever the chatbot is closed or language is changed
   useEffect(() => {
-    if (!isOpen) {
-      stopSpeaking();
-    }
-  }, [isOpen]);
-
-  useEffect(() => {
-    stopSpeaking();
+    return () => {
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };
   }, [chatLanguage]);
 
   const speak = (text: string, index: number) => {
@@ -305,26 +311,22 @@ export function ChatbotWidget() {
 
     utterance.onstart = () => {
       if (activeSpeechIdRef.current === currentSpeechId) {
-        setIsSpeaking(true);
         setSpeakingIndex(index);
       }
     };
 
     utterance.onend = () => {
       if (activeSpeechIdRef.current === currentSpeechId) {
-        setIsSpeaking(false);
         setSpeakingIndex(null);
       }
     };
 
     utterance.onerror = () => {
       if (activeSpeechIdRef.current === currentSpeechId) {
-        setIsSpeaking(false);
         setSpeakingIndex(null);
       }
     };
 
-    setIsSpeaking(true);
     setSpeakingIndex(index);
     window.speechSynthesis.speak(utterance);
   };
@@ -334,7 +336,9 @@ export function ChatbotWidget() {
     if (!recognitionConstructor) return;
 
     if (recognitionRef.current) {
-      recognitionRef.current?.stop();
+      try { recognitionRef.current.stop(); } catch {}
+      recognitionRef.current = null;
+      setIsListening(false);
       return;
     }
 
@@ -386,7 +390,7 @@ export function ChatbotWidget() {
       }
       recognitionRef.current = null;
       setIsListening(false);
-      recognition.abort();
+      try { recognition.abort(); } catch {}
     };
     recognitionRef.current = recognition;
     setVoiceError("");
@@ -436,14 +440,6 @@ export function ChatbotWidget() {
         setIsLoading(false);
       }
     }
-  };
-
-  const closeChatbot = () => {
-    recognitionRef.current?.abort();
-    recognitionRef.current = null;
-    setIsListening(false);
-    stopSpeaking();
-    setIsOpen(false);
   };
 
   const toggleOpen = () => {
@@ -508,7 +504,7 @@ export function ChatbotWidget() {
                       recognitionRef.current?.abort();
                       recognitionRef.current = null;
                       setIsListening(false);
-                      setChatLanguage(lang);
+                      setChatLanguageOverride(lang);
                     }}
                     className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
                       chatLanguage === lang
@@ -563,6 +559,11 @@ export function ChatbotWidget() {
             </div>
 
             {/* Input Area */}
+            {voiceError && (
+              <p className="border-t border-orange-100 bg-orange-50 px-3 py-1.5 text-xs text-red-700" role="alert">
+                {t(voiceError)}
+              </p>
+            )}
             <div className="flex shrink-0 gap-2 border-t border-orange-100 bg-white p-2.5 sm:p-3 dark:border-slate-800 dark:bg-slate-900">
               <input
                 type="text"
