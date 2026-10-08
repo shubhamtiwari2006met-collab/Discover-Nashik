@@ -96,7 +96,7 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
         />
       </head>
-      <body className="min-h-full flex flex-col bg-[#f8f2e8] text-[#192f42] selection:bg-orange-500/30">
+      <body className="min-h-full flex flex-col bg-white text-[#192f42] selection:bg-orange-500/30">
         <I18nProvider initialLanguage={language}>
           <UserAuthProvider>
             <NavBar />
