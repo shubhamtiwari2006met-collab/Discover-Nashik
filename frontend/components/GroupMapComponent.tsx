@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { Maximize2, Minimize2 } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 import { useTranslation } from "@/lib/i18n";
 
@@ -118,6 +119,41 @@ export default function GroupMapComponent({ members, currentMemberId, onUpdateLo
     );
   };
 
+  const groupMapWrapperRef = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!groupMapWrapperRef.current) return;
+
+    if (!document.fullscreenElement) {
+      if (groupMapWrapperRef.current.requestFullscreen) {
+        void groupMapWrapperRef.current.requestFullscreen();
+      } else if ((groupMapWrapperRef.current as any).webkitRequestFullscreen) {
+        (groupMapWrapperRef.current as any).webkitRequestFullscreen();
+      } else if ((groupMapWrapperRef.current as any).msRequestFullscreen) {
+        (groupMapWrapperRef.current as any).msRequestFullscreen();
+      }
+    } else {
+      if (document.exitFullscreen) {
+        void document.exitFullscreen();
+      } else if ((document as any).webkitExitFullscreen) {
+        (document as any).webkitExitFullscreen();
+      } else if ((document as any).msExitFullscreen) {
+        (document as any).msExitFullscreen();
+      }
+    }
+  };
+
   // Calculate center from active member positions or default
   const mapCenter: [number, number] =
     members.length > 0 && members[0].lat && members[0].lng
@@ -135,7 +171,7 @@ export default function GroupMapComponent({ members, currentMemberId, onUpdateLo
   const { MapContainer, TileLayer, Marker, Popup, coordinatorIcon, memberIcon } = mapLib;
 
   return (
-    <div className="relative w-full h-80 rounded-3xl overflow-hidden shadow-md border border-[#e7b06d]/40">
+    <div ref={groupMapWrapperRef} className="relative w-full h-80 rounded-3xl overflow-hidden shadow-md border border-[#e7b06d]/40 bg-slate-900">
       <MapContainer
         center={mapCenter}
         zoom={13}
@@ -178,6 +214,28 @@ export default function GroupMapComponent({ members, currentMemberId, onUpdateLo
           </Marker>
         ))}
       </MapContainer>
+
+      {/* Fullscreen Button at Bottom Left Corner */}
+      <div className="absolute bottom-3 left-3 z-[400]">
+        <button
+          type="button"
+          onClick={toggleFullscreen}
+          title={isFullscreen ? t("Exit Fullscreen") : t("Full Screen")}
+          className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white/95 px-3 py-2 text-xs font-bold text-[#173247] shadow-md backdrop-blur-md transition-all hover:bg-white hover:scale-105 hover:border-[#e86f18] hover:text-[#e86f18] active:scale-95 cursor-pointer"
+        >
+          {isFullscreen ? (
+            <>
+              <Minimize2 className="h-3.5 w-3.5 text-[#e86f18]" />
+              <span className="hidden sm:inline-block">{t("Exit Fullscreen")}</span>
+            </>
+          ) : (
+            <>
+              <Maximize2 className="h-3.5 w-3.5 text-[#e86f18]" />
+              <span className="hidden sm:inline-block">{t("Full Screen")}</span>
+            </>
+          )}
+        </button>
+      </div>
 
       {/* Share Location Overlay Button */}
       <div className="absolute bottom-3 right-3 z-[400] flex flex-col gap-1 items-end">

@@ -29,7 +29,9 @@ import {
   Car,
   Footprints,
   RotateCcw,
-  Flag
+  Flag,
+  Maximize2,
+  Minimize2
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { Place, PlaceCard } from "@/components/PlaceCard";
@@ -178,6 +180,42 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
   // Saved / Favorite Places state
   const [savedPlaceIds, setSavedPlaceIds] = useState<string[]>(readSavedPlaceIds);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Fullscreen Map State & Handler
+  const mapWrapperRef = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!mapWrapperRef.current) return;
+
+    if (!document.fullscreenElement) {
+      if (mapWrapperRef.current.requestFullscreen) {
+        void mapWrapperRef.current.requestFullscreen();
+      } else if ((mapWrapperRef.current as any).webkitRequestFullscreen) {
+        (mapWrapperRef.current as any).webkitRequestFullscreen();
+      } else if ((mapWrapperRef.current as any).msRequestFullscreen) {
+        (mapWrapperRef.current as any).msRequestFullscreen();
+      }
+    } else {
+      if (document.exitFullscreen) {
+        void document.exitFullscreen();
+      } else if ((document as any).webkitExitFullscreen) {
+        (document as any).webkitExitFullscreen();
+      } else if ((document as any).msExitFullscreen) {
+        (document as any).msExitFullscreen();
+      }
+    }
+  };
 
   // Map Voice Guide State
   const [voiceStatus, setVoiceStatus] = useState<"idle" | "listening" | "processing" | "speaking">("idle");
@@ -1253,7 +1291,29 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
           </div>
         ) : (
           /* Interactive Map View Mode */
-          <div className="relative h-full w-full">
+          <div ref={mapWrapperRef} className="relative h-full w-full bg-slate-900">
+            {/* Fullscreen Map Button at Bottom Left Corner */}
+            <div className="absolute bottom-4 left-4 z-[1000]">
+              <button
+                type="button"
+                onClick={toggleFullscreen}
+                title={isFullscreen ? t("Exit Fullscreen") : t("Full Screen")}
+                className="flex items-center gap-1.5 rounded-full border border-amber-300/90 bg-white px-3 py-2 text-xs font-extrabold text-[#173247] shadow-[0_4px_16px_rgba(0,0,0,0.2)] backdrop-blur-md transition-all duration-200 hover:bg-white hover:scale-105 hover:border-[#e86f18] hover:text-[#e86f18] active:scale-95 cursor-pointer"
+              >
+                {isFullscreen ? (
+                  <>
+                    <Minimize2 className="h-4 w-4 text-[#e86f18] shrink-0" />
+                    <span className="whitespace-nowrap">{t("Exit Fullscreen")}</span>
+                  </>
+                ) : (
+                  <>
+                    <Maximize2 className="h-4 w-4 text-[#e86f18] shrink-0" />
+                    <span className="whitespace-nowrap">{t("Full Screen")}</span>
+                  </>
+                )}
+              </button>
+            </div>
+
             {!mapLib ? (
               <div className="h-full w-full bg-slate-100 dark:bg-slate-800 animate-pulse flex items-center justify-center text-slate-500">
                 <div className="flex flex-col items-center">
