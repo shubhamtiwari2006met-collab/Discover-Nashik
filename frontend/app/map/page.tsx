@@ -32,12 +32,39 @@ function MapContent() {
   const initialCategory = searchParams.get("category") || searchParams.get("cat") || "All";
 
   useEffect(() => {
-    fetch("/api/places", { cache: "no-store" })
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) setPlaces(data);
-      })
-      .catch((err) => console.error("Map places fetch error:", err));
+    Promise.all([
+      fetch("/api/places", { cache: "no-store" }).then((res) => (res.ok ? res.json() : [])).catch(() => []),
+      fetch("/api/map-pois", { cache: "no-store" }).then((res) => (res.ok ? res.json() : [])).catch(() => []),
+    ]).then(([regularPlaces, mapPois]) => {
+      const formattedMapPois: Place[] = Array.isArray(mapPois)
+        ? mapPois.map((poi: {
+            _id: string;
+            name: string;
+            category: string;
+            latitude: number;
+            longitude: number;
+            location: string;
+            description?: string;
+            image?: string;
+            phone?: string;
+            famousThing?: string;
+          }) => ({
+            _id: poi._id || `map-poi-${Math.random()}`,
+            name: poi.name,
+            category: poi.category === "Public Toilets" ? "Emergency" : poi.category,
+            location: poi.location,
+            description: poi.description || `${poi.name} in ${poi.location}`,
+            famousThing: poi.famousThing,
+            image: poi.image,
+            latitude: poi.latitude,
+            longitude: poi.longitude,
+            phone: poi.phone,
+          }))
+        : [];
+
+      const merged = Array.isArray(regularPlaces) ? [...regularPlaces, ...formattedMapPois] : formattedMapPois;
+      setPlaces(merged);
+    });
   }, []);
 
   return (
