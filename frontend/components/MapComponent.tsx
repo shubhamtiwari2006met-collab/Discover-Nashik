@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import "leaflet/dist/leaflet.css";
 import { useMap } from "react-leaflet";
 import {
@@ -158,6 +158,7 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
   const [kumbhLocations, setKumbhLocations] = useState<Place[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [isSearchFocused, setIsSearchFocused] = useState<boolean>(false);
   const [selectedPlace, setSelectedPlace] = useState<MapPlaceItem | null>(null);
   const [detailModalPlace, setDetailModalPlace] = useState<Place | null>(null);
   const [viewMode, setViewMode] = useState<"map" | "list">("map");
@@ -496,6 +497,36 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
 
     return result;
   }, [allMapPlaces, searchQuery, selectedCategory, savedPlaceIds, userLocation]);
+
+  // Handle Marker or Search Result Selection: fly map to coordinates and show card popup!
+  const handleMarkerClick = useCallback((place: MapPlaceItem) => {
+    setSelectedPlace(place);
+    setMapCenter([place.lat, place.lng]);
+    setMapZoom(16);
+  }, []);
+
+  const searchSuggestions = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const q = searchQuery.toLowerCase().trim();
+    return allMapPlaces
+      .filter((item) => {
+        const matchesName = item.name.toLowerCase().includes(q);
+        const matchesLoc = (item.location || "").toLowerCase().includes(q);
+        const matchesCat = (item.category || "").toLowerCase().includes(q);
+        const matchesSub = (item.subcategory || "").toLowerCase().includes(q);
+        const matchesFamous = (item.famousThing || "").toLowerCase().includes(q);
+        return matchesName || matchesLoc || matchesCat || matchesSub || matchesFamous;
+      })
+      .slice(0, 7);
+  }, [allMapPlaces, searchQuery]);
+
+  const handleSelectSearchLocation = (place: MapPlaceItem) => {
+    handleMarkerClick(place);
+    setViewMode("map");
+    setIsSearchFocused(false);
+    setSearchQuery(place.name);
+    showToast(`${t("Showing")} ${place.name} ${t("on map")}`);
+  };
 
   // Handle Destination Route Calculation via OSRM (real road routing)
   const handleSelectRouteDestination = async (dest: MapPlaceItem, travelMode = routeTravelMode) => {
@@ -1078,12 +1109,6 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
     });
   };
 
-  const handleMarkerClick = (place: MapPlaceItem) => {
-    setSelectedPlace(place);
-    setMapCenter([place.lat, place.lng]);
-    setMapZoom(15);
-  };
-
   // Route travel calculations — prefer OSRM real data, fallback to Haversine estimate
   const routeDistKm = osrmDistance ?? (selectedDestination
     ? (selectedDestination.distanceKm ?? calculateHaversineDistance(userLocation ? userLocation.lat : NASHIK_CENTER[0], userLocation ? userLocation.lng : NASHIK_CENTER[1], selectedDestination.lat, selectedDestination.lng))
@@ -1130,18 +1155,90 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => {
+                // Short timeout to allow clicking on dropdown suggestions before blur
+                setTimeout(() => setIsSearchFocused(false), 200);
+              }}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setIsSearchFocused(true);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (searchSuggestions.length > 0) {
+                    handleSelectSearchLocation(searchSuggestions[0]);
+                  } else if (filteredMapPlaces.length > 0) {
+                    handleSelectSearchLocation(filteredMapPlaces[0]);
+                  }
+                }
+              }}
               placeholder={t("Search destination, places, temples, hospitals, Kumbh locations...")}
               className="w-full pl-10 pr-9 py-2 sm:py-2.5 rounded-full border border-[#e1cfb0] bg-white text-xs sm:text-sm text-[#173247] placeholder-[#667883] shadow-sm outline-none transition-all focus:border-[#e86f18] focus:ring-2 focus:ring-[#e86f18]/20"
             />
             {searchQuery && (
               <button
                 type="button"
-                onClick={() => setSearchQuery("")}
+                onClick={() => {
+                  setSearchQuery("");
+                  setIsSearchFocused(false);
+                }}
                 className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[#667883] hover:text-[#173247]"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
+            )}
+
+            {/* Floating Search Autocomplete Suggestions Dropdown */}
+            {isSearchFocused && searchQuery.trim() !== "" && searchSuggestions.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-2 z-50 rounded-2xl bg-white border border-[#e1cfb0] shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="p-2 border-b border-[#f1d9b6] bg-[#fffdf8] flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#c9580f]">
+                    {t("Location Suggestions")} ({searchSuggestions.length})
+                  </span>
+                  <span className="text-[10px] text-[#667883]">
+                    {t("Press Enter or click to show on map")}
+                  </span>
+                </div>
+
+                <div className="max-h-72 overflow-y-auto divide-y divide-slate-100">
+                  {searchSuggestions.map((place) => (
+                    <button
+                      key={`suggest-${place._id}`}
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleSelectSearchLocation(place);
+                      }}
+                      className="w-full text-left p-3 hover:bg-[#fff7ed] transition-colors flex items-center justify-between group cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#fff7ed] text-[#c9580f] group-hover:bg-[#c9580f] group-hover:text-white transition-colors">
+                          <MapPin className="h-4 w-4" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-[#173247] group-hover:text-[#c9580f] truncate transition-colors">
+                            {place.name}
+                          </p>
+                          <p className="text-[11px] text-[#667883] truncate mt-0.5">
+                            {place.location} • <span className="font-semibold text-amber-700">{place.category}</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {place.distanceKm !== undefined && (
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                            {formatDistance(place.distanceKm)}
+                          </span>
+                        )}
+                        <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-[#c9580f] group-hover:translate-x-0.5 transition-all" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
 
