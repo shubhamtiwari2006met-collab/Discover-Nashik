@@ -50,20 +50,35 @@ export async function GET() {
     // Backend express server not running or unreachable
   }
 
+  const defaultImageMap = new Map<string, string>();
+  DEFAULT_MAP_POIS.forEach((p) => {
+    if (p.name && p.image) defaultImageMap.set(p.name.trim().toLowerCase(), p.image);
+  });
+
   const poisMap = new Map<string, MapPOIItem>();
 
   // 1. Load backend or default POIs
   const basePois = backendPois.length > 0 ? backendPois : inMemoryMapPois;
   basePois.forEach((poi) => {
     if (poi && poi._id && !deletedMapPoiIds.has(poi._id)) {
-      poisMap.set(poi._id, poi);
+      const enriched = { ...poi };
+      const nameKey = (enriched.name || "").trim().toLowerCase();
+      if ((!enriched.image || enriched.image.trim() === "") && defaultImageMap.has(nameKey)) {
+        enriched.image = defaultImageMap.get(nameKey);
+      }
+      poisMap.set(poi._id, enriched);
     }
   });
 
   // 2. Add edited/added overrides
   editedMapPoisMap.forEach((editedPoi, id) => {
     if (!deletedMapPoiIds.has(id)) {
-      poisMap.set(id, editedPoi);
+      const enriched = { ...editedPoi };
+      const nameKey = (enriched.name || "").trim().toLowerCase();
+      if ((!enriched.image || enriched.image.trim() === "") && defaultImageMap.has(nameKey)) {
+        enriched.image = defaultImageMap.get(nameKey);
+      }
+      poisMap.set(id, enriched);
     }
   });
 

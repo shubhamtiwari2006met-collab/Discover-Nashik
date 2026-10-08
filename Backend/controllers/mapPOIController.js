@@ -60,7 +60,8 @@ const DEFAULT_NASHIK_POIS = [
     longitude: 73.7920,
     location: "Panchavati, Nashik",
     description: "Beautiful 1756 Lord Vishnu temple designed so rays of setting sun fall directly on deity on March 21.",
-    famousThing: "Equinox Sun Rays Alignment, Peshwa Architecture"
+    famousThing: "Equinox Sun Rays Alignment, Peshwa Architecture",
+    image: "https://tse3.mm.bing.net/th/id/OIP.TfZnORTtWXu3lBYNo-PcewHaE8?r=0&pid=Api&h=220&P=0"
   },
   {
     name: "Tapovan Ashram",
@@ -69,7 +70,8 @@ const DEFAULT_NASHIK_POIS = [
     longitude: 73.8055,
     location: "Panchavati, Nashik",
     description: "Serene penance grove where Lakshmana cut off Surpanakha's nose. Confluence of Kapila & Godavari.",
-    famousThing: "Ramayana History, Confluence of Rivers"
+    famousThing: "Ramayana History, Confluence of Rivers",
+    image: "https://tse3.mm.bing.net/th/id/OIP.YgMRWPgXEvJKQwGwmxuEDQHaEK?r=0&pid=Api&h=220&P=0"
   },
   {
     name: "Kapaleshwar Temple",
@@ -98,7 +100,8 @@ const DEFAULT_NASHIK_POIS = [
     longitude: 73.7410,
     location: "Vilholi, Nashik",
     description: "Grand Jain pilgrimage complex featuring heavy gold-plated idols and pink stone carvings.",
-    famousThing: "24 Tirthankara Sculptures, Architectural Marvel"
+    famousThing: "24 Tirthankara Sculptures, Architectural Marvel",
+    image: "https://tse4.mm.bing.net/th/id/OIP.kl8RJtUT7xFVYdtDL5OK_AHaCx?r=0&pid=Api&h=220&P=0"
   },
 
   // Historic & Tourist Spots
@@ -119,7 +122,8 @@ const DEFAULT_NASHIK_POIS = [
     longitude: 73.9215,
     location: "Sinnar, Nashik",
     description: "India's only mineral museum exhibiting rare natural zeolites, gems, crystals, and rocks.",
-    famousThing: "World-Class Zeolite & Gemstone Collection"
+    famousThing: "World-Class Zeolite & Gemstone Collection",
+    image: "https://tse4.mm.bing.net/th/id/OIP.B_1T4F4M7LRoIOHQLRjsXQHaFj?r=0&pid=Api&h=220&P=0"
   },
   {
     name: "Coin Museum (INSAF)",
@@ -128,7 +132,8 @@ const DEFAULT_NASHIK_POIS = [
     longitude: 73.5680,
     location: "Trimbak Road, Nashik",
     description: "Indian Institute of Research in Numismatic Studies documenting Indian currency history through millennia.",
-    famousThing: "Ancient Indian Coins & Currency History"
+    famousThing: "Ancient Indian Coins & Currency History",
+    image: "https://tse4.mm.bing.net/th/id/OIP.KgD15C3NFrDvtbG_4llpnQHaEd?r=0&pid=Api&h=220&P=0"
   },
   {
     name: "Artillery Centre Museum",
@@ -137,7 +142,8 @@ const DEFAULT_NASHIK_POIS = [
     longitude: 73.8150,
     location: "Nashik Road Military Station, Nashik",
     description: "Asia's largest artillery military museum displaying historic cannons, military tanks, and battle weapons.",
-    famousThing: "Military Tanks, War Artillery & Historic Guns"
+    famousThing: "Military Tanks, War Artillery & Historic Guns",
+    image: "https://tse3.mm.bing.net/th/id/OIP.Z1kSUlLdwuFx87r1dwZ8UAHaEK?r=0&pid=Api&h=220&P=0"
   },
 
   // Treks & Mountains
@@ -149,7 +155,7 @@ const DEFAULT_NASHIK_POIS = [
     location: "Anjaneri, Nashik",
     description: "Sacred mountain fort considered the birthplace of Lord Hanuman. Popular scenic trekking trail.",
     famousThing: "Birthplace of Lord Hanuman, Footprint Rock",
-    image: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=800&auto=format&fit=crop"
+    image: "https://tse3.mm.bing.net/th/id/OIP.rmUuBN0DAH7csfT4Pz2t3gHaE9?r=0&pid=Api&h=220&P=0"
   },
   {
     name: "Brahmagiri Mountain & Godavari Source",
@@ -158,7 +164,8 @@ const DEFAULT_NASHIK_POIS = [
     longitude: 73.5180,
     location: "Trimbakeshwar, Nashik",
     description: "Majestic mountain ridge overlooking Trimbak town. Steps lead to Godavari river origin (Gangadwar).",
-    famousThing: "Godavari River Origin Point, Cloud Trail"
+    famousThing: "Godavari River Origin Point, Cloud Trail",
+    image: "https://tse4.mm.bing.net/th/id/OIP.hkzh_pSLuEOsXSQD6xewCAHaEz?r=0&pid=Api&h=220&P=0"
   },
   {
     name: "Harihar Fort Trek",
@@ -178,7 +185,7 @@ const DEFAULT_NASHIK_POIS = [
     location: "Peth Road, Nashik",
     description: "Historic fort where Maratha army successfully defended against Mughal siege for over 5 years.",
     famousThing: "Maratha Defense History, Quick Weekend Trek",
-    image: ""
+    image: "https://tse1.mm.bing.net/th/id/OIP.OM3jaWNSp8ALbNG2HHbB4wHaFj?r=0&pid=Api&h=220&P=0"
   },
   {
     name: "Salher Fort Peak",
@@ -187,7 +194,8 @@ const DEFAULT_NASHIK_POIS = [
     longitude: 73.9405,
     location: "Satana, Nashik District",
     description: "The highest fort peak in Maharashtra at 1,567 meters altitude with ancient rock tanks.",
-    famousThing: "Highest Fort Peak in Maharashtra (1567m)"
+    famousThing: "Highest Fort Peak in Maharashtra (1567m)",
+    image: "https://tse2.mm.bing.net/th/id/OIP.tdJqZd7B4sFfQ0Sq_rkaXQHaEK?r=0&pid=Api&h=220&P=0"
   },
 
   // Famous Hotels & Stays
@@ -198,7 +206,8 @@ const DEFAULT_NASHIK_POIS = [
     longitude: 73.7460,
     location: "Ambad MIDC, Nashik",
     description: "5-star luxury hotel surrounded by 11 acres of manicured gardens and premium suites.",
-    phone: "+91 253 669 2333"
+    phone: "+91 253 669 2333",
+    image: "https://tse3.mm.bing.net/th/id/OIP.E5RdG-njAQzYciqKgWNq6QHaEK?r=0&pid=Api&h=220&P=0"
   },
   {
     name: "Express Inn Hotel",
@@ -207,7 +216,8 @@ const DEFAULT_NASHIK_POIS = [
     longitude: 73.7620,
     location: "Pathardi Phata, Mumbai-Agra Highway, Nashik",
     description: "Luxury 5-star business hotel featuring rooftop poolside lounge Freasia & multi-cuisine dining.",
-    phone: "+91 253 664 1111"
+    phone: "+91 253 664 1111",
+    image: "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/05/71/7a/6b/hotel-express-inn.jpg?w=900&h=-1&s=1"
   },
   {
     name: "Radisson Blu Hotel & Spa",
@@ -216,7 +226,8 @@ const DEFAULT_NASHIK_POIS = [
     longitude: 73.7550,
     location: "Pathardi Phata, Nashik",
     description: "Urban resort offering panoramic mountain views, international spa, and luxury dining.",
-    phone: "+91 253 260 0000"
+    phone: "+91 253 260 0000",
+    image: "https://tse3.mm.bing.net/th/id/OIP.fdNrDhgvWsL69NP3jZO5_QHaFj?r=0&pid=Api&h=220&P=0"
   },
   {
     name: "Courtyard by Marriott Nashik",
@@ -225,7 +236,8 @@ const DEFAULT_NASHIK_POIS = [
     longitude: 73.7740,
     location: "Mumbai Naka, Nashik",
     description: "Modern upscale city hotel featuring luxury amenities and convenient access to highway.",
-    phone: "+91 253 230 9999"
+    phone: "+91 253 230 9999",
+    image: "https://tse2.mm.bing.net/th/id/OIP.RrZ215c0-v7ks6gN7pHY4wHaGh?r=0&pid=Api&h=220&P=0"
   },
 
   // Famous Restaurants & Food
@@ -265,7 +277,8 @@ const DEFAULT_NASHIK_POIS = [
     longitude: 73.7750,
     location: "Swaminarayan Nagar, Mumbai Naka, Nashik",
     description: "24/7 Multi-speciality tertiary care super-specialty hospital with advanced trauma unit.",
-    phone: "1066 / +91 253 230 3333"
+    phone: "1066 / +91 253 230 3333",
+    image: "https://tse4.mm.bing.net/th/id/OIP.Qhaem1lvgVD37v1Gajf9DAAAAA?r=0&pid=Api&h=220&P=0"
   },
   {
     name: "Wockhardt Hospital",
@@ -274,7 +287,8 @@ const DEFAULT_NASHIK_POIS = [
     longitude: 73.7780,
     location: "Mumbai Naka, Nashik",
     description: "Multi-specialty super-specialty healthcare centre with round-the-clock emergency response.",
-    phone: "+91 253 662 4444"
+    phone: "+91 253 662 4444",
+    image: "https://tse1.mm.bing.net/th/id/OIP.VtchN16o9ZX1qfVrRhCG8AHaDt?r=0&pid=Api&h=220&P=0"
   },
   {
     name: "Sahyadri Super Speciality Hospital",
@@ -283,7 +297,8 @@ const DEFAULT_NASHIK_POIS = [
     longitude: 73.7680,
     location: "Bhavik Complex, Mumbai Naka, Nashik",
     description: "Leading multi-specialty cardiac, neuro, and critical care medical hospital.",
-    phone: "+91 253 664 0000"
+    phone: "+91 253 664 0000",
+    image: "https://tse2.mm.bing.net/th/id/OIP.WynFVhbp95VQ1ynbA8-23QHaE6?r=0&pid=Api&h=220&P=0"
   },
   {
     name: "Civil Hospital Nashik",
@@ -292,7 +307,8 @@ const DEFAULT_NASHIK_POIS = [
     longitude: 73.7850,
     location: "Trimbak Road, Nashik",
     description: "Primary government district general hospital with 24x7 emergency medical service.",
-    phone: "+91 253 257 2038"
+    phone: "+91 253 257 2038",
+    image: "https://tse4.mm.bing.net/th/id/OIP.rxRsKYj1jaUxZT3-mBwGtgHaEK?r=0&pid=Api&h=220&P=0"
   },
 
   // Public Toilets & Facilities
@@ -343,6 +359,13 @@ const DEFAULT_NASHIK_POIS = [
   }
 ];
 
+const defaultImageMap = {};
+DEFAULT_NASHIK_POIS.forEach(p => {
+  if (p.name && p.image) {
+    defaultImageMap[p.name.trim().toLowerCase()] = p.image;
+  }
+});
+
 // Get all Map POIs
 exports.getMapPOIs = async (req, res) => {
   try {
@@ -363,12 +386,24 @@ exports.getMapPOIs = async (req, res) => {
 
     const pois = await MapPOI.find(query).sort({ createdAt: -1 });
 
-    // If database is empty, return default seed POIs temporarily
+    // If database is empty, seed and return DEFAULT_NASHIK_POIS
     if (pois.length === 0 && !category && !search) {
+      MapPOI.insertMany(DEFAULT_NASHIK_POIS).catch((err) => console.warn('Auto seed warning:', err.message));
       return res.json(DEFAULT_NASHIK_POIS);
     }
 
-    res.json(pois);
+    // Enrich any database records that are missing image URLs from default seed map
+    const enrichedPois = pois.map((poi) => {
+      const obj = poi.toObject ? poi.toObject() : { ...poi };
+      const nameKey = (obj.name || '').trim().toLowerCase();
+      if ((!obj.image || obj.image.trim() === '') && defaultImageMap[nameKey]) {
+        obj.image = defaultImageMap[nameKey];
+        MapPOI.findByIdAndUpdate(obj._id, { image: defaultImageMap[nameKey] }).exec().catch(() => {});
+      }
+      return obj;
+    });
+
+    res.json(enrichedPois);
   } catch (error) {
     console.error('Error fetching map POIs:', error);
     res.status(500).json({ error: 'Failed to fetch map POIs' });
