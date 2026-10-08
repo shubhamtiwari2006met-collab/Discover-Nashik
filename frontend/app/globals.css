@@ -3,8 +3,8 @@
 @theme {
   --color-primary: #e86f18;
   --color-primary-hover: #c9580f;
-  --color-background: #f8f2e8;
-  --color-card: #fffdf8;
+  --color-background: #ffffff;
+  --color-card: #ffffff;
   --color-text-main: #173247;
   --color-text-muted: #667883;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
@@ -12,29 +12,27 @@
 }
 
 :root {
-  --background: #f8f2e8;
+  --background: #ffffff;
   --foreground: #173247;
-  --card: #fffdf8;
+  --card: #ffffff;
   --text-muted: #667883;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #f8f2e8;
+    --background: #ffffff;
     --foreground: #173247;
-    --card: #fffdf8;
+    --card: #ffffff;
     --text-muted: #667883;
   }
 }
 
 html {
-  background: #f8f2e8;
+  background: #ffffff;
 }
 
 body {
-  background:
-    radial-gradient(circle at 82% 5%, rgba(230, 111, 24, 0.12), transparent 25%),
-    linear-gradient(180deg, #fffdf8 0%, #f8f2e8 42%, #edf3f3 100%);
+  background: #ffffff;
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;

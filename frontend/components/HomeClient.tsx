@@ -43,7 +43,7 @@ export function HomeClient({ initialPlaces }: HomeClientProps) {
   return (
     <div className="flex flex-col min-h-screen">
       {/* Home Hero Section (~45-55% initial mobile viewport height, smooth curve bottom) */}
-      <div className="relative w-full min-h-[430px] sm:min-h-[500px] md:min-h-[550px] lg:min-h-[600px] bg-[#f8f2e8]">
+      <div className="relative w-full min-h-[430px] sm:min-h-[500px] md:min-h-[550px] lg:min-h-[600px] bg-white">
         {/* Hero Background Image Container with clipped overflow */}
         <div className="absolute inset-0 overflow-hidden z-0">
           <img
@@ -92,7 +92,7 @@ export function HomeClient({ initialPlaces }: HomeClientProps) {
           <svg
             viewBox="0 0 1200 120"
             preserveAspectRatio="none"
-            className="relative block w-full h-12 sm:h-16 md:h-24 text-[#f8f2e8] fill-current"
+            className="relative block w-full h-12 sm:h-16 md:h-24 text-white fill-current"
           >
             <path d="M-10,-5 C300,25 800,115 1210,40 L1210,130 L-10,130 Z"></path>
           </svg>
@@ -100,20 +100,20 @@ export function HomeClient({ initialPlaces }: HomeClientProps) {
       </div>
 
       {/* 2. THREE FEATURE ACTIONS SECTION (Near Me, AI Assistant, Map) */}
-      <section className="relative z-30 pt-3 pb-4 sm:pt-4 sm:pb-6">
-        <div className="container mx-auto px-3 sm:px-4 max-w-4xl">
-          <div className="flex items-center justify-between sm:justify-center gap-2 sm:gap-4 md:gap-6">
+      <section className="relative z-30 pt-2.5 pb-3 sm:pt-3.5 sm:pb-5">
+        <div className="container mx-auto px-2.5 sm:px-4 max-w-4xl">
+          <div className="flex items-center justify-between sm:justify-center gap-1.5 sm:gap-3 md:gap-4">
             {/* Near Me Feature Action Pill */}
             <button
               type="button"
               onClick={exploreNearMe}
               disabled={locationStatus === "loading"}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2.5 rounded-full border border-[#e1cfb0] bg-white px-3 py-2 sm:px-5 sm:py-2.5 shadow-[0_4px_16px_rgba(77,58,30,0.06)] transition-all duration-200 hover:scale-[1.02] hover:border-[#e86f18]/50 hover:shadow-md active:scale-95 disabled:opacity-70 cursor-pointer min-w-0"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 rounded-full border border-slate-200/90 bg-white px-2.5 py-1.5 sm:px-4 sm:py-2 shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all duration-200 hover:scale-[1.02] hover:border-[#e86f18]/50 hover:shadow-md active:scale-95 disabled:opacity-70 cursor-pointer min-w-0"
             >
-              <div className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#f89b33]/20 to-[#e86f18]/20 text-[#e86f18]">
-                <Navigation className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <div className="flex h-6.5 w-6.5 sm:h-7.5 sm:w-7.5 shrink-0 items-center justify-center rounded-full bg-orange-100/90 text-[#e86f18]">
+                <Navigation className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
               </div>
-              <span className="truncate text-xs sm:text-sm font-bold text-[#173247]">
+              <span className="whitespace-nowrap text-[11px] xs:text-xs sm:text-sm font-bold text-[#173247] tracking-tight">
                 {locationStatus === "loading" ? t("Locating...") : t("Near Me")}
               </span>
             </button>
@@ -122,12 +122,12 @@ export function HomeClient({ initialPlaces }: HomeClientProps) {
             <button
               type="button"
               onClick={() => window.dispatchEvent(new CustomEvent("open-chatbot"))}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2.5 rounded-full border border-[#e1cfb0] bg-white px-3 py-2 sm:px-5 sm:py-2.5 shadow-[0_4px_16px_rgba(77,58,30,0.06)] transition-all duration-200 hover:scale-[1.02] hover:border-[#e86f18]/50 hover:shadow-md active:scale-95 cursor-pointer min-w-0"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 rounded-full border border-slate-200/90 bg-white px-2.5 py-1.5 sm:px-4 sm:py-2 shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all duration-200 hover:scale-[1.02] hover:border-[#e86f18]/50 hover:shadow-md active:scale-95 cursor-pointer min-w-0"
             >
-              <div className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#f89b33]/20 to-[#e86f18]/20 text-[#e86f18]">
-                <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <div className="flex h-6.5 w-6.5 sm:h-7.5 sm:w-7.5 shrink-0 items-center justify-center rounded-full bg-orange-100/90 text-[#e86f18]">
+                <Sparkles className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
               </div>
-              <span className="truncate text-xs sm:text-sm font-bold text-[#173247]">
+              <span className="whitespace-nowrap text-[11px] xs:text-xs sm:text-sm font-bold text-[#173247] tracking-tight">
                 {t("AI Assistant")}
               </span>
             </button>
@@ -136,12 +136,12 @@ export function HomeClient({ initialPlaces }: HomeClientProps) {
             <button
               type="button"
               onClick={() => router.push("/map")}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2.5 rounded-full border border-[#e1cfb0] bg-white px-3 py-2 sm:px-5 sm:py-2.5 shadow-[0_4px_16px_rgba(77,58,30,0.06)] transition-all duration-200 hover:scale-[1.02] hover:border-[#e86f18]/50 hover:shadow-md active:scale-95 cursor-pointer min-w-0"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 rounded-full border border-slate-200/90 bg-white px-2.5 py-1.5 sm:px-4 sm:py-2 shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all duration-200 hover:scale-[1.02] hover:border-[#e86f18]/50 hover:shadow-md active:scale-95 cursor-pointer min-w-0"
             >
-              <div className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#f89b33]/20 to-[#e86f18]/20 text-[#e86f18]">
-                <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <div className="flex h-6.5 w-6.5 sm:h-7.5 sm:w-7.5 shrink-0 items-center justify-center rounded-full bg-orange-100/90 text-[#e86f18]">
+                <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
               </div>
-              <span className="truncate text-xs sm:text-sm font-bold text-[#173247]">
+              <span className="whitespace-nowrap text-[11px] xs:text-xs sm:text-sm font-bold text-[#173247] tracking-tight">
                 {t("Map")}
               </span>
             </button>
@@ -158,14 +158,14 @@ export function HomeClient({ initialPlaces }: HomeClientProps) {
       </section>
 
       {/* 3. BROWSE CATEGORIES SECTION */}
-      <section className="relative z-20 pb-6 sm:pb-10">
-        <div className="container relative mx-auto px-3 sm:px-4 max-w-6xl">
-          <div className="rounded-2xl sm:rounded-3xl border border-[#e1cfb0] bg-white p-4 sm:p-6 shadow-[0_8px_32px_rgba(77,58,30,0.06)]">
-            <div className="flex flex-col justify-between gap-1 mb-1 px-1">
-              <h2 className="font-display text-2xl sm:text-3xl font-extrabold tracking-tight text-[#173247]">
+      <section className="relative z-20 pb-4 sm:pb-6">
+        <div className="container relative mx-auto px-2.5 sm:px-4 max-w-6xl">
+          <div className="rounded-2xl sm:rounded-3xl border border-slate-200/90 bg-white p-3 sm:p-4 shadow-[0_4px_16px_rgba(0,0,0,0.03)]">
+            <div className="flex flex-col justify-between gap-0.5 mb-0.5 px-1">
+              <h2 className="font-display text-lg sm:text-xl font-extrabold tracking-tight text-[#173247]">
                 {t("Browse Categories")}
               </h2>
-              <p className="text-xs sm:text-sm text-[#667883]">
+              <p className="text-[10px] sm:text-xs text-[#667883]">
                 {t("Explore Nashik by category — temples, heritage, nature, food and more.")}
               </p>
             </div>
@@ -174,7 +174,7 @@ export function HomeClient({ initialPlaces }: HomeClientProps) {
         </div>
       </section>
 
-      <section id="explore" className="bg-[linear-gradient(180deg,_#fffdf8_0%,_#f8f2e8_52%,_#edf3f3_100%)] py-8 sm:py-16">
+      <section id="explore" className="bg-white py-6 sm:py-12">
         <div className="container mx-auto px-3 sm:px-4">
           <div className="mb-6 sm:mb-10 flex flex-col gap-2 sm:gap-3 md:flex-row md:items-end md:justify-between">
             <div>
