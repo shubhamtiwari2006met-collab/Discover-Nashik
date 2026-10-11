@@ -336,9 +336,9 @@ function AdminDashboardContent({ defaultFilter = "pending" }: { defaultFilter?: 
       if (error) throw error;
 
       if (newStatus === "rejected") {
-        await fetch(`/api/places?id=${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => {});
+        await fetch(`/api/places?id=${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => { });
       } else if (newStatus === "approved") {
-        await fetch("/api/places").catch(() => {});
+        await fetch("/api/places").catch(() => { });
       }
 
       setBusinesses((current) =>
@@ -371,7 +371,7 @@ function AdminDashboardContent({ defaultFilter = "pending" }: { defaultFilter?: 
 
       if (error) throw error;
 
-      await fetch(`/api/places?id=${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => {});
+      await fetch(`/api/places?id=${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => { });
 
       setBusinesses((current) => current.filter((b) => b.id !== id));
       await loadStats();
@@ -402,7 +402,7 @@ function AdminDashboardContent({ defaultFilter = "pending" }: { defaultFilter?: 
       if (!res.ok) {
         const text = await res.text();
         let data: any = {};
-        try { data = JSON.parse(text); } catch(e) {}
+        try { data = JSON.parse(text); } catch (e) { }
         throw new Error(data.message || `Failed to update report status: ${res.status}`);
       }
 
@@ -436,7 +436,7 @@ function AdminDashboardContent({ defaultFilter = "pending" }: { defaultFilter?: 
       if (!res.ok) {
         const text = await res.text();
         let data: any = {};
-        try { data = JSON.parse(text); } catch(e) {}
+        try { data = JSON.parse(text); } catch (e) { }
         throw new Error(data.message || `Failed to delete report: ${res.status}`);
       }
 
@@ -521,11 +521,10 @@ function AdminDashboardContent({ defaultFilter = "pending" }: { defaultFilter?: 
           <button
             type="button"
             onClick={() => setActiveMainTab("businesses")}
-            className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs md:text-sm font-bold transition-all ${
-              activeMainTab === "businesses"
+            className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs md:text-sm font-bold transition-all ${activeMainTab === "businesses"
                 ? "bg-[#e86f18] text-white shadow-md"
                 : "text-[#667883] hover:bg-orange-50 hover:text-orange-600"
-            }`}
+              }`}
           >
             <Building2 className="h-4 w-4" />
             <span>Businesses ({businesses.length})</span>
@@ -534,11 +533,10 @@ function AdminDashboardContent({ defaultFilter = "pending" }: { defaultFilter?: 
           <button
             type="button"
             onClick={() => setActiveMainTab("lost-found")}
-            className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs md:text-sm font-bold transition-all ${
-              activeMainTab === "lost-found"
+            className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs md:text-sm font-bold transition-all ${activeMainTab === "lost-found"
                 ? "bg-[#e86f18] text-white shadow-md"
                 : "text-[#667883] hover:bg-orange-50 hover:text-orange-600"
-            }`}
+              }`}
           >
             <AlertTriangle className="h-4 w-4" />
             <span>Lost & Found Reports ({lostFoundReports.length})</span>
@@ -547,11 +545,10 @@ function AdminDashboardContent({ defaultFilter = "pending" }: { defaultFilter?: 
           <button
             type="button"
             onClick={() => setActiveMainTab("admins")}
-            className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs md:text-sm font-bold transition-all ${
-              activeMainTab === "admins"
+            className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs md:text-sm font-bold transition-all ${activeMainTab === "admins"
                 ? "bg-[#e86f18] text-white shadow-md"
                 : "text-[#667883] hover:bg-orange-50 hover:text-orange-600"
-            }`}
+              }`}
           >
             <ShieldCheck className="h-4 w-4" />
             <span>Admin Management</span>
@@ -593,11 +590,10 @@ function AdminDashboardContent({ defaultFilter = "pending" }: { defaultFilter?: 
                   key={status}
                   type="button"
                   onClick={() => setStatusFilter(status)}
-                  className={`rounded-lg px-4 py-2 text-xs font-bold capitalize transition-all ${
-                    statusFilter === status
+                  className={`rounded-lg px-4 py-2 text-xs font-bold capitalize transition-all ${statusFilter === status
                       ? "bg-[#e86f18] text-white shadow-sm"
                       : "text-[#667883] hover:bg-orange-50 hover:text-[#c9580f]"
-                  }`}
+                    }`}
                 >
                   {status}
                 </button>
@@ -762,11 +758,10 @@ function AdminDashboardContent({ defaultFilter = "pending" }: { defaultFilter?: 
                   key={filter.id}
                   type="button"
                   onClick={() => setLfStatusFilter(filter.id)}
-                  className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all shrink-0 ${
-                    lfStatusFilter === filter.id
+                  className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all shrink-0 ${lfStatusFilter === filter.id
                       ? "bg-orange-600 text-white shadow-sm"
                       : "text-[#667883] hover:bg-orange-50 hover:text-orange-600"
-                  }`}
+                    }`}
                 >
                   {filter.label}
                 </button>
@@ -962,11 +957,10 @@ function AdminDashboardContent({ defaultFilter = "pending" }: { defaultFilter?: 
                           <td className="p-3 font-bold text-[#173247]">{admin.name || "Admin"}</td>
                           <td className="p-3 font-mono text-xs">{admin.email}</td>
                           <td className="p-3">
-                            <span className={`inline-block rounded-full px-3 py-1 text-xs font-extrabold uppercase ${
-                              admin.adminStatus === "revoked"
+                            <span className={`inline-block rounded-full px-3 py-1 text-xs font-extrabold uppercase ${admin.adminStatus === "revoked"
                                 ? "bg-red-100 text-red-800 border border-red-200"
                                 : "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                            }`}>
+                              }`}>
                               {admin.adminStatus === "revoked" ? "Revoked" : "Active"}
                             </span>
                           </td>
