@@ -1,18 +1,10 @@
 const MapPOI = require('../models/MapPOI');
 
 // Initial seed list of Nashik points of interest
+// NOTE: All image URLs use stable sources (Wikimedia Commons, Unsplash, upload.wikimedia.org, etc.)
+// that do NOT expire or get blocked by referrer/CORS policies.
 const DEFAULT_NASHIK_POIS = [
   // Spiritual & Religious
-  {
-    name: "Trimbakeshwar Shiva Temple",
-    category: "Spiritual",
-    latitude: 19.9324,
-    longitude: 73.5307,
-    location: "Trimbak, Nashik",
-    description: "One of the 12 sacred Jyotirlingas of Lord Shiva located at the source of Godavari river.",
-    famousThing: "12 Jyotirlinga, Origin of Godavari River",
-    image: "https://images.unsplash.com/photo-1609946782782-99c5c1630166?q=80&w=800&auto=format&fit=crop"
-  },
   {
     name: "Kalaram Temple",
     category: "Religious",
@@ -21,7 +13,7 @@ const DEFAULT_NASHIK_POIS = [
     location: "Panchavati, Nashik",
     description: "Historic black stone temple dedicated to Lord Rama, constructed in 1782 by Sardar Rangarao Odhekar.",
     famousThing: "Black Stone Architecture, Ramayana Heritage",
-    image: "https://tse1.mm.bing.net/th/id/OIP.Yf3Jna1gyHvITRgDZWs_ygHaFj?r=0&pid=Api&h=220&P=0"
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Kalaram_Temple%2C_Nashik.jpg/800px-Kalaram_Temple%2C_Nashik.jpg"
   },
   {
     name: "Muktidham Temple",
@@ -31,7 +23,7 @@ const DEFAULT_NASHIK_POIS = [
     location: "Nashik Road, Nashik",
     description: "Marble temple complex featuring replicas of all 12 Jyotirlingas and chapters of Bhagavad Gita carved on walls.",
     famousThing: "12 Jyotirlinga Replicas, Pure White Marble",
-    image: "https://tse3.mm.bing.net/th/id/OIP.gS_GGalMBZPOy4MjKvpAdAHaFj?r=0&pid=Api&h=220&P=0"
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Muktidham_Temple_Nashik.jpg/800px-Muktidham_Temple_Nashik.jpg"
   },
   {
     name: "Ramkund Ghat",
@@ -41,7 +33,7 @@ const DEFAULT_NASHIK_POIS = [
     location: "Panchavati, Nashik",
     description: "Sacred bathing ghat on river Godavari where Lord Rama took baths during exile. Core site of Kumbh Mela.",
     famousThing: "Kumbh Mela Holy Dip, Sacred Asthi Visarjan",
-    image: "https://tse3.mm.bing.net/th/id/OIP.7mYVV2t2MLSGhuQndrYWDgHaEK?r=0&pid=Api&h=220&P=0"
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Ramkund_Nashik_India.jpg/800px-Ramkund_Nashik_India.jpg"
   },
   {
     name: "Someshwar Temple & Waterfalls",
@@ -51,7 +43,7 @@ const DEFAULT_NASHIK_POIS = [
     location: "Gangapur Road, Nashik",
     description: "Ancient Lord Shiva temple set beside scenic Dudhsagar waterfalls along the Godavari River.",
     famousThing: "Scenic Waterfalls, Boating & Shiva Temple",
-    image: "https://tse3.mm.bing.net/th/id/OIP.wMCa8FwYkXlOPOUa20NYwgHaEb?r=0&pid=Api&h=220&P=0"
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Someshwar_waterfall_Nashik.jpg/800px-Someshwar_waterfall_Nashik.jpg"
   },
   {
     name: "Sundarnarayan Temple",
@@ -61,7 +53,7 @@ const DEFAULT_NASHIK_POIS = [
     location: "Panchavati, Nashik",
     description: "Beautiful 1756 Lord Vishnu temple designed so rays of setting sun fall directly on deity on March 21.",
     famousThing: "Equinox Sun Rays Alignment, Peshwa Architecture",
-    image: "https://tse3.mm.bing.net/th/id/OIP.TfZnORTtWXu3lBYNo-PcewHaE8?r=0&pid=Api&h=220&P=0"
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c0/Sundarnarayan_Temple_Nashik.jpg/800px-Sundarnarayan_Temple_Nashik.jpg"
   },
   {
     name: "Tapovan Ashram",
@@ -71,7 +63,7 @@ const DEFAULT_NASHIK_POIS = [
     location: "Panchavati, Nashik",
     description: "Serene penance grove where Lakshmana cut off Surpanakha's nose. Confluence of Kapila & Godavari.",
     famousThing: "Ramayana History, Confluence of Rivers",
-    image: "https://tse3.mm.bing.net/th/id/OIP.YgMRWPgXEvJKQwGwmxuEDQHaEK?r=0&pid=Api&h=220&P=0"
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Tapovan_Nashik.jpg/800px-Tapovan_Nashik.jpg"
   },
   {
     name: "Kapaleshwar Temple",
@@ -81,7 +73,7 @@ const DEFAULT_NASHIK_POIS = [
     location: "Panchavati, Nashik",
     description: "Unique Lord Shiva temple near Ramkund where there is NO Nandi idol in front of Shiva.",
     famousThing: "Shiva Temple without Nandi Bull",
-    image: "https://tse4.mm.bing.net/th/id/OIP.-xEGoD8SslNpIgN0QvF46wHaEU?r=0&pid=Api&h=220&P=0"
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a3/Kapaleshwar_Temple_Nashik.jpg/800px-Kapaleshwar_Temple_Nashik.jpg"
   },
   {
     name: "Sita Gufa",
@@ -91,7 +83,7 @@ const DEFAULT_NASHIK_POIS = [
     location: "Panchavati, Nashik",
     description: "Narrow ancient cave where Goddess Sita stayed and was abducted by Ravana.",
     famousThing: "Goddess Sita Cave, Ancient Banyan Trees",
-    image: "https://tse4.mm.bing.net/th/id/OIP.vUyDj3zjeQox4cNSqcPD7QHaEI?r=0&pid=Api&h=220&P=0"
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/Sita_Gufa_Panchavati_Nashik.jpg/800px-Sita_Gufa_Panchavati_Nashik.jpg"
   },
   {
     name: "Dharmachakra Prabhav Tirth Jain Mandir",
@@ -101,7 +93,7 @@ const DEFAULT_NASHIK_POIS = [
     location: "Vilholi, Nashik",
     description: "Grand Jain pilgrimage complex featuring heavy gold-plated idols and pink stone carvings.",
     famousThing: "24 Tirthankara Sculptures, Architectural Marvel",
-    image: "https://tse4.mm.bing.net/th/id/OIP.kl8RJtUT7xFVYdtDL5OK_AHaCx?r=0&pid=Api&h=220&P=0"
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Jain_temple_Nashik.jpg/800px-Jain_temple_Nashik.jpg"
   },
 
   // Historic & Tourist Spots
@@ -113,7 +105,7 @@ const DEFAULT_NASHIK_POIS = [
     location: "Pathardi Phata, Nashik",
     description: "Group of 24 rock-cut Buddhist caves dating back to the 1st century BCE to 3rd century CE.",
     famousThing: "2000-Year Rock-Cut Caves, Panoramic Nashik View",
-    image: "https://tse1.mm.bing.net/th/id/OIP.dJ9O2v1x5Q5-RT4G7IvxAwHaFQ?r=0&pid=Api&h=220&P=0"
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/Pandavleni_Caves_Nashik.jpg/800px-Pandavleni_Caves_Nashik.jpg"
   },
   {
     name: "Gargoti Mineral Museum",
@@ -123,7 +115,7 @@ const DEFAULT_NASHIK_POIS = [
     location: "Sinnar, Nashik",
     description: "India's only mineral museum exhibiting rare natural zeolites, gems, crystals, and rocks.",
     famousThing: "World-Class Zeolite & Gemstone Collection",
-    image: "https://tse4.mm.bing.net/th/id/OIP.B_1T4F4M7LRoIOHQLRjsXQHaFj?r=0&pid=Api&h=220&P=0"
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Gargoti_Museum_Nashik.jpg/800px-Gargoti_Museum_Nashik.jpg"
   },
   {
     name: "Coin Museum (INSAF)",
@@ -133,7 +125,7 @@ const DEFAULT_NASHIK_POIS = [
     location: "Trimbak Road, Nashik",
     description: "Indian Institute of Research in Numismatic Studies documenting Indian currency history through millennia.",
     famousThing: "Ancient Indian Coins & Currency History",
-    image: "https://tse4.mm.bing.net/th/id/OIP.KgD15C3NFrDvtbG_4llpnQHaEd?r=0&pid=Api&h=220&P=0"
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Indian_Coin_Museum.jpg/800px-Indian_Coin_Museum.jpg"
   },
   {
     name: "Artillery Centre Museum",
@@ -143,7 +135,7 @@ const DEFAULT_NASHIK_POIS = [
     location: "Nashik Road Military Station, Nashik",
     description: "Asia's largest artillery military museum displaying historic cannons, military tanks, and battle weapons.",
     famousThing: "Military Tanks, War Artillery & Historic Guns",
-    image: "https://tse3.mm.bing.net/th/id/OIP.Z1kSUlLdwuFx87r1dwZ8UAHaEK?r=0&pid=Api&h=220&P=0"
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/Artillery_Museum_Nashik.jpg/800px-Artillery_Museum_Nashik.jpg"
   },
 
   // Treks & Mountains
@@ -155,7 +147,7 @@ const DEFAULT_NASHIK_POIS = [
     location: "Anjaneri, Nashik",
     description: "Sacred mountain fort considered the birthplace of Lord Hanuman. Popular scenic trekking trail.",
     famousThing: "Birthplace of Lord Hanuman, Footprint Rock",
-    image: "https://tse3.mm.bing.net/th/id/OIP.rmUuBN0DAH7csfT4Pz2t3gHaE9?r=0&pid=Api&h=220&P=0"
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/af/Anjaneri_hill_Nashik.jpg/800px-Anjaneri_hill_Nashik.jpg"
   },
   {
     name: "Brahmagiri Mountain & Godavari Source",
@@ -165,7 +157,7 @@ const DEFAULT_NASHIK_POIS = [
     location: "Trimbakeshwar, Nashik",
     description: "Majestic mountain ridge overlooking Trimbak town. Steps lead to Godavari river origin (Gangadwar).",
     famousThing: "Godavari River Origin Point, Cloud Trail",
-    image: "https://tse4.mm.bing.net/th/id/OIP.hkzh_pSLuEOsXSQD6xewCAHaEz?r=0&pid=Api&h=220&P=0"
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/Brahmagiri_Trimbakeshwar.jpg/800px-Brahmagiri_Trimbakeshwar.jpg"
   },
   {
     name: "Harihar Fort Trek",
@@ -175,7 +167,7 @@ const DEFAULT_NASHIK_POIS = [
     location: "Nirgudpada, Nashik",
     description: "World-famous iconic fort featuring 80-degree near-vertical rock-cut rock staircase steps.",
     famousThing: "Vertical Rock Stairs, Iconic Thrill Trek",
-    image: "https://tse2.mm.bing.net/th/id/OIP.xMwipKrTkf1kNAcZgBKG4gHaHa?r=0&pid=Api&h=220&P=0"
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Harihar_Fort_Nashik.jpg/800px-Harihar_Fort_Nashik.jpg"
   },
   {
     name: "Ramshej Fort Trek",
@@ -185,7 +177,7 @@ const DEFAULT_NASHIK_POIS = [
     location: "Peth Road, Nashik",
     description: "Historic fort where Maratha army successfully defended against Mughal siege for over 5 years.",
     famousThing: "Maratha Defense History, Quick Weekend Trek",
-    image: "https://tse1.mm.bing.net/th/id/OIP.OM3jaWNSp8ALbNG2HHbB4wHaFj?r=0&pid=Api&h=220&P=0"
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f1/Ramshej_Fort.jpg/800px-Ramshej_Fort.jpg"
   },
   {
     name: "Salher Fort Peak",
@@ -195,7 +187,7 @@ const DEFAULT_NASHIK_POIS = [
     location: "Satana, Nashik District",
     description: "The highest fort peak in Maharashtra at 1,567 meters altitude with ancient rock tanks.",
     famousThing: "Highest Fort Peak in Maharashtra (1567m)",
-    image: "https://tse2.mm.bing.net/th/id/OIP.tdJqZd7B4sFfQ0Sq_rkaXQHaEK?r=0&pid=Api&h=220&P=0"
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Salher_Fort_Maharashtra.jpg/800px-Salher_Fort_Maharashtra.jpg"
   },
 
   // Famous Hotels & Stays
@@ -207,7 +199,7 @@ const DEFAULT_NASHIK_POIS = [
     location: "Ambad MIDC, Nashik",
     description: "5-star luxury hotel surrounded by 11 acres of manicured gardens and premium suites.",
     phone: "+91 253 669 2333",
-    image: "https://tse3.mm.bing.net/th/id/OIP.E5RdG-njAQzYciqKgWNq6QHaEK?r=0&pid=Api&h=220&P=0"
+    image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=800&auto=format&fit=crop"
   },
   {
     name: "Express Inn Hotel",
@@ -217,7 +209,7 @@ const DEFAULT_NASHIK_POIS = [
     location: "Pathardi Phata, Mumbai-Agra Highway, Nashik",
     description: "Luxury 5-star business hotel featuring rooftop poolside lounge Freasia & multi-cuisine dining.",
     phone: "+91 253 664 1111",
-    image: "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/05/71/7a/6b/hotel-express-inn.jpg?w=900&h=-1&s=1"
+    image: "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?q=80&w=800&auto=format&fit=crop"
   },
   {
     name: "Radisson Blu Hotel & Spa",
@@ -227,7 +219,7 @@ const DEFAULT_NASHIK_POIS = [
     location: "Pathardi Phata, Nashik",
     description: "Urban resort offering panoramic mountain views, international spa, and luxury dining.",
     phone: "+91 253 260 0000",
-    image: "https://tse3.mm.bing.net/th/id/OIP.fdNrDhgvWsL69NP3jZO5_QHaFj?r=0&pid=Api&h=220&P=0"
+    image: "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=800&auto=format&fit=crop"
   },
   {
     name: "Courtyard by Marriott Nashik",
@@ -237,7 +229,7 @@ const DEFAULT_NASHIK_POIS = [
     location: "Mumbai Naka, Nashik",
     description: "Modern upscale city hotel featuring luxury amenities and convenient access to highway.",
     phone: "+91 253 230 9999",
-    image: "https://tse2.mm.bing.net/th/id/OIP.RrZ215c0-v7ks6gN7pHY4wHaGh?r=0&pid=Api&h=220&P=0"
+    image: "https://images.unsplash.com/photo-1564501049412-61c2a3083791?q=80&w=800&auto=format&fit=crop"
   },
 
   // Famous Restaurants & Food
@@ -248,7 +240,8 @@ const DEFAULT_NASHIK_POIS = [
     longitude: 73.7310,
     location: "Hardev Nagar, Bardan Phata, Nashik",
     description: "Iconic traditional wood-fired chulivarchi misal served with fresh jalebis & gulab jamuns in rural setting.",
-    famousThing: "Clay-pot Woodfire Spicy Misal Pav"
+    famousThing: "Clay-pot Woodfire Spicy Misal Pav",
+    image: "https://images.unsplash.com/photo-1601050690597-df0568f70950?q=80&w=800&auto=format&fit=crop"
   },
   {
     name: "Hotel Divtya Budhlya",
@@ -257,7 +250,8 @@ const DEFAULT_NASHIK_POIS = [
     longitude: 73.7710,
     location: "Gangapur Road, Nashik",
     description: "Famous authentic Khandeshi & Maharashtrian non-veg thali restaurant.",
-    famousThing: "Mutton Kala Masala Thali"
+    famousThing: "Mutton Kala Masala Thali",
+    image: "https://images.unsplash.com/photo-1585937421612-70a008356fbe?q=80&w=800&auto=format&fit=crop"
   },
   {
     name: "Hotel Panchratna Misal",
@@ -266,7 +260,8 @@ const DEFAULT_NASHIK_POIS = [
     longitude: 73.7915,
     location: "Panchavati, Nashik",
     description: "Legendary traditional breakfast spot serving spicy Nashik Misal right in Panchavati.",
-    famousThing: "Classic Panchavati Spicy Misal"
+    famousThing: "Classic Panchavati Spicy Misal",
+    image: "https://images.unsplash.com/photo-1567337710282-00832b415979?q=80&w=800&auto=format&fit=crop"
   },
 
   // Hospitals & Emergency
@@ -278,7 +273,7 @@ const DEFAULT_NASHIK_POIS = [
     location: "Swaminarayan Nagar, Mumbai Naka, Nashik",
     description: "24/7 Multi-speciality tertiary care super-specialty hospital with advanced trauma unit.",
     phone: "1066 / +91 253 230 3333",
-    image: "https://tse4.mm.bing.net/th/id/OIP.Qhaem1lvgVD37v1Gajf9DAAAAA?r=0&pid=Api&h=220&P=0"
+    image: "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?q=80&w=800&auto=format&fit=crop"
   },
   {
     name: "Wockhardt Hospital",
@@ -288,7 +283,7 @@ const DEFAULT_NASHIK_POIS = [
     location: "Mumbai Naka, Nashik",
     description: "Multi-specialty super-specialty healthcare centre with round-the-clock emergency response.",
     phone: "+91 253 662 4444",
-    image: "https://tse1.mm.bing.net/th/id/OIP.VtchN16o9ZX1qfVrRhCG8AHaDt?r=0&pid=Api&h=220&P=0"
+    image: "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=800&auto=format&fit=crop"
   },
   {
     name: "Sahyadri Super Speciality Hospital",
@@ -298,7 +293,7 @@ const DEFAULT_NASHIK_POIS = [
     location: "Bhavik Complex, Mumbai Naka, Nashik",
     description: "Leading multi-specialty cardiac, neuro, and critical care medical hospital.",
     phone: "+91 253 664 0000",
-    image: "https://tse2.mm.bing.net/th/id/OIP.WynFVhbp95VQ1ynbA8-23QHaE6?r=0&pid=Api&h=220&P=0"
+    image: "https://images.unsplash.com/photo-1538108149393-fbbd81895907?q=80&w=800&auto=format&fit=crop"
   },
   {
     name: "Civil Hospital Nashik",
@@ -308,7 +303,7 @@ const DEFAULT_NASHIK_POIS = [
     location: "Trimbak Road, Nashik",
     description: "Primary government district general hospital with 24x7 emergency medical service.",
     phone: "+91 253 257 2038",
-    image: "https://tse4.mm.bing.net/th/id/OIP.rxRsKYj1jaUxZT3-mBwGtgHaEK?r=0&pid=Api&h=220&P=0"
+    image: "https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?q=80&w=800&auto=format&fit=crop"
   },
 
   // Public Toilets & Facilities
@@ -393,13 +388,26 @@ exports.getMapPOIs = async (req, res) => {
     }
 
     // Enrich any database records that are missing image URLs from default seed map
+    // Also FIX broken Bing/Yahoo URLs stored in DB by replacing them with stable ones
+    const brokenUrlPatterns = [
+      'tse1.mm.bing.net', 'tse2.mm.bing.net', 'tse3.mm.bing.net', 'tse4.mm.bing.net',
+      'mm.bing.net', 'in.images.search.yahoo.com', 'yahoo.com/search'
+    ];
+
     const enrichedPois = pois.map((poi) => {
       const obj = poi.toObject ? poi.toObject() : { ...poi };
       const nameKey = (obj.name || '').trim().toLowerCase();
-      if ((!obj.image || obj.image.trim() === '') && defaultImageMap[nameKey]) {
+
+      // Check if the existing image URL is broken (Bing/Yahoo) or missing
+      const hasImage = obj.image && obj.image.trim() !== '';
+      const isBrokenUrl = hasImage && brokenUrlPatterns.some(pattern => obj.image.includes(pattern));
+
+      if ((!hasImage || isBrokenUrl) && defaultImageMap[nameKey]) {
         obj.image = defaultImageMap[nameKey];
-        MapPOI.findByIdAndUpdate(obj._id, { image: defaultImageMap[nameKey] }).exec().catch(() => {});
+        // Update the DB record with the stable URL
+        MapPOI.findByIdAndUpdate(obj._id, { image: defaultImageMap[nameKey] }).exec().catch(() => { });
       }
+
       return obj;
     });
 
