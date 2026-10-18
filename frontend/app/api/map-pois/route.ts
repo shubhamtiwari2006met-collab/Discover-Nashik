@@ -57,13 +57,24 @@ export async function GET() {
 
   const poisMap = new Map<string, MapPOIItem>();
 
+  // Patterns for unreliable image URLs (Bing thumbnails, Yahoo search pages)
+  const brokenUrlPatterns = [
+    'tse1.mm.bing.net', 'tse2.mm.bing.net', 'tse3.mm.bing.net', 'tse4.mm.bing.net',
+    'mm.bing.net', 'in.images.search.yahoo.com', 'yahoo.com/search'
+  ];
+
   // 1. Load backend or default POIs
   const basePois = backendPois.length > 0 ? backendPois : inMemoryMapPois;
   basePois.forEach((poi) => {
     if (poi && poi._id && !deletedMapPoiIds.has(poi._id)) {
       const enriched = { ...poi };
       const nameKey = (enriched.name || "").trim().toLowerCase();
-      if ((!enriched.image || enriched.image.trim() === "") && defaultImageMap.has(nameKey)) {
+
+      // Check if the existing image URL is broken (Bing/Yahoo) or missing
+      const hasImage = enriched.image && enriched.image.trim() !== "";
+      const isBrokenUrl = hasImage && brokenUrlPatterns.some(pattern => (enriched.image || "").includes(pattern));
+
+      if ((!hasImage || isBrokenUrl) && defaultImageMap.has(nameKey)) {
         enriched.image = defaultImageMap.get(nameKey);
       }
       poisMap.set(poi._id, enriched);

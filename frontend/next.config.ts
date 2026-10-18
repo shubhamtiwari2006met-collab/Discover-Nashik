@@ -7,12 +7,14 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "source.unsplash.com" },
+      { protocol: "https", hostname: "upload.wikimedia.org" },
       { protocol: "https", hostname: "*.supabase.co" },
       { protocol: "https", hostname: "*.pixabay.com" },
       { protocol: "https", hostname: "*.imgur.com" },
       { protocol: "https", hostname: "*.cloudinary.com" },
       { protocol: "https", hostname: "*.googleusercontent.com" },
       { protocol: "https", hostname: "*.picsum.photos" },
+      { protocol: "https", hostname: "dynamic-media-cdn.tripadvisor.com" },
     ],
   },
   async headers() {

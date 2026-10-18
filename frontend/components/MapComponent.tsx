@@ -1499,6 +1499,13 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
                               src={place.image || "https://images.unsplash.com/photo-1596700508005-4f05ab04c997?auto=format&fit=crop&w=800&q=80"}
                               alt={place.name}
                               className="h-full w-full object-cover"
+                              onError={(e) => {
+                                const target = e.currentTarget;
+                                if (!target.dataset.fallback) {
+                                  target.dataset.fallback = "1";
+                                  target.src = "https://images.unsplash.com/photo-1596700508005-4f05ab04c997?auto=format&fit=crop&w=800&q=80";
+                                }
+                              }}
                             />
                             {place.isKumbhLocation && (
                               <span className="absolute top-2 left-2 rounded-full bg-amber-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">
