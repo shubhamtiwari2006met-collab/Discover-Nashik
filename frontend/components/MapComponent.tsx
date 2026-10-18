@@ -405,10 +405,30 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
       });
     });
 
-    return Array.from(uniqueMap.values());
+    const isToiletLocation = (item: { name?: string; category?: string; subcategory?: string }) => {
+      const cat = (item.category || "").toLowerCase();
+      const sub = (item.subcategory || "").toLowerCase();
+      const name = (item.name || "").toLowerCase();
+      return cat.includes("toilet") || sub.includes("toilet") || name.includes("toilet");
+    };
+
+    return Array.from(uniqueMap.values()).sort((a, b) => {
+      const aT = isToiletLocation(a);
+      const bT = isToiletLocation(b);
+      if (aT && !bT) return 1;
+      if (!aT && bT) return -1;
+      return 0;
+    });
   }, [initialPlaces, kumbhLocations, userLocation]);
 
-  // Filter and sort places based on Category, Search & Distance
+  const isToiletLocation = useCallback((item: { name?: string; category?: string; subcategory?: string }) => {
+    const cat = (item.category || "").toLowerCase();
+    const sub = (item.subcategory || "").toLowerCase();
+    const name = (item.name || "").toLowerCase();
+    return cat.includes("toilet") || sub.includes("toilet") || name.includes("toilet");
+  }, []);
+
+  // Filter and sort places based on Category, Search & Distance (Toilets always at the end)
   const filteredMapPlaces = useMemo(() => {
     let result = allMapPlaces.filter((item) => {
       // Search text filter
@@ -486,17 +506,24 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
       return (item.category || "").toLowerCase() === selectedCategory.toLowerCase();
     });
 
-    // Nearest Result Prioritization: If user location is active, sort by distance ascending!
-    if (userLocation) {
-      result = [...result].sort((a, b) => {
+    // Nearest Result Prioritization & Toilet Placement:
+    // Toilets are always listed at the end of the list!
+    result = [...result].sort((a, b) => {
+      const aT = isToiletLocation(a);
+      const bT = isToiletLocation(b);
+      if (aT && !bT) return 1;
+      if (!aT && bT) return -1;
+
+      if (userLocation) {
         const distA = a.distanceKm ?? Infinity;
         const distB = b.distanceKm ?? Infinity;
         return distA - distB;
-      });
-    }
+      }
+      return 0;
+    });
 
     return result;
-  }, [allMapPlaces, searchQuery, selectedCategory, savedPlaceIds, userLocation]);
+  }, [allMapPlaces, searchQuery, selectedCategory, savedPlaceIds, userLocation, isToiletLocation]);
 
   // Handle Marker or Search Result Selection: fly map to coordinates and show card popup!
   const handleMarkerClick = useCallback((place: MapPlaceItem) => {
@@ -517,8 +544,15 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
         const matchesFamous = (item.famousThing || "").toLowerCase().includes(q);
         return matchesName || matchesLoc || matchesCat || matchesSub || matchesFamous;
       })
+      .sort((a, b) => {
+        const aT = isToiletLocation(a);
+        const bT = isToiletLocation(b);
+        if (aT && !bT) return 1;
+        if (!aT && bT) return -1;
+        return 0;
+      })
       .slice(0, 7);
-  }, [allMapPlaces, searchQuery]);
+  }, [allMapPlaces, searchQuery, isToiletLocation]);
 
   const handleSelectSearchLocation = (place: MapPlaceItem) => {
     handleMarkerClick(place);

@@ -437,7 +437,21 @@ exports.getMapPOIs = async (req, res) => {
       }
     });
 
-    res.json(Array.from(uniqueMap.values()));
+    const isToilet = (item) => {
+      const cat = (item.category || '').toLowerCase();
+      const name = (item.name || '').toLowerCase();
+      return cat.includes('toilet') || name.includes('toilet');
+    };
+
+    const finalPois = Array.from(uniqueMap.values()).sort((a, b) => {
+      const aToilet = isToilet(a);
+      const bToilet = isToilet(b);
+      if (aToilet && !bToilet) return 1;
+      if (!aToilet && bToilet) return -1;
+      return 0;
+    });
+
+    res.json(finalPois);
   } catch (error) {
     console.error('Error fetching map POIs:', error);
     res.status(500).json({ error: 'Failed to fetch map POIs' });

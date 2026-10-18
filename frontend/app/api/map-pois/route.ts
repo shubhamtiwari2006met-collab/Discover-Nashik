@@ -111,7 +111,19 @@ export async function GET() {
       }
     });
 
-  const finalPois = Array.from(uniqueByName.values());
+  const isToilet = (item: { name?: string; category?: string }) => {
+    const cat = (item.category || "").toLowerCase();
+    const name = (item.name || "").toLowerCase();
+    return cat.includes("toilet") || name.includes("toilet");
+  };
+
+  const finalPois = Array.from(uniqueByName.values()).sort((a, b) => {
+    const aT = isToilet(a);
+    const bT = isToilet(b);
+    if (aT && !bT) return 1;
+    if (!aT && bT) return -1;
+    return 0;
+  });
 
   return NextResponse.json(finalPois, {
     headers: {

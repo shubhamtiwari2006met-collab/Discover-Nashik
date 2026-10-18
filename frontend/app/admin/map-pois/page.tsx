@@ -223,14 +223,28 @@ export default function MapPOIsAdminPage() {
     }
   };
 
-  const filteredPois = pois.filter((poi) => {
-    const matchesCategory = selectedCategory === "All" || poi.category === selectedCategory;
-    const matchesSearch =
-      poi.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      poi.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      poi.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  const isToilet = (item: { name?: string; category?: string }) => {
+    const cat = (item.category || "").toLowerCase();
+    const name = (item.name || "").toLowerCase();
+    return cat.includes("toilet") || name.includes("toilet");
+  };
+
+  const filteredPois = pois
+    .filter((poi) => {
+      const matchesCategory = selectedCategory === "All" || poi.category === selectedCategory;
+      const matchesSearch =
+        poi.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        poi.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        poi.description.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesCategory && matchesSearch;
+    })
+    .sort((a, b) => {
+      const aT = isToilet(a);
+      const bT = isToilet(b);
+      if (aT && !bT) return 1;
+      if (!aT && bT) return -1;
+      return 0;
+    });
 
   return (
     <div className="space-y-6">
