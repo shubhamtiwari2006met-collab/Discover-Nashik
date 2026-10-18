@@ -93,7 +93,25 @@ export async function GET() {
     }
   });
 
-  const finalPois = Array.from(poisMap.values()).filter((p) => !deletedMapPoiIds.has(p._id));
+  // 3. Deduplicate by name so no duplicate places ever reach the frontend UI
+  const uniqueByName = new Map<string, MapPOIItem>();
+  Array.from(poisMap.values())
+    .filter((p) => !deletedMapPoiIds.has(p._id))
+    .forEach((p) => {
+      const key = (p.name || "").trim().toLowerCase();
+      if (!uniqueByName.has(key)) {
+        uniqueByName.set(key, p);
+      } else {
+        const existing = uniqueByName.get(key)!;
+        const existingHasImg = existing.image && existing.image.trim() !== "";
+        const incomingHasImg = p.image && p.image.trim() !== "";
+        if (!existingHasImg && incomingHasImg) {
+          uniqueByName.set(key, p);
+        }
+      }
+    });
+
+  const finalPois = Array.from(uniqueByName.values());
 
   return NextResponse.json(finalPois, {
     headers: {

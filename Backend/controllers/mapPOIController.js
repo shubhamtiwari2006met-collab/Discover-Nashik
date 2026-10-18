@@ -6,6 +6,16 @@ const MapPOI = require('../models/MapPOI');
 const DEFAULT_NASHIK_POIS = [
   // Spiritual & Religious
   {
+    name: "Trimbakeshwar Shiva Temple",
+    category: "Spiritual",
+    latitude: 19.9324,
+    longitude: 73.5307,
+    location: "Trimbak, Nashik",
+    description: "One of the 12 sacred Jyotirlingas of Lord Shiva located at the source of Godavari river.",
+    famousThing: "12 Jyotirlinga, Origin of Godavari River",
+    image: "https://images.unsplash.com/photo-1609946782782-99c5c1630166?q=80&w=800&auto=format&fit=crop"
+  },
+  {
     name: "Kalaram Temple",
     category: "Religious",
     latitude: 20.0055,
@@ -411,7 +421,23 @@ exports.getMapPOIs = async (req, res) => {
       return obj;
     });
 
-    res.json(enrichedPois);
+    // Deduplicate by name: keep the copy that has a valid image and more details
+    const uniqueMap = new Map();
+    enrichedPois.forEach((poi) => {
+      const key = (poi.name || '').trim().toLowerCase();
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, poi);
+      } else {
+        const existing = uniqueMap.get(key);
+        const existingHasImg = existing.image && existing.image.trim() !== '';
+        const incomingHasImg = poi.image && poi.image.trim() !== '';
+        if (!existingHasImg && incomingHasImg) {
+          uniqueMap.set(key, poi);
+        }
+      }
+    });
+
+    res.json(Array.from(uniqueMap.values()));
   } catch (error) {
     console.error('Error fetching map POIs:', error);
     res.status(500).json({ error: 'Failed to fetch map POIs' });
