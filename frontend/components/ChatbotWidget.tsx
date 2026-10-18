@@ -168,7 +168,12 @@ const getGeminiReply = async (
 
 export function ChatbotWidget() {
   const pathname = usePathname();
-  if (pathname === "/map") return null;
+  const normalizedPathname = (pathname || "").toLowerCase().replace(/\/+$/, "") || "/";
+
+  if (normalizedPathname === "/map" || normalizedPathname.startsWith("/map/")) {
+    return null;
+  }
+
   return <ChatbotAssistant />;
 }
 

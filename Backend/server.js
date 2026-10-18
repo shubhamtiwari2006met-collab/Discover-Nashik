@@ -102,8 +102,11 @@ try {
   console.warn("DNS server setup warning:", dnsErr.message);
 }
 
+const mapPOIRoutes = require('./routes/mapPOIRoutes');
+
 // Mount routers
 app.use("/api/places", placeRoutes);
+app.use("/api/map-pois", mapPOIRoutes);
 app.use("/api/auth", authRoutes);
 app.use('/api/business', businessRoutes);
 app.use('/api/kumbh', kumbhRoutes);

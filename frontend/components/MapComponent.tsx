@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import "leaflet/dist/leaflet.css";
 import { useMap } from "react-leaflet";
 import {
@@ -29,7 +29,9 @@ import {
   Car,
   Footprints,
   RotateCcw,
-  Flag
+  Flag,
+  Maximize2,
+  Minimize2
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { Place, PlaceCard } from "@/components/PlaceCard";
@@ -156,6 +158,7 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
   const [kumbhLocations, setKumbhLocations] = useState<Place[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [isSearchFocused, setIsSearchFocused] = useState<boolean>(false);
   const [selectedPlace, setSelectedPlace] = useState<MapPlaceItem | null>(null);
   const [detailModalPlace, setDetailModalPlace] = useState<Place | null>(null);
   const [viewMode, setViewMode] = useState<"map" | "list">("map");
@@ -178,6 +181,42 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
   // Saved / Favorite Places state
   const [savedPlaceIds, setSavedPlaceIds] = useState<string[]>(readSavedPlaceIds);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Fullscreen Map State & Handler
+  const mapWrapperRef = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!mapWrapperRef.current) return;
+
+    if (!document.fullscreenElement) {
+      if (mapWrapperRef.current.requestFullscreen) {
+        void mapWrapperRef.current.requestFullscreen();
+      } else if ((mapWrapperRef.current as any).webkitRequestFullscreen) {
+        (mapWrapperRef.current as any).webkitRequestFullscreen();
+      } else if ((mapWrapperRef.current as any).msRequestFullscreen) {
+        (mapWrapperRef.current as any).msRequestFullscreen();
+      }
+    } else {
+      if (document.exitFullscreen) {
+        void document.exitFullscreen();
+      } else if ((document as any).webkitExitFullscreen) {
+        (document as any).webkitExitFullscreen();
+      } else if ((document as any).msExitFullscreen) {
+        (document as any).msExitFullscreen();
+      }
+    }
+  };
 
   // Map Voice Guide State
   const [voiceStatus, setVoiceStatus] = useState<"idle" | "listening" | "processing" | "speaking">("idle");
@@ -366,10 +405,30 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
       });
     });
 
-    return Array.from(uniqueMap.values());
+    const isToiletLocation = (item: { name?: string; category?: string; subcategory?: string }) => {
+      const cat = (item.category || "").toLowerCase();
+      const sub = (item.subcategory || "").toLowerCase();
+      const name = (item.name || "").toLowerCase();
+      return cat.includes("toilet") || sub.includes("toilet") || name.includes("toilet");
+    };
+
+    return Array.from(uniqueMap.values()).sort((a, b) => {
+      const aT = isToiletLocation(a);
+      const bT = isToiletLocation(b);
+      if (aT && !bT) return 1;
+      if (!aT && bT) return -1;
+      return 0;
+    });
   }, [initialPlaces, kumbhLocations, userLocation]);
 
-  // Filter and sort places based on Category, Search & Distance
+  const isToiletLocation = useCallback((item: { name?: string; category?: string; subcategory?: string }) => {
+    const cat = (item.category || "").toLowerCase();
+    const sub = (item.subcategory || "").toLowerCase();
+    const name = (item.name || "").toLowerCase();
+    return cat.includes("toilet") || sub.includes("toilet") || name.includes("toilet");
+  }, []);
+
+  // Filter and sort places based on Category, Search & Distance (Toilets always at the end)
   const filteredMapPlaces = useMemo(() => {
     let result = allMapPlaces.filter((item) => {
       // Search text filter
@@ -447,17 +506,61 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
       return (item.category || "").toLowerCase() === selectedCategory.toLowerCase();
     });
 
-    // Nearest Result Prioritization: If user location is active, sort by distance ascending!
-    if (userLocation) {
-      result = [...result].sort((a, b) => {
+    // Nearest Result Prioritization & Toilet Placement:
+    // Toilets are always listed at the end of the list!
+    result = [...result].sort((a, b) => {
+      const aT = isToiletLocation(a);
+      const bT = isToiletLocation(b);
+      if (aT && !bT) return 1;
+      if (!aT && bT) return -1;
+
+      if (userLocation) {
         const distA = a.distanceKm ?? Infinity;
         const distB = b.distanceKm ?? Infinity;
         return distA - distB;
-      });
-    }
+      }
+      return 0;
+    });
 
     return result;
-  }, [allMapPlaces, searchQuery, selectedCategory, savedPlaceIds, userLocation]);
+  }, [allMapPlaces, searchQuery, selectedCategory, savedPlaceIds, userLocation, isToiletLocation]);
+
+  // Handle Marker or Search Result Selection: fly map to coordinates and show card popup!
+  const handleMarkerClick = useCallback((place: MapPlaceItem) => {
+    setSelectedPlace(place);
+    setMapCenter([place.lat, place.lng]);
+    setMapZoom(16);
+  }, []);
+
+  const searchSuggestions = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const q = searchQuery.toLowerCase().trim();
+    return allMapPlaces
+      .filter((item) => {
+        const matchesName = item.name.toLowerCase().includes(q);
+        const matchesLoc = (item.location || "").toLowerCase().includes(q);
+        const matchesCat = (item.category || "").toLowerCase().includes(q);
+        const matchesSub = (item.subcategory || "").toLowerCase().includes(q);
+        const matchesFamous = (item.famousThing || "").toLowerCase().includes(q);
+        return matchesName || matchesLoc || matchesCat || matchesSub || matchesFamous;
+      })
+      .sort((a, b) => {
+        const aT = isToiletLocation(a);
+        const bT = isToiletLocation(b);
+        if (aT && !bT) return 1;
+        if (!aT && bT) return -1;
+        return 0;
+      })
+      .slice(0, 7);
+  }, [allMapPlaces, searchQuery, isToiletLocation]);
+
+  const handleSelectSearchLocation = (place: MapPlaceItem) => {
+    handleMarkerClick(place);
+    setViewMode("map");
+    setIsSearchFocused(false);
+    setSearchQuery(place.name);
+    showToast(`${t("Showing")} ${place.name} ${t("on map")}`);
+  };
 
   // Handle Destination Route Calculation via OSRM (real road routing)
   const handleSelectRouteDestination = async (dest: MapPlaceItem, travelMode = routeTravelMode) => {
@@ -1040,12 +1143,6 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
     });
   };
 
-  const handleMarkerClick = (place: MapPlaceItem) => {
-    setSelectedPlace(place);
-    setMapCenter([place.lat, place.lng]);
-    setMapZoom(15);
-  };
-
   // Route travel calculations — prefer OSRM real data, fallback to Haversine estimate
   const routeDistKm = osrmDistance ?? (selectedDestination
     ? (selectedDestination.distanceKm ?? calculateHaversineDistance(userLocation ? userLocation.lat : NASHIK_CENTER[0], userLocation ? userLocation.lng : NASHIK_CENTER[1], selectedDestination.lat, selectedDestination.lng))
@@ -1092,18 +1189,90 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => {
+                // Short timeout to allow clicking on dropdown suggestions before blur
+                setTimeout(() => setIsSearchFocused(false), 200);
+              }}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setIsSearchFocused(true);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (searchSuggestions.length > 0) {
+                    handleSelectSearchLocation(searchSuggestions[0]);
+                  } else if (filteredMapPlaces.length > 0) {
+                    handleSelectSearchLocation(filteredMapPlaces[0]);
+                  }
+                }
+              }}
               placeholder={t("Search destination, places, temples, hospitals, Kumbh locations...")}
               className="w-full pl-10 pr-9 py-2 sm:py-2.5 rounded-full border border-[#e1cfb0] bg-white text-xs sm:text-sm text-[#173247] placeholder-[#667883] shadow-sm outline-none transition-all focus:border-[#e86f18] focus:ring-2 focus:ring-[#e86f18]/20"
             />
             {searchQuery && (
               <button
                 type="button"
-                onClick={() => setSearchQuery("")}
+                onClick={() => {
+                  setSearchQuery("");
+                  setIsSearchFocused(false);
+                }}
                 className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[#667883] hover:text-[#173247]"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
+            )}
+
+            {/* Floating Search Autocomplete Suggestions Dropdown */}
+            {isSearchFocused && searchQuery.trim() !== "" && searchSuggestions.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-2 z-50 rounded-2xl bg-white border border-[#e1cfb0] shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="p-2 border-b border-[#f1d9b6] bg-[#fffdf8] flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#c9580f]">
+                    {t("Location Suggestions")} ({searchSuggestions.length})
+                  </span>
+                  <span className="text-[10px] text-[#667883]">
+                    {t("Press Enter or click to show on map")}
+                  </span>
+                </div>
+
+                <div className="max-h-72 overflow-y-auto divide-y divide-slate-100">
+                  {searchSuggestions.map((place) => (
+                    <button
+                      key={`suggest-${place._id}`}
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleSelectSearchLocation(place);
+                      }}
+                      className="w-full text-left p-3 hover:bg-[#fff7ed] transition-colors flex items-center justify-between group cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#fff7ed] text-[#c9580f] group-hover:bg-[#c9580f] group-hover:text-white transition-colors">
+                          <MapPin className="h-4 w-4" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-[#173247] group-hover:text-[#c9580f] truncate transition-colors">
+                            {place.name}
+                          </p>
+                          <p className="text-[11px] text-[#667883] truncate mt-0.5">
+                            {place.location} • <span className="font-semibold text-amber-700">{place.category}</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {place.distanceKm !== undefined && (
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                            {formatDistance(place.distanceKm)}
+                          </span>
+                        )}
+                        <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-[#c9580f] group-hover:translate-x-0.5 transition-all" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
 
@@ -1253,7 +1422,29 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
           </div>
         ) : (
           /* Interactive Map View Mode */
-          <div className="relative h-full w-full">
+          <div ref={mapWrapperRef} className="relative h-full w-full bg-slate-900">
+            {/* Fullscreen Map Button at Bottom Left Corner */}
+            <div className="absolute bottom-4 left-4 z-[1000]">
+              <button
+                type="button"
+                onClick={toggleFullscreen}
+                title={isFullscreen ? t("Exit Fullscreen") : t("Full Screen")}
+                className="flex items-center gap-1.5 rounded-full border border-amber-300/90 bg-white px-3 py-2 text-xs font-extrabold text-[#173247] shadow-[0_4px_16px_rgba(0,0,0,0.2)] backdrop-blur-md transition-all duration-200 hover:bg-white hover:scale-105 hover:border-[#e86f18] hover:text-[#e86f18] active:scale-95 cursor-pointer"
+              >
+                {isFullscreen ? (
+                  <>
+                    <Minimize2 className="h-4 w-4 text-[#e86f18] shrink-0" />
+                    <span className="whitespace-nowrap">{t("Exit Fullscreen")}</span>
+                  </>
+                ) : (
+                  <>
+                    <Maximize2 className="h-4 w-4 text-[#e86f18] shrink-0" />
+                    <span className="whitespace-nowrap">{t("Full Screen")}</span>
+                  </>
+                )}
+              </button>
+            </div>
+
             {!mapLib ? (
               <div className="h-full w-full bg-slate-100 dark:bg-slate-800 animate-pulse flex items-center justify-center text-slate-500">
                 <div className="flex flex-col items-center">
@@ -1342,6 +1533,13 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
                               src={place.image || "https://images.unsplash.com/photo-1596700508005-4f05ab04c997?auto=format&fit=crop&w=800&q=80"}
                               alt={place.name}
                               className="h-full w-full object-cover"
+                              onError={(e) => {
+                                const target = e.currentTarget;
+                                if (!target.dataset.fallback) {
+                                  target.dataset.fallback = "1";
+                                  target.src = "https://images.unsplash.com/photo-1596700508005-4f05ab04c997?auto=format&fit=crop&w=800&q=80";
+                                }
+                              }}
                             />
                             {place.isKumbhLocation && (
                               <span className="absolute top-2 left-2 rounded-full bg-amber-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">
