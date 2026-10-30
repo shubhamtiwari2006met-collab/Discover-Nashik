@@ -18,20 +18,43 @@ export function HomeClient({ initialPlaces }: HomeClientProps) {
   const router = useRouter();
   const { t } = useTranslation();
   const [places, setPlaces] = useState<Place[]>(initialPlaces);
+  const [allPlaces, setAllPlaces] = useState<Place[]>(initialPlaces);
 
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [locationStatus, setLocationStatus] = useState<"idle" | "loading" | "error">("idle");
   const [selectedModalPlace, setSelectedModalPlace] = useState<Place | null>(null);
 
+  // Homepage configuration: ordered visible place IDs from admin
+  const [homepageConfig, setHomepageConfig] = useState<{ configured: boolean; placeIds: string[] } | null>(null);
+
   const exploreNearMe = () => {
     router.push("/search?nearby=true");
   };
 
+  // Fetch homepage config from backend (public endpoint, no auth needed)
+  useEffect(() => {
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+    const configUrl = backendUrl
+      ? `${backendUrl}/api/places/homepage`
+      : "/api/places/homepage";
+
+    fetch(configUrl, { cache: "no-store" })
+      .then((res) => res.ok ? res.json() : null)
+      .catch(() => null)
+      .then((data) => {
+        if (data && data.configured && Array.isArray(data.placeIds) && data.placeIds.length > 0) {
+          setHomepageConfig(data);
+        }
+      });
+  }, []);
+
+  // Refresh places client-side
   useEffect(() => {
     fetch("/api/places", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
+          setAllPlaces(data);
           setPlaces(data);
         }
       })
@@ -39,6 +62,25 @@ export function HomeClient({ initialPlaces }: HomeClientProps) {
         console.error("Failed to refresh places client-side:", err);
       });
   }, []);
+
+  // Apply homepage config ordering when both places and config are loaded
+  useEffect(() => {
+    if (!homepageConfig || !homepageConfig.configured || homepageConfig.placeIds.length === 0) return;
+    if (allPlaces.length === 0) return;
+
+    const placeMap = new Map(allPlaces.map((p) => [p._id, p]));
+    const orderedPlaces: Place[] = [];
+
+    // Add places in the admin-configured order (only visible ones)
+    for (const id of homepageConfig.placeIds) {
+      const place = placeMap.get(id);
+      if (place) {
+        orderedPlaces.push(place);
+      }
+    }
+
+    setPlaces(orderedPlaces);
+  }, [allPlaces, homepageConfig]);
 
   return (
     <div className="flex flex-col min-h-screen">

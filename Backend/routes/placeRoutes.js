@@ -9,6 +9,10 @@ const {
   deletePlace,
   seedPlaces 
 } = require('../controllers/placeController');
+const { getPublicHomepagePlaces } = require('../controllers/homepageConfigController');
+
+// Public route: Get homepage places configuration (ordering + visibility)
+router.get('/homepage', getPublicHomepagePlaces);
 
 // Routes for /api/places
 router.route('/')
@@ -24,3 +28,4 @@ router.route('/:id')
   .delete(authenticate, requireRoles('admin', 'business'), deletePlace);
 
 module.exports = router;
+
