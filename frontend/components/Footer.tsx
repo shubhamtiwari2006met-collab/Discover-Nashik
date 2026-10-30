@@ -58,8 +58,8 @@ export function Footer() {
         <div className="mt-8 flex flex-col items-center justify-between border-t border-white/15 pt-8 text-sm text-[#dbe7e7]/70 md:flex-row">
           <p>© {new Date().getFullYear()} Discover Nashik. {t("All rights reserved.")}</p>
           <div className="mt-4 flex space-x-4 md:mt-0">
-            <a href="#" className="transition-colors hover:text-orange-300">{t("Privacy")}</a>
-            <a href="#" className="transition-colors hover:text-orange-300">{t("Terms")}</a>
+            <Link href="/privacy" className="transition-colors hover:text-orange-300">{t("Privacy Policy")}</Link>
+            <Link href="/terms" className="transition-colors hover:text-orange-300">{t("Terms & Conditions")}</Link>
           </div>
         </div>
       </div>

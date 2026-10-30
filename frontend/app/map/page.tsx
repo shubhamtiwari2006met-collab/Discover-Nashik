@@ -63,6 +63,18 @@ function MapContent() {
         : [];
 
       const merged = Array.isArray(regularPlaces) ? [...regularPlaces, ...formattedMapPois] : formattedMapPois;
+      const isToilet = (item: Place) => {
+        const cat = (item.category || "").toLowerCase();
+        const name = (item.name || "").toLowerCase();
+        return cat.includes("toilet") || name.includes("toilet");
+      };
+      merged.sort((a, b) => {
+        const aT = isToilet(a);
+        const bT = isToilet(b);
+        if (aT && !bT) return 1;
+        if (!aT && bT) return -1;
+        return 0;
+      });
       setPlaces(merged);
     });
   }, []);

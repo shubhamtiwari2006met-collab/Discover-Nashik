@@ -93,7 +93,37 @@ export async function GET() {
     }
   });
 
-  const finalPois = Array.from(poisMap.values()).filter((p) => !deletedMapPoiIds.has(p._id));
+  // 3. Deduplicate by name so no duplicate places ever reach the frontend UI
+  const uniqueByName = new Map<string, MapPOIItem>();
+  Array.from(poisMap.values())
+    .filter((p) => !deletedMapPoiIds.has(p._id))
+    .forEach((p) => {
+      const key = (p.name || "").trim().toLowerCase();
+      if (!uniqueByName.has(key)) {
+        uniqueByName.set(key, p);
+      } else {
+        const existing = uniqueByName.get(key)!;
+        const existingHasImg = existing.image && existing.image.trim() !== "";
+        const incomingHasImg = p.image && p.image.trim() !== "";
+        if (!existingHasImg && incomingHasImg) {
+          uniqueByName.set(key, p);
+        }
+      }
+    });
+
+  const isToilet = (item: { name?: string; category?: string }) => {
+    const cat = (item.category || "").toLowerCase();
+    const name = (item.name || "").toLowerCase();
+    return cat.includes("toilet") || name.includes("toilet");
+  };
+
+  const finalPois = Array.from(uniqueByName.values()).sort((a, b) => {
+    const aT = isToilet(a);
+    const bT = isToilet(b);
+    if (aT && !bT) return 1;
+    if (!aT && bT) return -1;
+    return 0;
+  });
 
   return NextResponse.json(finalPois, {
     headers: {

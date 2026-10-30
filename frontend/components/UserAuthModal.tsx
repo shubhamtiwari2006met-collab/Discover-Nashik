@@ -13,10 +13,11 @@ import {
   Sparkles,
   LogOut,
   HelpCircle,
-  CheckCircle2
+  CheckCircle2,
 } from "lucide-react";
 import { useUserAuth } from "@/context/UserAuthContext";
 import { useTranslation } from "@/lib/i18n";
+import { LegalModal } from "./LegalModal";
 
 type AuthTab = "platformId" | "emailMobile";
 type AuthMode = "login" | "register" | "forgot" | "registeredSuccess";
@@ -42,12 +43,18 @@ export function UserAuthModal() {
   const [copiedId, setCopiedId] = useState(false);
   const [createdPlatformId, setCreatedPlatformId] = useState<string | null>(null);
 
+  // Mandatory Terms & Privacy Policy Consent State (Unchecked by default)
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
+  const [legalModalDoc, setLegalModalDoc] = useState<"terms" | "privacy">("terms");
+
   if (!isAuthModalOpen) return null;
 
   const resetForm = () => {
     setErrorMsg(null);
     setSuccessMsg(null);
     setSubmitting(false);
+    setAcceptedTerms(false);
   };
 
   const handleTabChange = (tab: AuthTab) => {
@@ -158,6 +165,10 @@ export function UserAuthModal() {
         setErrorMsg("Password must be at least 6 characters long");
         return;
       }
+      if (!acceptedTerms) {
+        setErrorMsg("Please read and agree to the Terms & Conditions and Privacy Policy of Discover Nashik to proceed.");
+        return;
+      }
 
       const isEmail = emailOrMobile.includes("@");
       const reqData = {
@@ -165,6 +176,8 @@ export function UserAuthModal() {
         email: isEmail ? emailOrMobile.trim() : undefined,
         mobile: !isEmail ? emailOrMobile.trim() : undefined,
         password: password || undefined,
+        termsAccepted: true,
+        privacyPolicyAccepted: true,
       };
 
       setSubmitting(true);
@@ -457,6 +470,50 @@ export function UserAuthModal() {
                 </div>
               )}
 
+              {/* MANDATORY TERMS & CONDITIONS AND PRIVACY POLICY CHECKBOX */}
+              {authMode === "register" && (
+                <div className="pt-1 pb-1">
+                  <label className="flex items-start gap-2.5 cursor-pointer select-none text-xs text-[#334b5c] leading-snug">
+                    <input
+                      type="checkbox"
+                      id="register-terms-checkbox"
+                      checked={acceptedTerms}
+                      onChange={(e) => setAcceptedTerms(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded border-[#d8c4a3] text-[#e86f18] focus:ring-[#e86f18] focus:ring-offset-0 cursor-pointer accent-[#e86f18] shrink-0"
+                    />
+                    <span>
+                      I have read and agree to the{" "}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setLegalModalDoc("terms");
+                          setLegalModalOpen(true);
+                        }}
+                        className="font-bold text-[#e86f18] hover:text-[#c9580f] hover:underline transition-colors"
+                      >
+                        Terms &amp; Conditions
+                      </button>{" "}
+                      and{" "}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setLegalModalDoc("privacy");
+                          setLegalModalOpen(true);
+                        }}
+                        className="font-bold text-[#e86f18] hover:text-[#c9580f] hover:underline transition-colors"
+                      >
+                        Privacy Policy
+                      </button>{" "}
+                      of Discover Nashik.
+                    </span>
+                  </label>
+                </div>
+              )}
+
               {/* Submit Action Button */}
               <button
                 type="submit"
@@ -520,6 +577,13 @@ export function UserAuthModal() {
           </>
         )}
       </div>
+
+      {/* Embedded Complete Legal Documents Modal */}
+      <LegalModal
+        isOpen={legalModalOpen}
+        onClose={() => setLegalModalOpen(false)}
+        initialDoc={legalModalDoc}
+      />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Loader2, LogIn } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { useTranslation } from "@/lib/i18n";
+import { LegalModal } from "@/components/LegalModal";
 
 type LoginRole = "visitor" | "admin" | "business";
 type AuthMode = "signIn" | "signUp" | "reset";
@@ -35,6 +36,9 @@ function LoginContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
+  const [legalModalDoc, setLegalModalDoc] = useState<"terms" | "privacy">("terms");
   const formRef = useRef<HTMLFormElement>(null);
 
   // New state to know if a user is already logged in and their role
@@ -141,6 +145,7 @@ function LoginContent() {
     setConfirmPassword("");
     setError("");
     setMessage("");
+    setAcceptedTerms(false);
   }, [mode]);
 
 
@@ -180,6 +185,11 @@ function LoginContent() {
           setMessage("Check your email for a password reset link.");
         }
       } else if (mode === "signUp") {
+        if (!acceptedTerms) {
+          setError("Please read and agree to the Terms & Conditions and Privacy Policy of Discover Nashik to proceed.");
+          setLoading(false);
+          return;
+        }
         const { error: signUpError } = await supabase.auth.signUp({ email: email.trim(), password, options: { emailRedirectTo: `${window.location.origin}/login` } });
         if (signUpError) throw signUpError;
         setMessage("Account created. Check your email to verify your address.");
@@ -467,6 +477,48 @@ function LoginContent() {
               />
             </label>
           )}
+          {mode === "signUp" && (
+            <div className="pt-1 pb-1">
+              <label className="flex items-start gap-2.5 cursor-pointer select-none text-xs text-[#334b5c] leading-snug">
+                <input
+                  type="checkbox"
+                  id="signup-terms-checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-[#d8c4a3] text-[#e86f18] focus:ring-[#e86f18] focus:ring-offset-0 cursor-pointer accent-[#e86f18] shrink-0"
+                />
+                <span>
+                  I have read and agree to the{" "}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setLegalModalDoc("terms");
+                      setLegalModalOpen(true);
+                    }}
+                    className="font-bold text-[#e86f18] hover:text-[#c9580f] hover:underline transition-colors"
+                  >
+                    Terms &amp; Conditions
+                  </button>{" "}
+                  and{" "}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setLegalModalDoc("privacy");
+                      setLegalModalOpen(true);
+                    }}
+                    className="font-bold text-[#e86f18] hover:text-[#c9580f] hover:underline transition-colors"
+                  >
+                    Privacy Policy
+                  </button>{" "}
+                  of Discover Nashik.
+                </span>
+              </label>
+            </div>
+          )}
           {error && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{t(error)}</p>}
           {message && <p role="status" className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{t(message)}</p>}
           {!mongoResetCompleted && <button type="submit" disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#e86f18] px-4 py-3 font-bold text-white hover:bg-[#c9580f] disabled:opacity-60">{loading && <Loader2 className="h-4 w-4 animate-spin" />}{mode === "signUp" ? t("Create account") : mode === "reset" ? isMongoPasswordReset ? t("Update Password") : t("Send reset email") : t("Sign in")}</button>}
@@ -478,6 +530,12 @@ function LoginContent() {
         </div>
         {role === "business" && <Link href="/business/register" className="mt-5 block text-center text-xs text-[#667883] hover:text-[#c9580f]">{t("Register your business after signing in")}</Link>}
       </div>
+
+      <LegalModal
+        isOpen={legalModalOpen}
+        onClose={() => setLegalModalOpen(false)}
+        initialDoc={legalModalDoc}
+      />
     </div>
   );
 }

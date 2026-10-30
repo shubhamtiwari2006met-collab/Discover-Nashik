@@ -23,7 +23,14 @@ interface UserAuthContextType {
   openAuthModal: () => void;
   closeAuthModal: () => void;
   login: (identifier: string, password?: string) => Promise<{ success: boolean; message?: string; user?: AppUser }>;
-  register: (data: { email?: string; mobile?: string; password?: string; name?: string }) => Promise<{ success: boolean; message?: string; user?: AppUser }>;
+  register: (data: {
+    email?: string;
+    mobile?: string;
+    password?: string;
+    name?: string;
+    termsAccepted?: boolean;
+    privacyPolicyAccepted?: boolean;
+  }) => Promise<{ success: boolean; message?: string; user?: AppUser }>;
   logout: () => Promise<void>;
   refetchUser: () => Promise<void>;
 }
@@ -107,7 +114,14 @@ export function UserAuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const register = async (reqData: { email?: string; mobile?: string; password?: string; name?: string }) => {
+  const register = async (reqData: {
+    email?: string;
+    mobile?: string;
+    password?: string;
+    name?: string;
+    termsAccepted?: boolean;
+    privacyPolicyAccepted?: boolean;
+  }) => {
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
