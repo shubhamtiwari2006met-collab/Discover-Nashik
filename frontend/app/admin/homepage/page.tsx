@@ -85,7 +85,7 @@ export default function HomepageDisplayManagementPage() {
       // 1. Fetch all places from /api/places (same source as Places Management)
       const placesRes = await fetch("/api/places", { cache: "no-store" });
       if (!placesRes.ok) {
-        throw new Error("Failed to load places from directory");
+        throw new Error(t("Failed to load places from directory"));
       }
       const allPlacesData = await placesRes.json();
       const allPlacesList: any[] = Array.isArray(allPlacesData) ? allPlacesData : [];
@@ -178,7 +178,7 @@ export default function HomepageDisplayManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void loadConfig();
@@ -256,7 +256,7 @@ export default function HomepageDisplayManagementPage() {
     try {
       const token = await getAuthToken();
       if (!token) {
-        setError("Authentication required. Please log in as admin.");
+        setError(t("Authentication required. Please log in as admin."));
         return;
       }
       const payload = places.map((p, idx) => ({
