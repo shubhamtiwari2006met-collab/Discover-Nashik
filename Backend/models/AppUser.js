@@ -69,6 +69,34 @@ const appUserSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+  termsAccepted: {
+    type: Boolean,
+    default: false
+  },
+  privacyPolicyAccepted: {
+    type: Boolean,
+    default: false
+  },
+  termsVersion: {
+    type: String,
+    default: null
+  },
+  privacyPolicyVersion: {
+    type: String,
+    default: null
+  },
+  acceptedAt: {
+    type: Date,
+    default: null
+  },
+  consentMethod: {
+    type: String,
+    default: null
+  },
+  consentSource: {
+    type: String,
+    default: null
   }
 }, {
   timestamps: true
@@ -102,6 +130,13 @@ appUserSchema.methods.toSafeObject = function() {
     emailVerified: this.emailVerified,
     mobileVerified: this.mobileVerified,
     authProvider: this.authProvider,
+    termsAccepted: this.termsAccepted,
+    privacyPolicyAccepted: this.privacyPolicyAccepted,
+    termsVersion: this.termsVersion,
+    privacyPolicyVersion: this.privacyPolicyVersion,
+    acceptedAt: this.acceptedAt,
+    consentMethod: this.consentMethod,
+    consentSource: this.consentSource,
     createdAt: this.createdAt,
     lastLoginAt: this.lastLoginAt
   };

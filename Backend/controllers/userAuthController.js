@@ -4,6 +4,10 @@ const crypto = require('crypto');
 const { Resend } = require('resend');
 const AppUser = require('../models/AppUser');
 const BlockedIdentifier = require('../models/BlockedIdentifier');
+const UserConsent = require('../models/UserConsent');
+
+const CURRENT_TERMS_VERSION = '1.0';
+const CURRENT_PRIVACY_POLICY_VERSION = '1.0';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'discover_nashik_jwt_secret_key_2026';
 const COOKIE_NAME = 'app_user_token';
@@ -89,7 +93,14 @@ async function generateUniquePlatformId() {
 // Register Controller
 exports.register = async (req, res) => {
   try {
-    const { email, mobile, password, name } = req.body;
+    const { email, mobile, password, name, termsAccepted, privacyPolicyAccepted } = req.body;
+
+    // Consent Validation: Mandatory acceptance of Terms & Conditions and Privacy Policy
+    if (termsAccepted !== true || privacyPolicyAccepted !== true) {
+      return res.status(400).json({
+        message: 'You must read and agree to the Terms & Conditions and Privacy Policy of Discover Nashik to create an account.'
+      });
+    }
 
     const cleanEmail = normalizeEmail(email);
     const cleanMobile = normalizeMobile(mobile);
@@ -136,6 +147,7 @@ exports.register = async (req, res) => {
     }
 
     const platformId = await generateUniquePlatformId();
+    const serverTimestamp = new Date();
 
     const newUser = new AppUser({
       platformId,
@@ -145,10 +157,36 @@ exports.register = async (req, res) => {
       passwordHash,
       emailVerified: false,
       mobileVerified: false,
-      lastLoginAt: new Date()
+      termsAccepted: true,
+      privacyPolicyAccepted: true,
+      termsVersion: CURRENT_TERMS_VERSION,
+      privacyPolicyVersion: CURRENT_PRIVACY_POLICY_VERSION,
+      acceptedAt: serverTimestamp,
+      consentMethod: 'signup',
+      consentSource: 'signup',
+      lastLoginAt: serverTimestamp
     });
 
     await newUser.save();
+
+    // Create auditable immutable consent record
+    try {
+      await UserConsent.create({
+        userId: newUser._id,
+        platformId: newUser.platformId,
+        termsAccepted: true,
+        privacyPolicyAccepted: true,
+        termsVersion: CURRENT_TERMS_VERSION,
+        privacyPolicyVersion: CURRENT_PRIVACY_POLICY_VERSION,
+        acceptedAt: serverTimestamp,
+        consentMethod: 'signup',
+        consentSource: 'signup',
+        ipAddress: req.ip || req.headers['x-forwarded-for'] || null,
+        userAgent: req.headers['user-agent'] || null
+      });
+    } catch (auditErr) {
+      console.error('User consent audit record failed (non-blocking):', auditErr);
+    }
 
     const token = setAuthSession(res, newUser._id);
 
