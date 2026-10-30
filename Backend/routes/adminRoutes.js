@@ -4,6 +4,7 @@ const router = express.Router();
 const { authenticate, requireRoles, requirePrimaryAdmin } = require('../middleware/auth');
 const notificationController = require('../controllers/notificationController');
 const { getAdmins, createAdmin, revokeAdmin, adminLogin } = require('../controllers/adminController');
+const { getHomepageConfig, saveHomepageConfig } = require('../controllers/homepageConfigController');
 const {
   getUsers,
   getUserStats,
@@ -61,4 +62,9 @@ router.patch('/notifications/settings', authenticate, requireRoles('admin'), not
 router.post('/notifications', authenticate, requireRoles('admin'), notificationController.createAdminNotification);
 router.patch('/notifications/:id/cancel', authenticate, requireRoles('admin'), notificationController.cancelScheduled);
 
+// Homepage Display Management Routes
+router.get('/homepage-config', authenticate, requireRoles('admin'), getHomepageConfig);
+router.put('/homepage-config', authenticate, requireRoles('admin'), saveHomepageConfig);
+
 module.exports = router;
+

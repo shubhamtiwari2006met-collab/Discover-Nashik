@@ -1,0 +1,86 @@
+{
+  "places": [
+    {
+      "placeId": "53355cdc-d87c-420b-aa26-2027d42f3b7e",
+      "visible": true,
+      "order": 0
+    },
+    {
+      "placeId": "52c922d8-ac84-49cb-abb7-a06540621761",
+      "visible": true,
+      "order": 1
+    },
+    {
+      "placeId": "0e7a2313-a4af-4fc1-a371-ae0f9918d674",
+      "visible": true,
+      "order": 2
+    },
+    {
+      "placeId": "98927eb3-6617-4d00-af1b-85ea8ea77eb0",
+      "visible": true,
+      "order": 3
+    },
+    {
+      "placeId": "9549316c-a1e9-4a6a-9c36-6b6836e3f813",
+      "visible": true,
+      "order": 4
+    },
+    {
+      "placeId": "f7889d03-8532-443e-9ef1-d0c1c86d78f4",
+      "visible": true,
+      "order": 5
+    },
+    {
+      "placeId": "30975799-08ac-418e-a662-fd92eff7d6d3",
+      "visible": true,
+      "order": 6
+    },
+    {
+      "placeId": "38f878e4-334e-4da3-8973-2e06bc4eb3b7",
+      "visible": true,
+      "order": 7
+    },
+    {
+      "placeId": "4b1def6f-bfc3-4e91-afa3-09510ed06014",
+      "visible": true,
+      "order": 8
+    },
+    {
+      "placeId": "aa0fc7e8-ca59-4523-9dde-cdcfff45ce74",
+      "visible": true,
+      "order": 9
+    },
+    {
+      "placeId": "5dc31fd6-a3e4-4901-873a-c8e80c090e7a",
+      "visible": true,
+      "order": 10
+    },
+    {
+      "placeId": "be3c2870-97d4-499a-bf49-b83db6d71338",
+      "visible": true,
+      "order": 11
+    },
+    {
+      "placeId": "ff7d5e57-8e3e-4147-ab63-8e28f9614759",
+      "visible": true,
+      "order": 12
+    },
+    {
+      "placeId": "ded954fe-7b44-441d-bbcb-52d69d36697f",
+      "visible": true,
+      "order": 13
+    },
+    {
+      "placeId": "90910373-2b01-4375-9b2e-40fe0754ee8e",
+      "visible": true,
+      "order": 14
+    },
+    {
+      "placeId": "6a9c17e1e325a7342c906158",
+      "visible": true,
+      "order": 15
+    }
+  ],
+  "updatedAt": "2026-10-30T19:39:10.448Z",
+  "updatedBy": "admin"
+}
