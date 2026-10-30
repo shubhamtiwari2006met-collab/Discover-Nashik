@@ -184,9 +184,12 @@ export default function PlaceClientPage() {
   const categories = ["Temples", "Food", "Hotels", "Nature", "Waterfalls", "Trekking", "Vineyards", "Shopping", "Emergency"];
 
   // --- Carousel auto-slide logic ---
-  const validPhotos = (form?.images && form.images.length > 0)
-    ? form.images.filter(u => u && u.trim())
+  const rawPhotos = (form?.images && form.images.length > 0)
+    ? form.images
     : (form?.image ? [form.image] : []);
+  const validPhotos = rawPhotos
+    .map((u) => normalizeImageUrl(u, ""))
+    .filter((u) => u && u.trim());
   const photoCount = validPhotos.length;
 
   const goToSlide = useCallback((index: number) => {
@@ -236,9 +239,17 @@ export default function PlaceClientPage() {
   async function savePlace() {
     if (!form) return;
 
-    // Filter out empty image URLs before saving, keep up to 6
-    const cleanedImages = (form.images || (form.image ? [form.image] : [])).filter((u: string) => u && u.trim()).slice(0, 6);
-    const payload = { ...form, image: cleanedImages[0] || form.image || "", images: cleanedImages.length > 0 ? cleanedImages : (form.image ? [form.image] : []) };
+    // Filter and normalize image URLs before saving
+    const rawList = (form.images && form.images.length > 0) ? form.images : (form.image ? [form.image] : []);
+    const cleanedImages = rawList
+      .map((u: string) => normalizeImageUrl(u, ""))
+      .filter((u: string) => u && u.trim());
+    const primary = cleanedImages[0] || normalizeImageUrl(form.image) || "";
+    const payload = {
+      ...form,
+      image: primary,
+      images: cleanedImages.length > 0 ? cleanedImages : (primary ? [primary] : []),
+    };
 
     const response = await fetch("/api/places", {
       method: "PUT",
@@ -313,6 +324,7 @@ export default function PlaceClientPage() {
                     <img
                       src={src}
                       alt=""
+                      referrerPolicy="no-referrer"
                       className="absolute inset-0 h-full w-full object-cover opacity-35 blur-xl scale-110 pointer-events-none"
                       aria-hidden="true"
                     />
@@ -320,6 +332,7 @@ export default function PlaceClientPage() {
                     <img
                       src={src}
                       alt={`${form.name} photo ${idx + 1}`}
+                      referrerPolicy="no-referrer"
                       onError={() => setBrokenImages((prev) => new Set(prev).add(idx))}
                       className="relative z-10 h-full w-full object-contain drop-shadow-md"
                     />
