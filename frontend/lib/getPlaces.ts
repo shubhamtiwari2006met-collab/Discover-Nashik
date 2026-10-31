@@ -79,9 +79,15 @@ export async function getPlaces(): Promise<Place[]> {
   }
 
   let mongoPlaces: Place[] = [];
+  const BACKEND_FETCH_TIMEOUT_MS = 7000;
+  const mongoController = new AbortController();
+  const mongoTimeoutId = setTimeout(() => mongoController.abort(), BACKEND_FETCH_TIMEOUT_MS);
   try {
     const backendUrl = process.env.BACKEND_URL || "http://localhost:5000";
-    const mongoRes = await fetch(`${backendUrl}/api/places`, { next: { revalidate: 60 } });
+    const mongoRes = await fetch(`${backendUrl}/api/places`, {
+      next: { revalidate: 60 },
+      signal: mongoController.signal,
+    });
     if (mongoRes.ok) {
       const data: unknown = await mongoRes.json();
       if (Array.isArray(data)) {
@@ -116,8 +122,15 @@ export async function getPlaces(): Promise<Place[]> {
         });
       }
     }
-  } catch {
-    // Mongo backend not reachable
+  } catch (err: unknown) {
+    if (err instanceof Error && err.name === "AbortError") {
+      console.warn(`[getPlaces] External backend request timed out after ${BACKEND_FETCH_TIMEOUT_MS}ms, continuing with Supabase places.`);
+    } else {
+      // Mongo backend not reachable
+      console.warn("[getPlaces] Mongo backend unreachable, continuing with Supabase places.");
+    }
+  } finally {
+    clearTimeout(mongoTimeoutId);
   }
 
   const staticList: Place[] = staticPlaces.map((p) => ({

@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2, Search, MapPin, Navigation, RefreshCw, AlertCircle } from "lucide-react";
-import { Suspense, useEffect, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { PlaceCard, Place } from "@/components/PlaceCard";
 import { places as staticPlaces } from "@/lib/places";
@@ -26,6 +26,23 @@ function SearchResults() {
   const [nearbyPlaces, setNearbyPlaces] = useState<Place[]>([]);
   const [nearbyLoading, setNearbyLoading] = useState(false);
 
+  // Control refs: keep latest query, prevent duplicate concurrent geolocation, manage lifecycle
+  const queryRef = useRef(query);
+  useEffect(() => {
+    queryRef.current = query;
+  }, [query]);
+
+  const isLocatingRef = useRef(false);
+  const isMountedRef = useRef(true);
+  const autoRequestedNearbyRef = useRef(false);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   const supabase = createClient();
 
   useEffect(() => {
@@ -42,18 +59,20 @@ function SearchResults() {
           console.error("Error fetching approved businesses:", dbError.message);
         }
 
-        const registeredPlaces: Place[] = (businesses || []).map((b: any) => {
-          const photos = parsePhotoList(b.photos);
+        const registeredPlaces: Place[] = (businesses || []).map((b: Record<string, unknown>) => {
+          const photos = parsePhotoList(typeof b.photos === "string" ? b.photos : Array.isArray(b.photos) ? b.photos.join(",") : "");
           const firstPhoto = photos[0] || DEFAULT_FALLBACK_IMAGE;
+          const bId = String(b.id || "");
+          const bName = String(b.business_name || "");
+          const bAddress = String(b.address || "");
           return {
-            _id: b.id,
-            id: b.id,
-            name: b.business_name,
-            category: b.category,
-            subcategory: b.subcategory,
-            location: b.city_area ? `${b.city_area}, ${b.address}` : b.address,
-            description: b.description || `${b.business_name} located at ${b.address}`,
-            phone: b.phone,
+            _id: bId,
+            name: bName,
+            category: String(b.category || ""),
+            subcategory: typeof b.subcategory === "string" ? b.subcategory : undefined,
+            location: b.city_area ? `${b.city_area}, ${bAddress}` : bAddress,
+            description: typeof b.description === "string" ? b.description : `${bName} located at ${bAddress}`,
+            phone: typeof b.phone === "string" ? b.phone : undefined,
             rating: 4.8,
             latitude: b.latitude != null ? Number(b.latitude) : undefined,
             longitude: b.longitude != null ? Number(b.longitude) : undefined,
@@ -63,21 +82,21 @@ function SearchResults() {
             images: photos,
             mapLink: b.latitude && b.longitude
               ? `https://www.google.com/maps/search/?api=1&query=${b.latitude},${b.longitude}`
-              : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${b.business_name}, ${b.address}`)}`,
+              : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${bName}, ${bAddress}`)}`,
           };
         });
 
-        let combinedPlaces: Place[] = [...registeredPlaces, ...staticPlaces.map(p => ({ ...p, id: p._id }))];
+        let combinedPlaces: Place[] = [...registeredPlaces, ...staticPlaces];
 
         // Fetch from /api/places to guarantee all approved & admin added places are merged
         try {
           const apiRes = await fetch("/api/places").then((r) => r.json());
           if (Array.isArray(apiRes)) {
             const placesMap = new Map<string, Place>();
-            [...combinedPlaces, ...apiRes].forEach((p) => {
-              if (p && (p._id || (p as any).id)) {
-                const id = p._id || (p as any).id;
-                placesMap.set(id, { ...p, _id: id, id: id });
+            [...combinedPlaces, ...apiRes].forEach((p: Place & { id?: string }) => {
+              const pid = p && (p._id || p.id);
+              if (pid) {
+                placesMap.set(pid, { ...p, _id: pid });
               }
             });
             combinedPlaces = Array.from(placesMap.values());
@@ -103,12 +122,15 @@ function SearchResults() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [supabase]);
 
   // Fetch nearby places whenever user location or category query changes
   const fetchNearbyPlaces = useCallback(async (lat: number, lng: number, categoryQuery: string) => {
-    setNearbyLoading(true);
     try {
+      await Promise.resolve();
+      if (!isMountedRef.current) return;
+      setNearbyLoading(true);
+
       const url = new URL("/api/places/nearby", window.location.origin);
       url.searchParams.set("lat", lat.toString());
       url.searchParams.set("lng", lng.toString());
@@ -121,57 +143,75 @@ function SearchResults() {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.nearby)) {
-          const mappedNearby: Place[] = data.nearby.map((b: any) => ({
-            _id: b.id || b._id,
-            name: b.name || b.title,
-            category: b.category,
-            subcategory: b.subcategory,
-            location: b.location || b.address || "Nashik",
-            description: b.description || `${b.name} nearby`,
-            phone: b.phone,
-            rating: b.rating || 4.8,
-            distance: b.distance ?? b.distance_km,
-            distance_km: b.distance_km ?? b.distance,
-            latitude: b.latitude,
-            longitude: b.longitude,
-            verified: true,
-            isApprovedBusiness: true,
-            image: b.image || "https://images.unsplash.com/photo-1596700508005-4f05ab04c997?auto=format&fit=crop&w=800&q=80",
-            mapLink: b.latitude && b.longitude
-              ? `https://www.google.com/maps/search/?api=1&query=${b.latitude},${b.longitude}`
-              : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${b.name}, ${b.location}`)}`,
-          }));
-          setNearbyPlaces(mappedNearby);
+          const mappedNearby: Place[] = data.nearby.map((b: Record<string, unknown>) => {
+            const bId = String(b.id || b._id || "");
+            const bName = String(b.name || b.title || "");
+            const bLocation = String(b.location || b.address || "Nashik");
+            return {
+              _id: bId,
+              name: bName,
+              category: String(b.category || ""),
+              subcategory: typeof b.subcategory === "string" ? b.subcategory : undefined,
+              location: bLocation,
+              description: typeof b.description === "string" ? b.description : `${bName} nearby`,
+              phone: typeof b.phone === "string" ? b.phone : undefined,
+              rating: typeof b.rating === "number" ? b.rating : 4.8,
+              distance: typeof b.distance === "number" ? b.distance : typeof b.distance_km === "number" ? b.distance_km : undefined,
+              distance_km: typeof b.distance_km === "number" ? b.distance_km : typeof b.distance === "number" ? b.distance : undefined,
+              latitude: typeof b.latitude === "number" ? b.latitude : undefined,
+              longitude: typeof b.longitude === "number" ? b.longitude : undefined,
+              verified: true,
+              isApprovedBusiness: true,
+              image: typeof b.image === "string" ? b.image : "https://images.unsplash.com/photo-1596700508005-4f05ab04c997?auto=format&fit=crop&w=800&q=80",
+              mapLink: b.latitude && b.longitude
+                ? `https://www.google.com/maps/search/?api=1&query=${b.latitude},${b.longitude}`
+                : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${bName}, ${bLocation}`)}`,
+            };
+          });
+          if (isMountedRef.current) {
+            setNearbyPlaces(mappedNearby);
+          }
         }
       }
     } catch (err) {
       console.error("Failed to fetch nearby places:", err);
     } finally {
-      setNearbyLoading(false);
+      if (isMountedRef.current) {
+        setNearbyLoading(false);
+      }
     }
   }, []);
 
-  // Handle Location Request
+  // Handle Location Request: single concurrent execution guarded by ref
   const handleGetLocation = useCallback(() => {
     if (!navigator.geolocation) {
       setLocationError("Geolocation is not supported by your browser.");
       return;
     }
 
+    // Prevent duplicate concurrent requests
+    if (isLocatingRef.current) {
+      return;
+    }
+    isLocatingRef.current = true;
     setLocating(true);
     setLocationError(null);
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        isLocatingRef.current = false;
+        if (!isMountedRef.current) return;
         const coords = {
           lat: position.coords.latitude,
           lng: position.coords.longitude,
         };
         setUserLocation(coords);
         setLocating(false);
-        fetchNearbyPlaces(coords.lat, coords.lng, query);
+        fetchNearbyPlaces(coords.lat, coords.lng, queryRef.current);
       },
       (error) => {
+        isLocatingRef.current = false;
+        if (!isMountedRef.current) return;
         setLocating(false);
         switch (error.code) {
           case error.PERMISSION_DENIED:
@@ -190,66 +230,70 @@ function SearchResults() {
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
     );
-  }, [fetchNearbyPlaces, query]);
+  }, [fetchNearbyPlaces, t]);
 
-  // Auto-request location if ?nearby=true was passed in URL
+  // Auto-request location ONLY ONCE if ?nearby=true was passed in URL on page entry
   useEffect(() => {
-    if (params.get("nearby") === "true") {
+    const isNearby = params.get("nearby") === "true";
+    if (isNearby && !autoRequestedNearbyRef.current) {
+      autoRequestedNearbyRef.current = true;
       handleGetLocation();
     }
   }, [params, handleGetLocation]);
 
-  // Update nearby query when search term changes and location is active
+  // Update nearby query when search term changes and location is already active
   useEffect(() => {
     if (userLocation) {
-      fetchNearbyPlaces(userLocation.lat, userLocation.lng, query);
+      const timer = setTimeout(() => {
+        fetchNearbyPlaces(userLocation.lat, userLocation.lng, query);
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [query, userLocation, fetchNearbyPlaces]);
 
   const category = resolveCategory(query);
   const normalizedQuery = query.toLowerCase();
 
-  // Attach calculated distance to allPlaces if user location is available
-  const placesWithCalculatedDistance = allPlaces.map((place) => {
-    if (userLocation && place.latitude != null && place.longitude != null) {
-      const dist = calculateHaversineDistance(
-        userLocation.lat,
-        userLocation.lng,
-        place.latitude,
-        place.longitude
-      );
-      return { ...place, distance: dist, distance_km: dist };
-    }
-    return place;
-  });
-
-  const filteredPlaces = placesWithCalculatedDistance.filter((place) => {
-    if (!normalizedQuery) return true;
-    if (category) {
-      const matchCategory =
-        category.placeCategories.some(
-          (c) => c.toLowerCase() === (place.category || "").toLowerCase()
-        ) ||
-        category.aliases.some(
-          (a) => a.toLowerCase() === (place.category || "").toLowerCase()
+  // Attach calculated distance and filter/sort memoized to avoid heavy main-thread work on every render
+  const sortedFilteredPlaces = useMemo(() => {
+    const placesWithCalculatedDistance = allPlaces.map((place) => {
+      if (userLocation && place.latitude != null && place.longitude != null) {
+        const dist = calculateHaversineDistance(
+          userLocation.lat,
+          userLocation.lng,
+          place.latitude,
+          place.longitude
         );
-      if (matchCategory) return true;
-    }
-    const searchableText = `${place.name} ${place.category} ${place.location} ${place.description}`.toLowerCase();
-    return searchableText.includes(normalizedQuery);
-  });
+        return { ...place, distance: dist, distance_km: dist };
+      }
+      return place;
+    });
 
-  // Sort filtered places so approved/nearby businesses appear first if user location is present
-  const sortedFilteredPlaces = [...filteredPlaces].sort((a, b) => {
-    // If both have distance, sort by distance ASC
-    if (a.distance != null && b.distance != null) {
-      return a.distance - b.distance;
-    }
-    // Verified approved businesses first
-    if (a.verified && !b.verified) return -1;
-    if (!a.verified && b.verified) return 1;
-    return 0;
-  });
+    const filtered = placesWithCalculatedDistance.filter((place) => {
+      if (!normalizedQuery) return true;
+      if (category) {
+        const matchCategory =
+          category.placeCategories.some(
+            (c) => c.toLowerCase() === (place.category || "").toLowerCase()
+          ) ||
+          category.aliases.some(
+            (a) => a.toLowerCase() === (place.category || "").toLowerCase()
+          );
+        if (matchCategory) return true;
+      }
+      const searchableText = `${place.name} ${place.category} ${place.location} ${place.description}`.toLowerCase();
+      return searchableText.includes(normalizedQuery);
+    });
+
+    return [...filtered].sort((a, b) => {
+      if (a.distance != null && b.distance != null) {
+        return a.distance - b.distance;
+      }
+      if (a.verified && !b.verified) return -1;
+      if (!a.verified && b.verified) return 1;
+      return 0;
+    });
+  }, [allPlaces, userLocation, normalizedQuery, category]);
 
   return (
     <main className="min-h-screen bg-[#f8f2e8] py-14">
@@ -391,4 +435,3 @@ function SearchResults() {
 export default function SearchPage() {
   return <Suspense fallback={<main className="min-h-screen bg-[#f8f2e8]" />}><SearchResults /></Suspense>;
 }
-
