@@ -25,6 +25,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { createClient } from "@/utils/supabase/client";
 import { useTranslation } from "@/lib/i18n";
 import dynamic from "next/dynamic";
+import type { Session, REALTIME_SUBSCRIBE_STATES } from "@supabase/supabase-js";
 const supabase = createClient();
 
 // Dynamic import for Leaflet map component (SSRs safely)
@@ -70,6 +71,15 @@ type GroupBroadcastPayload = {
   note?: Note;
   location?: { memberId: string; lat: number; lng: number; lastUpdated: string };
 };
+
+interface StoredGroupNoteRow {
+  id: string;
+  group_code?: string;
+  sender_name?: string;
+  sender_role?: string;
+  message?: string;
+  created_at?: string;
+}
 
 const STORAGE_KEYS = {
   ACTIVE_CODE: "active_group_code",
@@ -274,7 +284,7 @@ export default function GroupTracker() {
         return [] as Note[];
       }
 
-      const normalized = (data || []).map((item) => normalizeStoredNote({
+      const normalized = (data as StoredGroupNoteRow[] | null || []).map((item: StoredGroupNoteRow) => normalizeStoredNote({
         id: item.id,
         sender_name: item.sender_name,
         sender_role: item.sender_role,
@@ -320,7 +330,7 @@ export default function GroupTracker() {
   }, [loadGroupNotesFromSupabase]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(({ data }: { data: { session: Session | null } }) => {
       if (data.session?.user) {
         setUserId(data.session.user.id);
         const metaName = data.session.user.user_metadata?.full_name || data.session.user.email?.split("@")[0];
@@ -372,7 +382,7 @@ export default function GroupTracker() {
     });
 
     channel
-      .on("broadcast", { event: "NEW_NOTE" }, (payload) => {
+      .on("broadcast", { event: "NEW_NOTE" }, (payload: { payload?: GroupBroadcastPayload }) => {
         if (payload?.payload?.note) {
           const incomingNote = normalizeStoredNote(payload.payload.note);
           setNotes((prev) => {
@@ -383,20 +393,21 @@ export default function GroupTracker() {
           localStorage.setItem(`group_unread_${groupCode}`, "true");
         }
       })
-      .on("broadcast", { event: "MEMBER_JOINED" }, (payload) => {
-        if (payload?.payload?.member) {
-          const joinedName = payload.payload.member.name;
+      .on("broadcast", { event: "MEMBER_JOINED" }, (payload: { payload?: GroupBroadcastPayload }) => {
+        const newMember = payload?.payload?.member;
+        if (newMember) {
+          const joinedName = newMember.name;
           setJoinNotice(`${joinedName} joined the group.`);
           window.setTimeout(() => setJoinNotice(""), 5000);
           setMembers((prev) => {
-            if (prev.some((m) => m.id === payload.payload.member.id)) return prev;
-            const updated = [...prev, payload.payload.member];
+            if (prev.some((m) => m.id === newMember.id)) return prev;
+            const updated = [...prev, newMember];
             localStorage.setItem(STORAGE_KEYS.MEMBERS(groupCode), JSON.stringify(updated));
             return updated;
           });
         }
       })
-      .on("broadcast", { event: "LOCATION_UPDATE" }, (payload) => {
+      .on("broadcast", { event: "LOCATION_UPDATE" }, (payload: { payload?: GroupBroadcastPayload }) => {
         if (payload?.payload?.location) {
           const loc = payload.payload.location;
           setMembers((prev) =>
@@ -408,7 +419,7 @@ export default function GroupTracker() {
           );
         }
       })
-      .subscribe((status) => {
+      .subscribe((status: `${REALTIME_SUBSCRIBE_STATES}`) => {
         if (status === "SUBSCRIBED") {
           void reconcileGroup(groupCode).catch((error: Error) => {
             console.error("Group realtime reconnect reconciliation failed:", error);

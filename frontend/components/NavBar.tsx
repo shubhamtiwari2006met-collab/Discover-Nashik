@@ -9,7 +9,7 @@ import type { Language } from "@/lib/locale";
 import { createClient } from "@/utils/supabase/client";
 import { useUserAuth } from "@/context/UserAuthContext";
 import NotificationBell from "@/components/NotificationBell";
-import type { Session } from "@supabase/supabase-js";
+import type { Session, AuthChangeEvent, PostgrestError } from "@supabase/supabase-js";
 import logo from "@/assets/DN.logo.png";
 
 const supabase = createClient();
@@ -73,7 +73,7 @@ export function NavBar() {
 
   useEffect(() => {
     // Get current session
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(({ data }: { data: { session: Session | null } }) => {
       setSession(data.session);
       if (data.session?.user) {
         const userEmail = (data.session.user.email || '').toLowerCase().trim();
@@ -86,7 +86,7 @@ export function NavBar() {
             .select('role')
             .eq('id', data.session.user.id)
             .maybeSingle()
-            .then(({ data: profileData, error }) => {
+            .then(({ data: profileData, error }: { data: { role?: string | null } | null; error: PostgrestError | null }) => {
               if (!error && profileData?.role) {
                 setRole(profileData.role.toLowerCase());
               } else {
@@ -99,7 +99,7 @@ export function NavBar() {
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       setSession(session);
       if (session?.user) {
         const userEmail = (session.user.email || '').toLowerCase().trim();
@@ -111,7 +111,7 @@ export function NavBar() {
             .select('role')
             .eq('id', session.user.id)
             .maybeSingle()
-            .then(({ data: profileData, error }) => {
+            .then(({ data: profileData, error }: { data: { role?: string | null } | null; error: PostgrestError | null }) => {
               if (!error && profileData?.role) {
                 setRole(profileData.role.toLowerCase());
               } else {

@@ -5,6 +5,7 @@ import { Bell, Check, CheckCheck, Settings2, X } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { useUserAuth } from "@/context/UserAuthContext";
 import { enableWebPush, getPushDeviceDetails } from "@/lib/firebase/messaging";
+import type { Session, AuthChangeEvent, REALTIME_SUBSCRIBE_STATES } from "@supabase/supabase-js";
 
 type NotificationItem = {
   _id: string;
@@ -73,10 +74,10 @@ export default function NotificationBell() {
 
   useEffect(() => {
     let active = true;
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(({ data }: { data: { session: Session | null } }) => {
       if (active) setPlatformToken(data.session?.access_token || "");
     });
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       setPlatformToken(session?.access_token || "");
     });
     return () => {
@@ -96,12 +97,12 @@ export default function NotificationBell() {
     const channel = supabase.channel(`notifications:${recipientId}`, {
       config: { broadcast: { self: false } },
     });
-    channel.on("broadcast", { event: "NOTIFICATION_CREATED" }, ({ payload }) => {
-      const notification = payload?.notification as NotificationItem | undefined;
+    channel.on("broadcast", { event: "NOTIFICATION_CREATED" }, ({ payload }: { payload?: { notification?: NotificationItem } }) => {
+      const notification = payload?.notification;
       if (!notification) return;
       setItems((current) => [notification, ...current.filter((item) => item._id !== notification._id)].slice(0, 50));
       setUnreadCount((current) => current + (notification.isRead ? 0 : 1));
-    }).subscribe((status) => {
+    }).subscribe((status: `${REALTIME_SUBSCRIBE_STATES}`) => {
       if (status === "SUBSCRIBED") void load();
     });
     return () => {
