@@ -1309,7 +1309,10 @@ function AdminDashboardContent({ defaultFilter = "pending" }: { defaultFilter?: 
   );
 }
 
-export default function AdminDashboardPage({ defaultFilter = "pending" }: { defaultFilter?: StatusFilter }) {
+export default function AdminDashboardPage(props: { defaultFilter?: StatusFilter }): React.JSX.Element;
+export default function AdminDashboardPage(props: { params?: Promise<Record<string, string | string[] | undefined>>; searchParams?: Promise<Record<string, string | string[] | undefined>> }): React.JSX.Element;
+export default function AdminDashboardPage(props?: { defaultFilter?: StatusFilter; params?: Promise<Record<string, string | string[] | undefined>>; searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
+  const activeFilter = (props && "defaultFilter" in props && props.defaultFilter) ? props.defaultFilter : "pending";
   return (
     <Suspense
       fallback={
@@ -1318,7 +1321,7 @@ export default function AdminDashboardPage({ defaultFilter = "pending" }: { defa
         </div>
       }
     >
-      <AdminDashboardContent defaultFilter={defaultFilter} />
+      <AdminDashboardContent defaultFilter={activeFilter} />
     </Suspense>
   );
 }

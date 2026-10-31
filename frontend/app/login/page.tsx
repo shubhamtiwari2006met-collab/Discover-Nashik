@@ -7,6 +7,7 @@ import { Loader2, LogIn } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { useTranslation } from "@/lib/i18n";
 import { LegalModal } from "@/components/LegalModal";
+import type { Session, PostgrestError } from "@supabase/supabase-js";
 
 type LoginRole = "visitor" | "admin" | "business";
 type AuthMode = "signIn" | "signUp" | "reset";
@@ -42,7 +43,7 @@ function LoginContent() {
   const formRef = useRef<HTMLFormElement>(null);
 
   // New state to know if a user is already logged in and their role
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
 
   // Fetch role when session becomes available
@@ -53,7 +54,7 @@ function LoginContent() {
         .select('role')
         .eq('id', session.user.id)
         .maybeSingle()
-        .then(({ data: profileData, error }) => {
+        .then(({ data: profileData, error }: { data: { role?: string | null } | null; error: PostgrestError | null }) => {
           if (error) {
             console.error('Failed to fetch profile role:', error);
           } else if (profileData?.role) {
