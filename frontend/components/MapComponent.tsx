@@ -147,9 +147,26 @@ function MapController({ center, zoom, bounds }: { center: [number, number]; zoo
     } else {
       map.flyTo(center, zoom, { duration: 1.2 });
     }
+    return () => {
+      try {
+        map.stop();
+      } catch {}
+    };
   }, [center, zoom, bounds, map]);
 
   return null;
+}
+
+// Module-level cached promise prevents duplicate dynamic imports across mounts
+let cachedMapLeafletPromise: Promise<{ L: typeof import("leaflet"); ReactLeaflet: typeof import("react-leaflet") }> | null = null;
+function getMapLeafletModules() {
+  if (!cachedMapLeafletPromise) {
+    cachedMapLeafletPromise = Promise.all([
+      import("leaflet"),
+      import("react-leaflet"),
+    ]).then(([L, ReactLeaflet]) => ({ L, ReactLeaflet }));
+  }
+  return cachedMapLeafletPromise;
 }
 
 export default function MapComponent({ places: initialPlaces, initialCategory = "All", groupMembers = [] }: MapComponentProps) {
@@ -177,6 +194,15 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
   const [userLocation, setUserLocation] = useState<LatLng | null>(null);
   const [locating, setLocating] = useState<boolean>(false);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const isLocatingRef = useRef(false);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Saved / Favorite Places state
   const [savedPlaceIds, setSavedPlaceIds] = useState<string[]>(readSavedPlaceIds);
@@ -292,14 +318,13 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
     }
   };
 
-  // Dynamically load Leaflet client-side
+  // Dynamically load Leaflet client-side (reusing cached module promise)
   useEffect(() => {
     let active = true;
 
     async function loadMapLib() {
       try {
-        const L = await import("leaflet");
-        const ReactLeaflet = await import("react-leaflet");
+        const { L, ReactLeaflet } = await getMapLeafletModules();
 
         if (!active) return;
 
@@ -1029,9 +1054,14 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
       return;
     }
 
+    if (isLocatingRef.current) return;
+    isLocatingRef.current = true;
     setLocating(true);
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        isLocatingRef.current = false;
+        if (!isMountedRef.current) return;
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
         const userLatLng = { lat, lng };
@@ -1042,6 +1072,8 @@ export default function MapComponent({ places: initialPlaces, initialCategory = 
         setLocating(false);
       },
       (err) => {
+        isLocatingRef.current = false;
+        if (!isMountedRef.current) return;
         setLocating(false);
         if (err.code === err.PERMISSION_DENIED) {
           setLocationError(t("Location access was denied. You can still explore Nashik on the map manually."));

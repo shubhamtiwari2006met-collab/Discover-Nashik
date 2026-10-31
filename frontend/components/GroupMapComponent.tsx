@@ -26,9 +26,35 @@ type LeafletLib = {
   TileLayer: any;
   Marker: any;
   Popup: any;
+  useMap: any;
   coordinatorIcon: any;
   memberIcon: any;
 };
+
+// Module-level cached promise prevents duplicate dynamic imports across mounts
+let cachedGroupLeafletPromise: Promise<{ L: typeof import("leaflet"); ReactLeaflet: typeof import("react-leaflet") }> | null = null;
+function getGroupLeafletModules() {
+  if (!cachedGroupLeafletPromise) {
+    cachedGroupLeafletPromise = Promise.all([
+      import("leaflet"),
+      import("react-leaflet"),
+    ]).then(([L, ReactLeaflet]) => ({ L, ReactLeaflet }));
+  }
+  return cachedGroupLeafletPromise;
+}
+
+function GroupMapController({ center, useMapHook }: { center: [number, number]; useMapHook: () => import("leaflet").Map }) {
+  const map = useMapHook();
+  useEffect(() => {
+    map.flyTo(center, 13, { duration: 0.8 });
+    return () => {
+      try {
+        map.stop();
+      } catch {}
+    };
+  }, [center, map]);
+  return null;
+}
 
 export default function GroupMapComponent({ members, currentMemberId, onUpdateLocation }: GroupMapProps) {
   const { t } = useTranslation();
@@ -37,52 +63,66 @@ export default function GroupMapComponent({ members, currentMemberId, onUpdateLo
   const [isLocating, setIsLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
 
+  const isLocatingRef = useRef(false);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   useEffect(() => {
     let active = true;
 
     async function loadMapLib() {
-      const L = await import("leaflet");
-      const ReactLeaflet = await import("react-leaflet");
+      try {
+        const { L, ReactLeaflet } = await getGroupLeafletModules();
 
-      if (!active) return;
+        if (!active) return;
 
-      // Custom icon for Group Coordinator (Orange/Gold pin)
-      const coordinatorIcon = L.divIcon({
-        className: "custom-coord-marker",
-        html: `
-          <div style="background-color: #e86f18; color: white; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-weight: bold; font-size: 16px;">
-            👑
-          </div>
-        `,
-        iconSize: [36, 36],
-        iconAnchor: [18, 18],
-        popupAnchor: [0, -18],
-      });
+        // Custom icon for Group Coordinator (Orange/Gold pin)
+        const coordinatorIcon = L.divIcon({
+          className: "custom-coord-marker",
+          html: `
+            <div style="background-color: #e86f18; color: white; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-weight: bold; font-size: 16px;">
+              👑
+            </div>
+          `,
+          iconSize: [36, 36],
+          iconAnchor: [18, 18],
+          popupAnchor: [0, -18],
+        });
 
-      // Custom icon for Group Member (Blue pin)
-      const memberIcon = L.divIcon({
-        className: "custom-member-marker",
-        html: `
-          <div style="background-color: #0284c7; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.25); font-weight: bold; font-size: 14px;">
-            📍
-          </div>
-        `,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16],
-        popupAnchor: [0, -16],
-      });
+        // Custom icon for Group Member (Blue pin)
+        const memberIcon = L.divIcon({
+          className: "custom-member-marker",
+          html: `
+            <div style="background-color: #0284c7; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.25); font-weight: bold; font-size: 14px;">
+              📍
+            </div>
+          `,
+          iconSize: [32, 32],
+          iconAnchor: [16, 16],
+          popupAnchor: [0, -16],
+        });
 
-      setMapLib({
-        MapContainer: ReactLeaflet.MapContainer,
-        TileLayer: ReactLeaflet.TileLayer,
-        Marker: ReactLeaflet.Marker,
-        Popup: ReactLeaflet.Popup,
-        coordinatorIcon,
-        memberIcon,
-      });
+        setMapLib({
+          MapContainer: ReactLeaflet.MapContainer,
+          TileLayer: ReactLeaflet.TileLayer,
+          Marker: ReactLeaflet.Marker,
+          Popup: ReactLeaflet.Popup,
+          useMap: ReactLeaflet.useMap,
+          coordinatorIcon,
+          memberIcon,
+        });
+      } catch (err) {
+        console.error("Failed to load GroupMap Leaflet library:", err);
+      }
     }
 
-    loadMapLib();
+    void loadMapLib();
     return () => {
       active = false;
     };
@@ -94,11 +134,15 @@ export default function GroupMapComponent({ members, currentMemberId, onUpdateLo
       return;
     }
 
+    if (isLocatingRef.current) return;
+    isLocatingRef.current = true;
     setIsLocating(true);
     setLocationError(null);
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        isLocatingRef.current = false;
+        if (!isMountedRef.current) return;
         setIsLocating(false);
         const { latitude, longitude } = position.coords;
         if (onUpdateLocation) {
@@ -106,6 +150,8 @@ export default function GroupMapComponent({ members, currentMemberId, onUpdateLo
         }
       },
       (err) => {
+        isLocatingRef.current = false;
+        if (!isMountedRef.current) return;
         setIsLocating(false);
         // Fallback to approximate Nashik landmark location if blocked or offline
         const mockLat = 20.0 + (Math.random() * 0.02 - 0.01);
@@ -168,7 +214,7 @@ export default function GroupMapComponent({ members, currentMemberId, onUpdateLo
     );
   }
 
-  const { MapContainer, TileLayer, Marker, Popup, coordinatorIcon, memberIcon } = mapLib;
+  const { MapContainer, TileLayer, Marker, Popup, useMap, coordinatorIcon, memberIcon } = mapLib;
 
   return (
     <div ref={groupMapWrapperRef} className="relative w-full h-80 rounded-3xl overflow-hidden shadow-md border border-[#e7b06d]/40 bg-slate-900">
@@ -178,6 +224,7 @@ export default function GroupMapComponent({ members, currentMemberId, onUpdateLo
         scrollWheelZoom={true}
         className="h-full w-full z-0"
       >
+        <GroupMapController center={mapCenter} useMapHook={useMap} />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

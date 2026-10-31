@@ -11,6 +11,7 @@ import { HotelData } from "@/app/api/business/hotel-data/route";
 
 type PlaceRecord = {
   _id: string;
+  id?: string;
   name: string;
   category: string;
   location: string;
@@ -71,18 +72,21 @@ export default function PlaceClientPage() {
 
     async function loadPlaceData() {
       try {
-        const res = await fetch("/api/places");
         let item: PlaceRecord | null = null;
-        if (res.ok) {
-          const data = await res.json();
-          const found = Array.isArray(data) ? data.find((p: PlaceRecord) => p._id === id || (p as any).id === id) : null;
-          if (found) {
-            item = { ...found, _id: found._id || (found as any).id };
-          }
-        }
 
+        // 1. Try dedicated single-place endpoint first
+        try {
+          const res = await fetch(`/api/places/${encodeURIComponent(id)}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data && (data._id || data.id)) {
+              item = { ...data, _id: data._id || data.id };
+            }
+          }
+        } catch {}
+
+        // 2. Direct fallback for approved business in Supabase by exact ID if not returned above
         if (!item) {
-          // Direct fallback for approved business in Supabase by exact ID
           const { data: bus } = await supabase
             .from("business_registrations")
             .select("id, business_name, category, subcategory, contact_name, phone, email, address, city_area, description, opening_time, closing_time, working_days, website_url, photos, latitude, longitude, verification_status, admin_remarks")
@@ -111,6 +115,20 @@ export default function PlaceClientPage() {
               subcategory: bus.subcategory || undefined,
             };
           }
+        }
+
+        // 3. Last fallback: check places collection if single-place lookup missed
+        if (!item) {
+          try {
+            const res = await fetch("/api/places");
+            if (res.ok) {
+              const data = await res.json();
+              const found = Array.isArray(data) ? data.find((p: PlaceRecord) => p._id === id || p.id === id) : null;
+              if (found) {
+                item = { ...found, _id: found._id || found.id || id };
+              }
+            }
+          } catch {}
         }
 
         if (item) {

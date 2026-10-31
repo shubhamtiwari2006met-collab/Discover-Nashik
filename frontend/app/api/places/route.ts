@@ -279,8 +279,14 @@ export async function GET() {
 
   // Also query MongoDB Express backend if running to merge any MongoDB approved businesses
   let mongoPlaces: SavedPlace[] = [];
+  const BACKEND_FETCH_TIMEOUT_MS = 7000;
+  const mongoController = new AbortController();
+  const mongoTimeoutId = setTimeout(() => mongoController.abort(), BACKEND_FETCH_TIMEOUT_MS);
   try {
-    const mongoRes = await fetch(`${BACKEND_URL}/api/places`, { cache: "no-store" });
+    const mongoRes = await fetch(`${BACKEND_URL}/api/places`, {
+      cache: "no-store",
+      signal: mongoController.signal,
+    });
     if (mongoRes.ok) {
       const data: unknown = await mongoRes.json();
       if (Array.isArray(data)) {
@@ -320,8 +326,15 @@ export async function GET() {
         });
       }
     }
-  } catch {
-    // Express backend not running or unreachable
+  } catch (err: unknown) {
+    if (err instanceof Error && err.name === "AbortError") {
+      console.warn(`[GET /api/places] External backend request timed out after ${BACKEND_FETCH_TIMEOUT_MS}ms, continuing with Supabase and static places.`);
+    } else {
+      // Express backend not running or unreachable
+      console.warn("[GET /api/places] Express backend unreachable, continuing with Supabase and static places.");
+    }
+  } finally {
+    clearTimeout(mongoTimeoutId);
   }
 
   const staticPlacesList = getStaticPlaces();
