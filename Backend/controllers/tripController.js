@@ -589,65 +589,82 @@ exports.modifyTripWithAi = async (req, res) => {
       return res.status(403).json({ message: 'Access denied: You do not have permission to modify this trip' });
     }
 
-    const cleanPrompt = prompt.toLowerCase();
+    const cleanPrompt = prompt.toLowerCase().trim();
 
-    // ─── Fast-path handlers for common quick modifications ───
+    // ─── Fast-path handlers for the static quick-suggestion buttons ONLY ───
+    // Complex, day-specific, replacement, or multi-action requests must be processed by the full AI engine.
+    const isQuickSuggestion =
+      cleanPrompt === 'add trimbakeshwar jyotirlinga' ||
+      cleanPrompt === 'add trimbakeshwar' ||
+      cleanPrompt === 'make itinerary less hectic' ||
+      cleanPrompt === 'make itinerary relaxed' ||
+      cleanPrompt === 'remove shopping activities' ||
+      cleanPrompt === 'remove shopping' ||
+      cleanPrompt === 'low walking preferences only' ||
+      cleanPrompt === 'low walking only';
+
     let fastPathHandled = false;
 
-    // 1. Remove Shopping / Remove Trekking
-    if (cleanPrompt.includes('remove shopping') || cleanPrompt.includes('no shopping')) {
-      trip.days.forEach(day => {
-        day.items = day.items.filter(item => !item.category.toLowerCase().includes('shopping') && !item.title.toLowerCase().includes('shopping'));
-      });
-      fastPathHandled = true;
-    }
-
-    // 2. Add Trimbakeshwar if requested
-    if (cleanPrompt.includes('add trimbakeshwar') || cleanPrompt.includes('trimbakeshwar temple')) {
-      const alreadyHasTrimbak = trip.days.some(day => day.items.some(i => i.title.toLowerCase().includes('trimbakeshwar')));
-      if (!alreadyHasTrimbak && trip.days.length > 0) {
-        trip.days[0].items.unshift({
-          placeId: null,
-          title: "Trimbakeshwar Jyotirlinga Temple",
-          category: "Spiritual",
-          location: "Trimbak, Nashik",
-          startTime: "06:30 AM",
-          endTime: "08:30 AM",
-          durationMinutes: 120,
-          travelMinutes: 45,
-          notes: "Sacred Jyotirlinga holy bath and early morning darshan.",
-          isCompleted: false
+    if (isQuickSuggestion) {
+      // 1. Remove Shopping
+      if (cleanPrompt.includes('remove shopping')) {
+        trip.days.forEach(day => {
+          day.items = day.items.filter(item => !item.category.toLowerCase().includes('shopping') && !item.title.toLowerCase().includes('shopping'));
         });
+        fastPathHandled = true;
       }
-      fastPathHandled = true;
-    }
 
-    // 3. Make less hectic / reduce activities
-    if (cleanPrompt.includes('less hectic') || cleanPrompt.includes('relaxed') || cleanPrompt.includes('too busy')) {
-      trip.travelStyle = 'Relaxed';
-      trip.days.forEach(day => {
-        if (day.items.length > 2) {
-          day.items = day.items.slice(0, 2);
+      // 2. Add Trimbakeshwar if requested
+      if (cleanPrompt.includes('add trimbakeshwar')) {
+        const alreadyHasTrimbak = trip.days.some(day => day.items.some(i => i.title.toLowerCase().includes('trimbakeshwar')));
+        if (!alreadyHasTrimbak && trip.days.length > 0) {
+          trip.days[0].items.unshift({
+            placeId: null,
+            title: "Trimbakeshwar Jyotirlinga Temple",
+            category: "Spiritual",
+            location: "Trimbak, Nashik",
+            startTime: "06:30 AM",
+            endTime: "08:30 AM",
+            durationMinutes: 120,
+            travelMinutes: 45,
+            notes: "Sacred Jyotirlinga holy bath and early morning darshan.",
+            isCompleted: false
+          });
         }
-      });
-      fastPathHandled = true;
-    }
+        fastPathHandled = true;
+      }
 
-    // 4. Low walking / no trekking
-    if (cleanPrompt.includes('walk') || cleanPrompt.includes('stair') || cleanPrompt.includes('accessibility')) {
-      trip.preferences.lowWalking = true;
-      trip.days.forEach(day => {
-        day.items = day.items.filter(item => !item.title.toLowerCase().includes('anjaneri') && !item.title.toLowerCase().includes('caves'));
-      });
-      fastPathHandled = true;
+      // 3. Make less hectic / reduce activities
+      if (cleanPrompt.includes('less hectic') || cleanPrompt.includes('relaxed')) {
+        trip.travelStyle = 'Relaxed';
+        trip.days.forEach(day => {
+          if (day.items.length > 2) {
+            day.items = day.items.slice(0, 2);
+          }
+        });
+        fastPathHandled = true;
+      }
+
+      // 4. Low walking
+      if (cleanPrompt.includes('low walking') || cleanPrompt.includes('walk')) {
+        trip.preferences.lowWalking = true;
+        trip.days.forEach(day => {
+          day.items = day.items.filter(item => !item.title.toLowerCase().includes('anjaneri') && !item.title.toLowerCase().includes('caves'));
+        });
+        fastPathHandled = true;
+      }
     }
 
     // ─── AI-powered modification for all other requests ───
     if (!fastPathHandled) {
-      const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-      if (!GEMINI_API_KEY) {
-        console.error('GEMINI_API_KEY is not configured in Backend environment');
-        return res.status(500).json({ message: 'AI modification service is not configured. Please contact support.' });
+      // Load and sanitize Gemini API Key (support standard GEMINI_API_KEY as well as MAP_VOICE_API_KEY and GOOGLE_API_KEY)
+      const apiKey = (process.env.GEMINI_API_KEY || process.env.MAP_VOICE_API_KEY || process.env.GOOGLE_API_KEY)?.trim().replace(/^["']|["']$/g, "");
+      if (!apiKey) {
+        console.error('[TripPlanner AI] GEMINI_API_KEY is not configured in backend environment variables.');
+        return res.status(503).json({
+          message: 'AI modification service is not configured. Please ensure GEMINI_API_KEY is configured in your backend environment variables.',
+          code: 'AI_SERVICE_UNCONFIGURED'
+        });
       }
 
       // Build available places reference for the AI
@@ -710,23 +727,31 @@ RULES:
         ],
         generationConfig: {
           responseMimeType: "application/json",
-          temperature: 0.3,
+          temperature: 0.2,
           maxOutputTokens: 8192
         }
       };
 
-      // Try multiple Gemini models with fallback
-      const models = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+      // Primary model explicitly recommended by Google Gemini API (gemini-3.8-flash),
+      // followed by verified, active fallback models tested with Gemini API v1beta
+      const models = [
+        'gemini-3.8-flash',
+        'gemini-3.5-flash',
+        'gemini-3.5-flash-lite',
+        'gemini-flash-lite-latest',
+        'gemini-3.1-flash-lite'
+      ];
       let aiResponse = null;
       let lastError = null;
+      let usedModel = null;
 
       for (const model of models) {
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
+          const timeoutId = setTimeout(() => controller.abort(), 25000); // 25s timeout per attempt
 
           const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
             {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -740,7 +765,7 @@ RULES:
           if (!response.ok) {
             const errorText = await response.text();
             lastError = new Error(`Gemini API ${model} returned ${response.status}: ${errorText}`);
-            console.error(lastError.message);
+            console.warn(`[TripPlanner AI] Model ${model} returned status ${response.status}. Attempting fallback...`);
             continue;
           }
 
@@ -750,7 +775,7 @@ RULES:
           const textContent = data?.candidates?.[0]?.content?.parts?.[0]?.text;
           if (!textContent) {
             lastError = new Error(`Gemini ${model} returned empty content`);
-            console.error(lastError.message);
+            console.warn(`[TripPlanner AI] Model ${model} returned empty content. Attempting fallback...`);
             continue;
           }
 
@@ -759,25 +784,24 @@ RULES:
           try {
             parsedDays = JSON.parse(textContent);
           } catch (parseErr) {
-            // Try to extract JSON array from the response if wrapped in text
+            // Try to extract JSON array from the response if wrapped in markdown/text
             const jsonMatch = textContent.match(/\[[\s\S]*\]/);
             if (jsonMatch) {
               parsedDays = JSON.parse(jsonMatch[0]);
             } else {
-              lastError = new Error(`Failed to parse AI response as JSON: ${parseErr.message}`);
-              console.error(lastError.message);
+              lastError = new Error(`Failed to parse AI response as JSON from ${model}: ${parseErr.message}`);
+              console.warn(`[TripPlanner AI] Model ${model} returned non-JSON output. Attempting fallback...`);
               continue;
             }
           }
 
           // Ensure it's an array
           if (!Array.isArray(parsedDays)) {
-            // If it's wrapped in an object with a days key
             if (parsedDays && Array.isArray(parsedDays.days)) {
               parsedDays = parsedDays.days;
             } else {
-              lastError = new Error('AI response is not a valid days array');
-              console.error(lastError.message);
+              lastError = new Error(`AI response from ${model} is not a valid days array`);
+              console.warn(`[TripPlanner AI] Model ${model} output was not a day array. Attempting fallback...`);
               continue;
             }
           }
@@ -794,8 +818,8 @@ RULES:
           );
 
           if (!isValid) {
-            lastError = new Error('AI response has invalid day/item structure');
-            console.error(lastError.message);
+            lastError = new Error(`AI response from ${model} has invalid day/item structure`);
+            console.warn(`[TripPlanner AI] Model ${model} output failed schema validation. Attempting fallback...`);
             continue;
           }
 
@@ -818,7 +842,9 @@ RULES:
           });
 
           aiResponse = parsedDays;
-          break; // Success — stop trying models
+          usedModel = model;
+          console.log(`[TripPlanner AI] Itinerary successfully modified using model: ${model}`);
+          break; // Primary or fallback succeeded
 
         } catch (fetchErr) {
           if (fetchErr.name === 'AbortError') {
@@ -826,7 +852,7 @@ RULES:
           } else {
             lastError = fetchErr;
           }
-          console.error(`Gemini ${model} error:`, lastError.message);
+          console.warn(`[TripPlanner AI] Model ${model} error:`, lastError.message, `Attempting fallback...`);
           continue;
         }
       }
