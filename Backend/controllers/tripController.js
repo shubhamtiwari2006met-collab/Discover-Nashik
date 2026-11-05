@@ -3,6 +3,7 @@ const Place = require('../models/Place');
 const KumbhLocation = require('../models/KumbhLocation');
 const KumbhEvent = require('../models/KumbhEvent');
 const { generateIntelligentItinerary } = require('../services/geoPilgrimagePlanner');
+const { matchDestinationToPlace } = require('../services/placeMatcher');
 
 // Default curated database of Nashik & Kumbh locations for high-quality itinerary generation
 const DEFAULT_KUMBH_PLACES = [
@@ -343,6 +344,25 @@ exports.generateTrip = async (req, res) => {
       travellers
     });
 
+    // Match itinerary destinations with platform Places in Discover Nashik
+    try {
+      const platformPlaces = await Place.find({}).lean();
+      if (platformPlaces && platformPlaces.length > 0) {
+        for (const day of generatedDays) {
+          if (Array.isArray(day.items)) {
+            for (const item of day.items) {
+              const matched = matchDestinationToPlace(item, platformPlaces);
+              if (matched) {
+                item.placeId = matched._id.toString();
+              }
+            }
+          }
+        }
+      }
+    } catch (matchErr) {
+      console.warn("Notice: Place matching during trip generation skipped:", matchErr.message);
+    }
+
     // Save generated trip to MongoDB
     const newTrip = new KumbhTrip({
       userId,
@@ -380,6 +400,31 @@ exports.getUserTrips = async (req, res) => {
     const userId = req.authUser._id;
     const trips = await KumbhTrip.find({ userId }).sort({ createdAt: -1 });
 
+    // Enrich saved trips with platform placeId if missing
+    try {
+      const platformPlaces = await Place.find({}).lean();
+      if (platformPlaces && platformPlaces.length > 0) {
+        for (const trip of trips) {
+          if (Array.isArray(trip.days)) {
+            for (const day of trip.days) {
+              if (Array.isArray(day.items)) {
+                for (const item of day.items) {
+                  if (!item.placeId) {
+                    const matched = matchDestinationToPlace(item, platformPlaces);
+                    if (matched) {
+                      item.placeId = matched._id.toString();
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (matchErr) {
+      // Non-blocking
+    }
+
     return res.status(200).json({
       success: true,
       trips
@@ -404,6 +449,27 @@ exports.getTripById = async (req, res) => {
     // Strict Ownership Verification
     if (trip.userId.toString() !== userId.toString()) {
       return res.status(403).json({ message: 'Access denied: You do not have permission to view this trip' });
+    }
+
+    // Enrich with platform placeId if missing
+    try {
+      const platformPlaces = await Place.find({}).lean();
+      if (platformPlaces && platformPlaces.length > 0 && Array.isArray(trip.days)) {
+        for (const day of trip.days) {
+          if (Array.isArray(day.items)) {
+            for (const item of day.items) {
+              if (!item.placeId) {
+                const matched = matchDestinationToPlace(item, platformPlaces);
+                if (matched) {
+                  item.placeId = matched._id.toString();
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (matchErr) {
+      // Non-blocking
     }
 
     return res.status(200).json({
@@ -779,6 +845,27 @@ RULES:
 
       // Apply the AI-generated modifications
       trip.days = aiResponse;
+    }
+
+    // Match modified activities with platform places
+    try {
+      const platformPlaces = await Place.find({}).lean();
+      if (platformPlaces && platformPlaces.length > 0 && Array.isArray(trip.days)) {
+        for (const day of trip.days) {
+          if (Array.isArray(day.items)) {
+            for (const item of day.items) {
+              if (!item.placeId) {
+                const matched = matchDestinationToPlace(item, platformPlaces);
+                if (matched) {
+                  item.placeId = matched._id.toString();
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (mErr) {
+      // Non-blocking
     }
 
     await trip.save();
