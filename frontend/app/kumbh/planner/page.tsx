@@ -32,9 +32,18 @@ import {
   BookmarkCheck,
   Zap,
   Coffee,
-  Check
+  Check,
+  Star,
+  ExternalLink,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { useUserAuth } from "@/context/UserAuthContext";
+import { useTranslation } from "@/lib/i18n";
+import { matchDestinationToPlace } from "@/lib/placeMatcher";
+import { Place } from "@/components/PlaceCard";
+import { PlaceDetailModal } from "@/components/PlaceDetailModal";
+import { normalizeImageUrl, DEFAULT_FALLBACK_IMAGE } from "@/lib/imageUrl";
 
 const INTEREST_OPTIONS = [
   { id: "Spiritual", label: "Spiritual & Rituals", icon: "🕉️" },
@@ -50,6 +59,7 @@ const INTEREST_OPTIONS = [
 ];
 
 export default function KumbhPlannerPage() {
+  const { t } = useTranslation();
   const { user, isAuthenticated, openAuthModal } = useUserAuth();
   const router = useRouter();
 
@@ -69,7 +79,7 @@ export default function KumbhPlannerPage() {
   const [arrivalMode, setArrivalMode] = useState("Train");
   const [departureMode, setDepartureMode] = useState("Train");
   const [stayType, setStayType] = useState("Discover Nashik Partner Hotel");
-  
+
   // Preferences
   const [prefLowWalking, setPrefLowWalking] = useState(false);
   const [prefVegetarian, setPrefVegetarian] = useState(true);
@@ -82,6 +92,41 @@ export default function KumbhPlannerPage() {
   const [activeTrip, setActiveTrip] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Platform Places integration for itinerary destination matching
+  const [platformPlaces, setPlatformPlaces] = useState<Place[]>([]);
+  const [selectedModalPlace, setSelectedModalPlace] = useState<Place | null>(null);
+  const [expandedPlaceMap, setExpandedPlaceMap] = useState<Record<string, boolean>>({});
+
+  const toggleDetails = (key: string) => {
+    setExpandedPlaceMap((prev) => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  const getMatchedPlaceForItem = (item: any): Place | null => {
+    if (!item || !platformPlaces || platformPlaces.length === 0) return null;
+    return matchDestinationToPlace(item, platformPlaces);
+  };
+
+  // Fetch registered platform places once for batch destination correlation
+  useEffect(() => {
+    let isMounted = true;
+    fetch("/api/places", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (isMounted && Array.isArray(data)) {
+          setPlatformPlaces(data);
+        }
+      })
+      .catch((err) => {
+        console.warn("Notice: Failed to load platform places for planner:", err);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // AI Prompt State
   const [aiPrompt, setAiPrompt] = useState("");
@@ -312,7 +357,7 @@ export default function KumbhPlannerPage() {
       <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#b86628_1px,transparent_1px)] [background-size:24px_24px]" />
 
       <div className="container mx-auto px-4 max-w-5xl relative z-10 space-y-8">
-        
+
         {/* Navigation Breadcrumb & Header Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/80 backdrop-blur-md p-4 sm:px-6 rounded-2xl border border-[#e1cfb0] shadow-sm">
           <div className="flex items-center gap-3">
@@ -358,11 +403,10 @@ export default function KumbhPlannerPage() {
             <button
               type="button"
               onClick={() => setViewMode("form")}
-              className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2 ${
-                viewMode === "form"
+              className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2 ${viewMode === "form"
                   ? "bg-[#2c1810] text-[#fffdf8] shadow-md"
                   : "bg-white/60 text-[#667883] hover:bg-white border border-[#e1cfb0]"
-              }`}
+                }`}
             >
               <SlidersHorizontal className="w-4 h-4" /> 1. Configure Trip Preferences
             </button>
@@ -371,11 +415,10 @@ export default function KumbhPlannerPage() {
               <button
                 type="button"
                 onClick={() => setViewMode("itinerary")}
-                className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2 ${
-                  viewMode === "itinerary"
+                className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2 ${viewMode === "itinerary"
                     ? "bg-[#2c1810] text-[#fffdf8] shadow-md"
                     : "bg-white/60 text-[#667883] hover:bg-white border border-[#e1cfb0]"
-                }`}
+                  }`}
               >
                 <Compass className="w-4 h-4" /> 2. My Kumbh Journey
               </button>
@@ -386,11 +429,10 @@ export default function KumbhPlannerPage() {
             <button
               type="button"
               onClick={() => setViewMode("history")}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                viewMode === "history"
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${viewMode === "history"
                   ? "bg-[#d4a359] text-[#2c1810]"
                   : "bg-white/80 text-[#865d2c] border border-[#e1cfb0] hover:bg-orange-50"
-              }`}
+                }`}
             >
               <BookmarkCheck className="w-4 h-4" /> My Saved Journeys ({savedTrips.length})
             </button>
@@ -403,7 +445,7 @@ export default function KumbhPlannerPage() {
         {viewMode === "form" && (
           <form onSubmit={handleGenerateTrip} className="space-y-8">
             <div className="rounded-3xl border border-[#e1cfb0] bg-[#fffdf8] p-6 md:p-8 shadow-[0_10px_30px_rgba(50,20,10,0.05)] space-y-8">
-              
+
               {/* Step Title */}
               <div className="border-b border-[#f0e2cd] pb-4">
                 <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#e86f18]">
@@ -570,11 +612,10 @@ export default function KumbhPlannerPage() {
                         key={item.id}
                         type="button"
                         onClick={() => toggleInterest(item.id)}
-                        className={`p-3 rounded-2xl text-left border transition-all text-xs flex flex-col justify-between gap-2 ${
-                          selected
+                        className={`p-3 rounded-2xl text-left border transition-all text-xs flex flex-col justify-between gap-2 ${selected
                             ? "bg-[#fff7ed] border-[#e86f18] shadow-sm text-[#9e4129] font-bold"
                             : "bg-white border-[#e1cfb0] text-[#667883] hover:border-[#e86f18]"
-                        }`}
+                          }`}
                       >
                         <span className="text-lg">{item.icon}</span>
                         <span>{item.label}</span>
@@ -596,11 +637,10 @@ export default function KumbhPlannerPage() {
                         key={style}
                         type="button"
                         onClick={() => setTravelStyle(style)}
-                        className={`py-2.5 rounded-xl border text-xs font-bold transition-all ${
-                          travelStyle === style
+                        className={`py-2.5 rounded-xl border text-xs font-bold transition-all ${travelStyle === style
                             ? "bg-[#2c1810] text-white border-[#2c1810]"
                             : "bg-white text-[#667883] border-[#d8c4a3] hover:bg-orange-50"
-                        }`}
+                          }`}
                       >
                         {style}
                       </button>
@@ -618,11 +658,10 @@ export default function KumbhPlannerPage() {
                         key={b}
                         type="button"
                         onClick={() => setBudget(b)}
-                        className={`py-2.5 rounded-xl border text-xs font-bold transition-all ${
-                          budget === b
+                        className={`py-2.5 rounded-xl border text-xs font-bold transition-all ${budget === b
                             ? "bg-[#2c1810] text-white border-[#2c1810]"
                             : "bg-white text-[#667883] border-[#d8c4a3] hover:bg-orange-50"
-                        }`}
+                          }`}
                       >
                         {b}
                       </button>
@@ -770,7 +809,7 @@ export default function KumbhPlannerPage() {
         {/* ───────────────────────────────────────────────────────────── */}
         {viewMode === "itinerary" && activeTrip && (
           <div className="space-y-8">
-            
+
             {/* Trip Overview Summary Header Card */}
             <div className="rounded-3xl bg-gradient-to-br from-[#2c1810] via-[#4a2417] to-[#1e100a] p-6 md:p-8 text-white shadow-2xl border border-[#d4a359]/30 relative overflow-hidden">
               <div className="absolute right-0 bottom-0 w-64 h-64 bg-[#d4a359]/10 rounded-full blur-3xl pointer-events-none" />
@@ -953,61 +992,179 @@ export default function KumbhPlannerPage() {
 
                   {/* Activity Timeline Items */}
                   <div className="space-y-3">
-                    {day.items && day.items.map((item: any, itemIdx: number) => (
-                      <div
-                        key={itemIdx}
-                        className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
-                          item.isCompleted
-                            ? "bg-emerald-50/60 border-emerald-200 opacity-75"
-                            : "bg-white border-[#e1cfb0] hover:border-[#e86f18]"
-                        }`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <button
-                            type="button"
-                            onClick={() => toggleItemCompletion(dayIdx, itemIdx)}
-                            className="mt-0.5 text-[#e86f18] hover:scale-110 transition-transform"
-                          >
-                            {item.isCompleted ? (
-                              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                            ) : (
-                              <Circle className="w-5 h-5 text-[#d8c4a3]" />
-                            )}
-                          </button>
+                    {day.items && day.items.map((item: any, itemIdx: number) => {
+                      const matchedPlace = getMatchedPlaceForItem(item);
+                      const itemKey = `${dayIdx}-${itemIdx}`;
+                      const isExpanded = Boolean(expandedPlaceMap[itemKey]);
+                      const imageUrl = matchedPlace?.image ? normalizeImageUrl(matchedPlace.image, DEFAULT_FALLBACK_IMAGE) : null;
 
-                          <div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-xs font-bold text-[#2c1810]">{item.startTime}</span>
-                              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-orange-100 text-[#9e4129]">
-                                {item.category}
-                              </span>
-                              <span className="text-xs text-[#667883]">📍 {item.location}</span>
+                      return (
+                        <div
+                          key={itemIdx}
+                          className={`p-4 rounded-2xl border transition-all flex flex-col justify-between gap-3 ${item.isCompleted
+                              ? "bg-emerald-50/60 border-emerald-200 opacity-75"
+                              : "bg-white border-[#e1cfb0] hover:border-[#e86f18]"
+                            }`}
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                            <div className="flex items-start gap-3 flex-1 min-w-0">
+                              <button
+                                type="button"
+                                onClick={() => toggleItemCompletion(dayIdx, itemIdx)}
+                                className="mt-0.5 text-[#e86f18] hover:scale-110 transition-transform shrink-0"
+                              >
+                                {item.isCompleted ? (
+                                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                                ) : (
+                                  <Circle className="w-5 h-5 text-[#d8c4a3]" />
+                                )}
+                              </button>
+
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-xs font-bold text-[#2c1810]">{item.startTime}</span>
+                                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-orange-100 text-[#9e4129]">
+                                    {item.category}
+                                  </span>
+                                  <span className="text-xs text-[#667883]">📍 {item.location}</span>
+                                  {matchedPlace && (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                                      <Sparkles className="w-2.5 h-2.5 text-amber-600" />
+                                      {t("Discover Nashik Listed")}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="flex items-start gap-3 mt-1.5">
+                                  {matchedPlace && imageUrl && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedModalPlace(matchedPlace)}
+                                      className="relative shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden border border-[#e1cfb0] shadow-xs group/thumb hover:scale-105 transition-transform"
+                                      title={t("Explore Destination")}
+                                    >
+                                      <img
+                                        src={imageUrl}
+                                        alt={matchedPlace.name}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                          const target = e.currentTarget;
+                                          if (target.src !== DEFAULT_FALLBACK_IMAGE) {
+                                            target.src = DEFAULT_FALLBACK_IMAGE;
+                                          }
+                                        }}
+                                      />
+                                      <div className="absolute inset-0 bg-black/25 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center">
+                                        <ExternalLink className="w-3.5 h-3.5 text-white" />
+                                      </div>
+                                    </button>
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <h4 className={`text-sm font-bold ${item.isCompleted ? "line-through text-slate-500" : "text-[#173247]"}`}>
+                                        {item.title}
+                                      </h4>
+                                      {matchedPlace?.rating && (
+                                        <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                                          <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                                          {matchedPlace.rating}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {item.notes && (
+                                      <p className="text-xs text-[#667883] mt-0.5 leading-relaxed">{item.notes}</p>
+                                    )}
+
+                                    {/* Platform Details Toggle for matched destination */}
+                                    {matchedPlace && (
+                                      <div className="mt-1.5 flex items-center gap-3">
+                                        <button
+                                          type="button"
+                                          onClick={() => toggleDetails(itemKey)}
+                                          className="text-[11px] font-semibold text-[#c9580f] hover:text-[#9e4129] flex items-center gap-1 transition-colors"
+                                        >
+                                          {isExpanded ? (
+                                            <>
+                                              <ChevronUp className="w-3 h-3" />
+                                              <span>{t("Hide Details")}</span>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <ChevronDown className="w-3 h-3" />
+                                              <span>{t("Platform Details")}</span>
+                                            </>
+                                          )}
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
                             </div>
-                            <h4 className={`text-sm font-bold mt-1 ${item.isCompleted ? "line-through text-slate-500" : "text-[#173247]"}`}>
-                              {item.title}
-                            </h4>
-                            {item.notes && (
-                              <p className="text-xs text-[#667883] mt-0.5">{item.notes}</p>
-                            )}
-                          </div>
-                        </div>
 
-                        {/* Timing & Buffer Actions */}
-                        <div className="flex items-center justify-between sm:justify-end gap-3 border-t sm:border-t-0 pt-2 sm:pt-0 border-[#f0e2cd]">
-                          <div className="text-right text-[11px] text-[#667883]">
-                            <span>⏱️ {item.durationMinutes} mins</span>
-                            <span className="block text-[10px] text-[#b86628]">🚘 {item.travelMinutes} mins travel buffer</span>
+                            {/* Timing & Buffer Actions */}
+                            <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 border-t sm:border-t-0 pt-2 sm:pt-0 border-[#f0e2cd] shrink-0">
+                              <div className="text-left sm:text-right text-[11px] text-[#667883]">
+                                <span>⏱️ {item.durationMinutes} mins</span>
+                                <span className="block text-[10px] text-[#b86628]">🚘 {item.travelMinutes} mins travel buffer</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {matchedPlace && (
+                                  <Link
+                                    href={`/place/${matchedPlace._id}`}
+                                    className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#c9580f] text-white text-xs font-bold shadow-xs hover:bg-[#173247] transition-all"
+                                  >
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                    <span>{t("Explore on Discover Nashik")}</span>
+                                  </Link>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => removeItem(dayIdx, itemIdx)}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => removeItem(dayIdx, itemIdx)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+
+                          {/* Expanded Platform Place Information Drawer */}
+                          {matchedPlace && isExpanded && (
+                            <div className="mt-2 pt-2.5 border-t border-amber-200/70 text-xs space-y-2 text-[#4a2e18] bg-amber-50/50 p-3 rounded-xl">
+                              {matchedPlace.description && (
+                                <p className="text-slate-700 leading-relaxed text-[11px] sm:text-xs">
+                                  {matchedPlace.description}
+                                </p>
+                              )}
+                              {matchedPlace.heritage && (
+                                <div className="flex items-start gap-1.5 text-[11px] sm:text-xs">
+                                  <span className="font-bold text-[#b45309] shrink-0">🏛️ {t("Heritage & Significance")}:</span>
+                                  <span className="text-slate-600">{matchedPlace.heritage}</span>
+                                </div>
+                              )}
+                              {(matchedPlace.famousThing || matchedPlace.tagline) && (
+                                <div className="flex items-start gap-1.5 text-[11px] sm:text-xs">
+                                  <span className="font-bold text-[#b45309] shrink-0">✨ {t("Highlights")}:</span>
+                                  <span className="text-slate-600">{matchedPlace.famousThing || matchedPlace.tagline}</span>
+                                </div>
+                              )}
+                              <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px] text-slate-500">
+                                {matchedPlace.location && (
+                                  <span>📍 {matchedPlace.location}</span>
+                                )}
+                                {(matchedPlace.openingTime || matchedPlace.closingTime) && (
+                                  <span>🕒 {matchedPlace.openingTime || "06:00 AM"} – {matchedPlace.closingTime || "08:00 PM"}</span>
+                                )}
+                                {matchedPlace.phone && (
+                                  <span>📞 {matchedPlace.phone}</span>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
 
                 </div>
@@ -1040,11 +1197,10 @@ export default function KumbhPlannerPage() {
               {savedTrips.map((trip) => (
                 <div
                   key={trip._id}
-                  className={`p-5 rounded-2xl border transition-all space-y-3 cursor-pointer ${
-                    activeTrip?._id === trip._id
+                  className={`p-5 rounded-2xl border transition-all space-y-3 cursor-pointer ${activeTrip?._id === trip._id
                       ? "bg-[#fff7ed] border-[#e86f18] shadow-md"
                       : "bg-white border-[#e1cfb0] hover:border-[#e86f18]"
-                  }`}
+                    }`}
                   onClick={() => {
                     setActiveTrip(trip);
                     setViewMode("itinerary");
@@ -1078,6 +1234,14 @@ export default function KumbhPlannerPage() {
         )}
 
       </div>
+
+      {/* Destination Quick Preview Modal */}
+      {selectedModalPlace && (
+        <PlaceDetailModal
+          place={selectedModalPlace}
+          onClose={() => setSelectedModalPlace(null)}
+        />
+      )}
     </main>
   );
 }

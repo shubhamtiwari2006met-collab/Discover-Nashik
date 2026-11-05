@@ -787,6 +787,12 @@ const translations: Record<Language, Record<string, string>> = {
     "No places match your search.": "आपकी खोज से मेल खाने वाला कोई स्थान नहीं है।",
     "Last saved:": "अंतिम बार सहेजा गया:",
     "Homepage Display": "होमपेज प्रदर्शन",
+    "Explore on Discover Nashik": "डिस्कवर नासिक पर देखें",
+    "Discover Nashik Listed": "डिस्कवर नासिक पर सूचीबद्ध",
+    "Platform Details": "स्थान विवरण",
+    "Hide Details": "विवरण छिपाएं",
+    "Highlights": "प्रमुख आकर्षण",
+    "Explore Destination": "गंतव्य देखें",
   },
   mr: {
     // Navigation & Global Header/Footer
@@ -1567,6 +1573,12 @@ const translations: Record<Language, Record<string, string>> = {
     "No places match your search.": "तुमच्या शोधाशी जुळणारे कोणतेही ठिकाण नाही.",
     "Last saved:": "शेवटचे जतन केलेले:",
     "Homepage Display": "होमपेज प्रदर्शन",
+    "Explore on Discover Nashik": "डिस्कवर नाशिकवर एक्सप्लोर करा",
+    "Discover Nashik Listed": "डिस्कवर नाशिकवर सूचीबद्ध",
+    "Platform Details": "प्लॅटफॉर्म तपशील",
+    "Hide Details": "तपशील लपवा",
+    "Highlights": "प्रमुख वैशिष्ट्ये",
+    "Explore Destination": "ठिकाण एक्सप्लोर करा",
   },
 };
 
