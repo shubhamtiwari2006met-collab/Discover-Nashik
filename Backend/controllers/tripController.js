@@ -114,6 +114,178 @@ const DEFAULT_KUMBH_PLACES = [
     travelMinutes: 10,
     description: "Quiet meditative riverfront grove where Lakshmana practiced penance.",
     tags: ["Spiritual", "Nature", "Culture"]
+  },
+  // ─── Extended places to support 7-10 day itineraries without repetition ───
+  {
+    title: "Gangapur Dam & Boating",
+    category: "Nature",
+    location: "Gangapur, Nashik",
+    durationMinutes: 120,
+    travelMinutes: 25,
+    description: "Scenic reservoir offering boating, bird watching, and sunset views over the dam.",
+    tags: ["Nature", "Family", "Photography"]
+  },
+  {
+    title: "Coin Museum Nashik",
+    category: "Heritage",
+    location: "Anjaneri, Nashik",
+    durationMinutes: 60,
+    travelMinutes: 20,
+    description: "One of India's finest numismatic museums showcasing coins from ancient to modern eras.",
+    tags: ["Heritage", "Culture", "Family"]
+  },
+  {
+    title: "Naroshankar Temple",
+    category: "Spiritual",
+    location: "Godavari Bank, Nashik",
+    durationMinutes: 45,
+    travelMinutes: 10,
+    description: "18th-century Shiva temple famous for its enormous bell and riverside location.",
+    tags: ["Spiritual", "Heritage", "Culture"]
+  },
+  {
+    title: "Sundarnarayan Temple",
+    category: "Spiritual",
+    location: "Panchavati, Nashik",
+    durationMinutes: 45,
+    travelMinutes: 10,
+    description: "Ancient Vishnu temple with beautiful carvings and serene courtyard atmosphere.",
+    tags: ["Spiritual", "Heritage", "Culture"]
+  },
+  {
+    title: "York Winery & Tasting Lounge",
+    category: "Vineyards",
+    location: "Gangapur, Nashik",
+    durationMinutes: 90,
+    travelMinutes: 25,
+    description: "Award-winning winery with guided vineyard tours, tasting sessions, and panoramic valley views.",
+    tags: ["Vineyards", "Food", "Photography"]
+  },
+  {
+    title: "Grover Zampa Vineyards",
+    category: "Vineyards",
+    location: "Sanjegaon, Nashik",
+    durationMinutes: 90,
+    travelMinutes: 30,
+    description: "Premium boutique winery offering exclusive wine tasting and picturesque vineyard walks.",
+    tags: ["Vineyards", "Food", "Photography"]
+  },
+  {
+    title: "Dugarwadi Waterfall",
+    category: "Nature",
+    location: "Trimbakeshwar Road, Nashik",
+    durationMinutes: 120,
+    travelMinutes: 35,
+    description: "Stunning multi-tiered waterfall surrounded by dense green forest, ideal for nature lovers.",
+    tags: ["Nature", "Trekking", "Photography"]
+  },
+  {
+    title: "Saptashrungi Devi Temple",
+    category: "Spiritual",
+    location: "Vani, Nashik",
+    durationMinutes: 180,
+    travelMinutes: 60,
+    description: "One of the Shakti Peeths, a powerful hilltop goddess temple with panoramic views.",
+    tags: ["Spiritual", "Nature", "Trekking", "Photography"]
+  },
+  {
+    title: "Bhandardara & Arthur Lake",
+    category: "Nature",
+    location: "Bhandardara, Nashik",
+    durationMinutes: 180,
+    travelMinutes: 75,
+    description: "Serene hill station with Arthur Lake, Wilson Dam, firefly spots, and lush Sahyadri scenery.",
+    tags: ["Nature", "Photography", "Family"]
+  },
+  {
+    title: "Nandur Madhmeshwar Bird Sanctuary",
+    category: "Nature",
+    location: "Niphad, Nashik",
+    durationMinutes: 120,
+    travelMinutes: 45,
+    description: "Maharashtra's only Ramsar wetland site, home to over 200 migratory and resident bird species.",
+    tags: ["Nature", "Photography", "Family"]
+  },
+  {
+    title: "ABC Farms (Agri-Tourism)",
+    category: "Nature",
+    location: "Trimbakeshwar Road, Nashik",
+    durationMinutes: 120,
+    travelMinutes: 30,
+    description: "Popular agri-tourism destination with farm activities, organic food, and rural Nashik experiences.",
+    tags: ["Nature", "Food", "Family", "Culture"]
+  },
+  {
+    title: "Panchavati Heritage Walk",
+    category: "Heritage",
+    location: "Panchavati, Nashik",
+    durationMinutes: 120,
+    travelMinutes: 10,
+    description: "Guided walk through Nashik's ancient Panchavati area covering temples, ghats, and historic lanes.",
+    tags: ["Heritage", "Culture", "Kumbh experiences", "Photography"]
+  },
+  {
+    title: "Godavari Dham",
+    category: "Spiritual",
+    location: "Nashik",
+    durationMinutes: 60,
+    travelMinutes: 15,
+    description: "Modern spiritual complex on the banks of Godavari with meditation halls and puja areas.",
+    tags: ["Spiritual", "Culture"]
+  },
+  {
+    title: "Igatpuri Vipassana & Dhamma Giri",
+    category: "Spiritual",
+    location: "Igatpuri, Nashik",
+    durationMinutes: 120,
+    travelMinutes: 50,
+    description: "World-renowned Vipassana meditation centre with serene hilltop pagoda and peace gardens.",
+    tags: ["Spiritual", "Nature", "Culture"]
+  },
+  {
+    title: "Harihar Fort Trek",
+    category: "Nature",
+    location: "Harshewadi, Nashik",
+    durationMinutes: 240,
+    travelMinutes: 50,
+    description: "Thrilling rock-cut staircase fort trek with dramatic cliff edges and stunning Sahyadri views.",
+    tags: ["Nature", "Trekking", "Photography"]
+  },
+  {
+    title: "Brahmagiri Hill & Trek",
+    category: "Nature",
+    location: "Trimbakeshwar, Nashik",
+    durationMinutes: 180,
+    travelMinutes: 40,
+    description: "Sacred hill where river Godavari originates; moderate trek with panoramic views of Trimbak valley.",
+    tags: ["Nature", "Spiritual", "Trekking", "Photography"]
+  },
+  {
+    title: "Nashik Caves (Trirashmi Leni)",
+    category: "Heritage",
+    location: "College Road, Nashik",
+    durationMinutes: 90,
+    travelMinutes: 15,
+    description: "Group of 23 ancient Buddhist caves with detailed sculptures and inscriptions from 1st-3rd century CE.",
+    tags: ["Heritage", "Culture", "Photography"]
+  },
+  {
+    title: "Ozar Ganpati Temple",
+    category: "Spiritual",
+    location: "Junnar-Ozar, Nashik",
+    durationMinutes: 90,
+    travelMinutes: 50,
+    description: "One of the Ashtavinayak temples dedicated to Lord Vighneshwar with beautiful carved mandap.",
+    tags: ["Spiritual", "Heritage"]
+  },
+  {
+    title: "Gondeshwar Temple",
+    category: "Heritage",
+    location: "Sinnar, Nashik",
+    durationMinutes: 60,
+    travelMinutes: 30,
+    description: "11th-century Hemadpanthi-style temple complex with exquisite stone carvings dedicated to Lord Shiva.",
+    tags: ["Heritage", "Spiritual", "Culture", "Photography"]
   }
 ];
 
@@ -179,8 +351,21 @@ exports.generateTrip = async (req, res) => {
       candidatePlaces = candidatePlaces.filter(p => !p.tags.includes("Trekking"));
     }
 
+    // Diverse day title themes for middle days (avoiding repetitive "Heritage & Cultural")
+    const DAY_THEMES = [
+      "Heritage & Cultural Exploration",
+      "Spiritual Pilgrimage & Sacred Sites",
+      "Nature & Scenic Discovery",
+      "Vineyard Trail & Local Flavours",
+      "Adventure & Offbeat Trails",
+      "Historic Landmarks & Hidden Gems",
+      "Riverside Serenity & Meditation",
+      "Art, Architecture & Museum Walk"
+    ];
+
     const generatedDays = [];
-    let poolIndex = 0;
+    const usedTitles = new Set(); // Track used destinations to prevent repetition
+    let themeIndex = 0;
 
     for (let dayNum = 1; dayNum <= totalDays; dayNum++) {
       const currentDate = new Date(start);
@@ -193,39 +378,57 @@ exports.generateTrip = async (req, res) => {
       let dayTitle = `Day ${dayNum}: `;
       if (dayNum === 1) dayTitle += `Arrival & Sacred Panchavati Circuit`;
       else if (dayNum === totalDays) dayTitle += `Trimbakeshwar Rituals & Departure`;
-      else dayTitle += `Heritage & Cultural Exploration`;
+      else {
+        dayTitle += DAY_THEMES[themeIndex % DAY_THEMES.length];
+        themeIndex++;
+      }
 
       for (let itemIdx = 0; itemIdx < maxItemsPerDay; itemIdx++) {
-        const place = candidatePlaces[poolIndex % candidatePlaces.length];
-        poolIndex++;
+        // Find the next unused place from the sorted candidates
+        let selectedPlace = null;
+        for (let searchIdx = 0; searchIdx < candidatePlaces.length; searchIdx++) {
+          const candidate = candidatePlaces[searchIdx];
+          if (!usedTitles.has(candidate.title)) {
+            selectedPlace = candidate;
+            break;
+          }
+        }
+
+        // If all candidates exhausted, stop adding items for remaining slots
+        if (!selectedPlace) break;
+
+        usedTitles.add(selectedPlace.title);
 
         const startTimeStr = formatTime(currentMinute);
-        const duration = place.durationMinutes;
-        const travel = place.travelMinutes;
+        const duration = selectedPlace.durationMinutes;
+        const travel = selectedPlace.travelMinutes;
         currentMinute += duration;
         const endTimeStr = formatTime(currentMinute);
         currentMinute += travel; // Travel buffer for next item
 
         items.push({
           placeId: null,
-          title: place.title,
-          category: place.category,
-          location: place.location,
+          title: selectedPlace.title,
+          category: selectedPlace.category,
+          location: selectedPlace.location,
           startTime: startTimeStr,
           endTime: endTimeStr,
           durationMinutes: duration,
           travelMinutes: travel,
-          notes: place.description,
+          notes: selectedPlace.description,
           isCompleted: false
         });
       }
 
-      generatedDays.push({
-        dayNumber: dayNum,
-        date: dateStr,
-        title: dayTitle,
-        items
-      });
+      // Only add day if it has at least one activity
+      if (items.length > 0) {
+        generatedDays.push({
+          dayNumber: dayNum,
+          date: dateStr,
+          title: dayTitle,
+          items
+        });
+      }
     }
 
     // Save generated trip to MongoDB
@@ -388,11 +591,15 @@ exports.modifyTripWithAi = async (req, res) => {
 
     const cleanPrompt = prompt.toLowerCase();
 
+    // ─── Fast-path handlers for common quick modifications ───
+    let fastPathHandled = false;
+
     // 1. Remove Shopping / Remove Trekking
     if (cleanPrompt.includes('remove shopping') || cleanPrompt.includes('no shopping')) {
       trip.days.forEach(day => {
         day.items = day.items.filter(item => !item.category.toLowerCase().includes('shopping') && !item.title.toLowerCase().includes('shopping'));
       });
+      fastPathHandled = true;
     }
 
     // 2. Add Trimbakeshwar if requested
@@ -412,6 +619,7 @@ exports.modifyTripWithAi = async (req, res) => {
           isCompleted: false
         });
       }
+      fastPathHandled = true;
     }
 
     // 3. Make less hectic / reduce activities
@@ -422,6 +630,7 @@ exports.modifyTripWithAi = async (req, res) => {
           day.items = day.items.slice(0, 2);
         }
       });
+      fastPathHandled = true;
     }
 
     // 4. Low walking / no trekking
@@ -430,6 +639,208 @@ exports.modifyTripWithAi = async (req, res) => {
       trip.days.forEach(day => {
         day.items = day.items.filter(item => !item.title.toLowerCase().includes('anjaneri') && !item.title.toLowerCase().includes('caves'));
       });
+      fastPathHandled = true;
+    }
+
+    // ─── AI-powered modification for all other requests ───
+    if (!fastPathHandled) {
+      const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+      if (!GEMINI_API_KEY) {
+        console.error('GEMINI_API_KEY is not configured in Backend environment');
+        return res.status(500).json({ message: 'AI modification service is not configured. Please contact support.' });
+      }
+
+      // Build available places reference for the AI
+      const availablePlacesRef = DEFAULT_KUMBH_PLACES.map(p => ({
+        title: p.title,
+        category: p.category,
+        location: p.location,
+        durationMinutes: p.durationMinutes,
+        travelMinutes: p.travelMinutes,
+        description: p.description
+      }));
+
+      // Build current itinerary summary for the AI
+      const currentItinerary = trip.days.map(day => ({
+        dayNumber: day.dayNumber,
+        date: day.date,
+        title: day.title,
+        items: day.items.map(item => ({
+          title: item.title,
+          category: item.category,
+          location: item.location,
+          startTime: item.startTime,
+          endTime: item.endTime,
+          durationMinutes: item.durationMinutes,
+          travelMinutes: item.travelMinutes,
+          notes: item.notes,
+          isCompleted: item.isCompleted
+        }))
+      }));
+
+      const systemPrompt = `You are an expert travel itinerary planner for Nashik, India. You help modify existing trip itineraries based on user instructions.
+
+CURRENT ITINERARY (JSON):
+${JSON.stringify(currentItinerary, null, 2)}
+
+AVAILABLE NASHIK DESTINATIONS (you may use these or suggest similar Nashik-area places):
+${JSON.stringify(availablePlacesRef, null, 2)}
+
+RULES:
+1. You MUST return ONLY a valid JSON array of day objects matching the exact structure below.
+2. Modify ONLY what the user explicitly requests. Preserve all other days and items unchanged.
+3. Each day object must have: dayNumber (number), date (string YYYY-MM-DD), title (string), items (array).
+4. Each item must have: placeId (null), title (string), category (string), location (string), startTime (string like "9:00 AM"), endTime (string like "10:30 AM"), durationMinutes (number), travelMinutes (number), notes (string description), isCompleted (boolean).
+5. Keep the same number of days as the original itinerary (${trip.days.length} days).
+6. When adding a new place, calculate reasonable startTime and endTime based on other items in that day.
+7. When removing a place, recalculate remaining items' time slots to avoid gaps.
+8. When replacing a place, keep the same time slot if duration is similar, otherwise adjust.
+9. Keep dates exactly as they are in the original itinerary.
+10. DO NOT add any text, explanation, or markdown. Return ONLY the JSON array.`;
+
+      const requestBody = {
+        systemInstruction: {
+          parts: [{ text: systemPrompt }]
+        },
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: `Modify my itinerary: ${prompt}` }]
+          }
+        ],
+        generationConfig: {
+          responseMimeType: "application/json",
+          temperature: 0.3,
+          maxOutputTokens: 8192
+        }
+      };
+
+      // Try multiple Gemini models with fallback
+      const models = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+      let aiResponse = null;
+      let lastError = null;
+
+      for (const model of models) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
+
+          const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(requestBody),
+              signal: controller.signal
+            }
+          );
+
+          clearTimeout(timeoutId);
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            lastError = new Error(`Gemini API ${model} returned ${response.status}: ${errorText}`);
+            console.error(lastError.message);
+            continue;
+          }
+
+          const data = await response.json();
+
+          // Extract text content from Gemini response
+          const textContent = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (!textContent) {
+            lastError = new Error(`Gemini ${model} returned empty content`);
+            console.error(lastError.message);
+            continue;
+          }
+
+          // Parse the JSON response
+          let parsedDays;
+          try {
+            parsedDays = JSON.parse(textContent);
+          } catch (parseErr) {
+            // Try to extract JSON array from the response if wrapped in text
+            const jsonMatch = textContent.match(/\[[\s\S]*\]/);
+            if (jsonMatch) {
+              parsedDays = JSON.parse(jsonMatch[0]);
+            } else {
+              lastError = new Error(`Failed to parse AI response as JSON: ${parseErr.message}`);
+              console.error(lastError.message);
+              continue;
+            }
+          }
+
+          // Ensure it's an array
+          if (!Array.isArray(parsedDays)) {
+            // If it's wrapped in an object with a days key
+            if (parsedDays && Array.isArray(parsedDays.days)) {
+              parsedDays = parsedDays.days;
+            } else {
+              lastError = new Error('AI response is not a valid days array');
+              console.error(lastError.message);
+              continue;
+            }
+          }
+
+          // Validate structure of each day
+          const isValid = parsedDays.every(day =>
+            typeof day.dayNumber === 'number' &&
+            typeof day.title === 'string' &&
+            Array.isArray(day.items) &&
+            day.items.every(item =>
+              typeof item.title === 'string' &&
+              typeof item.category === 'string'
+            )
+          );
+
+          if (!isValid) {
+            lastError = new Error('AI response has invalid day/item structure');
+            console.error(lastError.message);
+            continue;
+          }
+
+          // Ensure all items have required fields with defaults
+          parsedDays.forEach(day => {
+            if (!day.date) {
+              const originalDay = trip.days.find(d => d.dayNumber === day.dayNumber);
+              if (originalDay) day.date = originalDay.date;
+            }
+            day.items.forEach(item => {
+              if (item.placeId === undefined) item.placeId = null;
+              if (item.isCompleted === undefined) item.isCompleted = false;
+              if (!item.location) item.location = 'Nashik';
+              if (!item.startTime) item.startTime = '9:00 AM';
+              if (!item.endTime) item.endTime = '10:00 AM';
+              if (!item.durationMinutes) item.durationMinutes = 60;
+              if (!item.travelMinutes) item.travelMinutes = 15;
+              if (!item.notes) item.notes = '';
+            });
+          });
+
+          aiResponse = parsedDays;
+          break; // Success — stop trying models
+
+        } catch (fetchErr) {
+          if (fetchErr.name === 'AbortError') {
+            lastError = new Error(`Gemini ${model} request timed out`);
+          } else {
+            lastError = fetchErr;
+          }
+          console.error(`Gemini ${model} error:`, lastError.message);
+          continue;
+        }
+      }
+
+      if (!aiResponse) {
+        console.error('All Gemini models failed:', lastError?.message);
+        return res.status(500).json({
+          message: 'Could not process your modification request. Please try rephrasing your instruction or try again later.',
+          error: lastError?.message
+        });
+      }
+
+      // Apply the AI-generated modifications
+      trip.days = aiResponse;
     }
 
     await trip.save();
