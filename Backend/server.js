@@ -8,6 +8,8 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const mongoSanitize = require("express-mongo-sanitize");
 const cookieParser = require("cookie-parser");
+// Explicitly load .env from Backend directory, then fallback to current working directory
+require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 require("dotenv").config();
 
 // Ensure public/uploads directory exists
