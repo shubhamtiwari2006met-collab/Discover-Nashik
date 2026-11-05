@@ -2,6 +2,7 @@ const KumbhTrip = require('../models/KumbhTrip');
 const Place = require('../models/Place');
 const KumbhLocation = require('../models/KumbhLocation');
 const KumbhEvent = require('../models/KumbhEvent');
+const { generateIntelligentItinerary } = require('../services/geoPilgrimagePlanner');
 
 // Default curated database of Nashik & Kumbh locations for high-quality itinerary generation
 const DEFAULT_KUMBH_PLACES = [
@@ -331,105 +332,16 @@ exports.generateTrip = async (req, res) => {
     const diffTime = Math.abs(end - start);
     const totalDays = Math.min(10, Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1));
 
-    // Determine max activities per day based on travel style
-    let maxItemsPerDay = 3;
-    if (travelStyle === 'Relaxed') maxItemsPerDay = 2;
-    if (travelStyle === 'Packed') maxItemsPerDay = 4;
-
-    // Filter candidate places matching user interests or fallback defaults
-    let candidatePlaces = [...DEFAULT_KUMBH_PLACES];
-    if (interests && interests.length > 0) {
-      candidatePlaces.sort((a, b) => {
-        const scoreA = a.tags.filter(t => interests.includes(t)).length;
-        const scoreB = b.tags.filter(t => interests.includes(t)).length;
-        return scoreB - scoreA;
-      });
-    }
-
-    // Adjust for accessibility/low walking preferences
-    if (preferences.lowWalking || preferences.accessibilityNeeded) {
-      candidatePlaces = candidatePlaces.filter(p => !p.tags.includes("Trekking"));
-    }
-
-    // Diverse day title themes for middle days (avoiding repetitive "Heritage & Cultural")
-    const DAY_THEMES = [
-      "Heritage & Cultural Exploration",
-      "Spiritual Pilgrimage & Sacred Sites",
-      "Nature & Scenic Discovery",
-      "Vineyard Trail & Local Flavours",
-      "Adventure & Offbeat Trails",
-      "Historic Landmarks & Hidden Gems",
-      "Riverside Serenity & Meditation",
-      "Art, Architecture & Museum Walk"
-    ];
-
-    const generatedDays = [];
-    const usedTitles = new Set(); // Track used destinations to prevent repetition
-    let themeIndex = 0;
-
-    for (let dayNum = 1; dayNum <= totalDays; dayNum++) {
-      const currentDate = new Date(start);
-      currentDate.setDate(start.getDate() + (dayNum - 1));
-      const dateStr = currentDate.toISOString().split('T')[0];
-
-      let currentMinute = preferences.earlyMorningPreference ? 360 : 540; // 6:00 AM or 9:00 AM start
-      const items = [];
-
-      let dayTitle = `Day ${dayNum}: `;
-      if (dayNum === 1) dayTitle += `Arrival & Sacred Panchavati Circuit`;
-      else if (dayNum === totalDays) dayTitle += `Trimbakeshwar Rituals & Departure`;
-      else {
-        dayTitle += DAY_THEMES[themeIndex % DAY_THEMES.length];
-        themeIndex++;
-      }
-
-      for (let itemIdx = 0; itemIdx < maxItemsPerDay; itemIdx++) {
-        // Find the next unused place from the sorted candidates
-        let selectedPlace = null;
-        for (let searchIdx = 0; searchIdx < candidatePlaces.length; searchIdx++) {
-          const candidate = candidatePlaces[searchIdx];
-          if (!usedTitles.has(candidate.title)) {
-            selectedPlace = candidate;
-            break;
-          }
-        }
-
-        // If all candidates exhausted, stop adding items for remaining slots
-        if (!selectedPlace) break;
-
-        usedTitles.add(selectedPlace.title);
-
-        const startTimeStr = formatTime(currentMinute);
-        const duration = selectedPlace.durationMinutes;
-        const travel = selectedPlace.travelMinutes;
-        currentMinute += duration;
-        const endTimeStr = formatTime(currentMinute);
-        currentMinute += travel; // Travel buffer for next item
-
-        items.push({
-          placeId: null,
-          title: selectedPlace.title,
-          category: selectedPlace.category,
-          location: selectedPlace.location,
-          startTime: startTimeStr,
-          endTime: endTimeStr,
-          durationMinutes: duration,
-          travelMinutes: travel,
-          notes: selectedPlace.description,
-          isCompleted: false
-        });
-      }
-
-      // Only add day if it has at least one activity
-      if (items.length > 0) {
-        generatedDays.push({
-          dayNumber: dayNum,
-          date: dateStr,
-          title: dayTitle,
-          items
-        });
-      }
-    }
+    // Generate intelligent, geography-based pilgrimage itinerary
+    const generatedDays = generateIntelligentItinerary({
+      destination,
+      startDate,
+      endDate,
+      interests,
+      travelStyle,
+      preferences,
+      travellers
+    });
 
     // Save generated trip to MongoDB
     const newTrip = new KumbhTrip({
