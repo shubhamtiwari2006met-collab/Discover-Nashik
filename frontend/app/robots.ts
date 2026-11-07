@@ -12,6 +12,8 @@ export default function robots(): MetadataRoute.Robots {
         "/login",
         "/business/dashboard",
         "/business/pending",
+        "/kumbh/lost-found/inquiry/",
+        "/kumbh/lost-found/report",
       ],
     },
     sitemap: "https://discovernashik.co.in/sitemap.xml",

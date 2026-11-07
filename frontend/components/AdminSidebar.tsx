@@ -2,7 +2,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Users, Building2, MapPin, Bell, Settings, Calendar, ShieldCheck, X, Navigation, LayoutDashboard } from "lucide-react";
+import { Home, Users, Building2, MapPin, Bell, Settings, Calendar, ShieldCheck, X, Navigation, LayoutDashboard, Globe } from "lucide-react";
 
 import { useTranslation } from "@/lib/i18n";
 
@@ -13,6 +13,7 @@ const getNavItems = (t: (key: string) => string) => [
   { href: "/admin/map-pois", label: t("Map POIs (Leaflet)"), icon: <Navigation className="h-5 w-5" /> },
   { href: "/admin/businesses", label: t("Business Management"), icon: <Building2 className="h-5 w-5" /> },
   { href: "/admin/kumbh", label: t("Kumbh 2027 Management"), icon: <Calendar className="h-5 w-5" /> },
+  { href: "/admin/seo", label: t("SEO Management"), icon: <Globe className="h-5 w-5" /> },
   { href: "/admin/users", label: t("Users"), icon: <Users className="h-5 w-5" /> },
   { href: "/admin/notifications", label: t("Notifications"), icon: <Bell className="h-5 w-5" /> },
   { href: "/admin/settings", label: t("Settings"), icon: <Settings className="h-5 w-5" /> },
