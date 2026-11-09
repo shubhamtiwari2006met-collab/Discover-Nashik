@@ -74,6 +74,8 @@ export function PlaceCard({ place, onExplore }: { place: Place; onExplore?: (pla
           key={`${place._id}:${imageUrl}`}
           src={imageUrl}
           alt={place.name}
+          loading="lazy"
+          decoding="async"
           onError={(e) => {
             const target = e.currentTarget;
             if (target.src !== DEFAULT_FALLBACK_IMAGE) {

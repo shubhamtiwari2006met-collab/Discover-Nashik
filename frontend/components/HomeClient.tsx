@@ -91,6 +91,10 @@ export function HomeClient({ initialPlaces }: HomeClientProps) {
           <img
             src="/images/nashik-hero.webp"
             loading="eager"
+            fetchPriority="high"
+            decoding="async"
+            width={1671}
+            height={941}
             alt="Nashik Ghats at Sunset - Discover Nashik"
             className="w-full h-full object-cover object-[78%_center] sm:object-center"
           />
